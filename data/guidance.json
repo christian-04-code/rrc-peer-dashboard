@@ -1,0 +1,3715 @@
+{
+  "meta": {
+    "layer": "Layer 2 - Management Guidance",
+    "label": "Company Guidance",
+    "source": "Peer_Comp_Site_Data/Alphasense/Peer Comp Site 1Q26 Guidance.docx",
+    "note": "AlphaSense used as research/discovery layer only; per controlling spec, AlphaSense is not the final authority and material guidance should be verified against company disclosures. Structure preserves original section groupings from the source document; free-text bullets are split into label/value where a clear colon-delimited pattern exists.",
+    "generated": "2026-07-31",
+    "core_v1_peers": [
+      "RRC",
+      "AR",
+      "CNX",
+      "CRK",
+      "EQT",
+      "EXE",
+      "GPOR"
+    ],
+    "companies_covered": [
+      "RRC",
+      "AR",
+      "CNX",
+      "CRK",
+      "EQT",
+      "EXE",
+      "GPOR",
+      "CHRD",
+      "MGY",
+      "MTDR",
+      "MUR",
+      "OVV",
+      "SM"
+    ]
+  },
+  "companies": {
+    "RRC": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Production"
+          },
+          {
+            "text": "Q1 2026 Actual: 2.2 Bcfe/d",
+            "label": "Q1 2026 Actual",
+            "value": "2.2 Bcfe/d"
+          },
+          {
+            "text": "Q2 2026: ~2.3 Bcfe/d",
+            "label": "Q2 2026",
+            "value": "~2.3 Bcfe/d"
+          },
+          {
+            "text": "Year-End 2026 Target: ~2.5 Bcfe/d",
+            "label": "Year-End 2026 Target",
+            "value": "~2.5 Bcfe/d"
+          },
+          {
+            "text": "Mid-year production ramp expected with new processing capacity"
+          },
+          {
+            "text": "2027 Production"
+          },
+          {
+            "text": "Target: ~2.6 Bcfe/d",
+            "label": "Target",
+            "value": "~2.6 Bcfe/d"
+          },
+          {
+            "text": "2028+ Production"
+          },
+          {
+            "text": "Maintenance Case: ~2.6 Bcfe/d",
+            "label": "Maintenance Case",
+            "value": "~2.6 Bcfe/d"
+          },
+          {
+            "text": "Option to grow above 2.6 Bcfe/d depending on market conditions"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total Capital Budget"
+          },
+          {
+            "text": "$650\u2013$700MM"
+          },
+          {
+            "text": "2026 Maintenance D&C"
+          },
+          {
+            "text": "~$500MM"
+          },
+          {
+            "text": "2026 Growth D&C"
+          },
+          {
+            "text": "$120\u2013$140MM"
+          },
+          {
+            "text": "2026 Land / Acreage"
+          },
+          {
+            "text": "$15\u2013$35MM"
+          },
+          {
+            "text": "2026 Facilities / Software / Other"
+          },
+          {
+            "text": "$15\u2013$25MM"
+          },
+          {
+            "text": "2026 Capital Cadence"
+          },
+          {
+            "text": "Q2 and Q3 expected to be peak spending periods"
+          },
+          {
+            "text": "2026\u20132027 Annual Capital"
+          },
+          {
+            "text": "~$650\u2013$700MM annually"
+          },
+          {
+            "text": "2028+ Maintenance D&C"
+          },
+          {
+            "text": "~$600MM annually"
+          },
+          {
+            "text": "Maintenance capital intensity: ~$0.60/Mcfe",
+            "label": "Maintenance capital intensity",
+            "value": "~$0.60/Mcfe"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Lease Operating Expense (LOE)"
+          },
+          {
+            "text": "$0.14\u2013$0.16/Mcfe"
+          },
+          {
+            "text": "Cash G&A / G&A"
+          },
+          {
+            "text": "~$0.23/Mcfe"
+          },
+          {
+            "text": "Includes ~$0.05/Mcfe stock-based compensation"
+          },
+          {
+            "text": "GP&T"
+          },
+          {
+            "text": "$1 increase in NGL price impacts GP&T by ~$0.01/Mcfe"
+          },
+          {
+            "text": "$1 increase in natural gas price impacts GP&T by ~$0.02\u2013$0.03/Mcfe"
+          }
+        ],
+        "Commodity Realizations / Differentials": [
+          {
+            "text": "NGL Differential"
+          },
+          {
+            "text": "2026 Guidance: +$1.25 to +$2.50/bbl vs. Mont Belvieu",
+            "label": "2026 Guidance",
+            "value": "+$1.25 to +$2.50/bbl vs. Mont Belvieu"
+          },
+          {
+            "text": "Prior Guidance: $0.00 to +$1.00/bbl",
+            "label": "Prior Guidance",
+            "value": "$0.00 to +$1.00/bbl"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Natural Gas Differential"
+          },
+          {
+            "text": "($0.35)\u2013($0.45)/Mcf vs. NYMEX"
+          },
+          {
+            "text": "Oil / Condensate Differential"
+          },
+          {
+            "text": "($10.00)\u2013($14.00)/bbl vs. WTI"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "1 horizontal rig"
+          },
+          {
+            "text": "Completion Crews"
+          },
+          {
+            "text": "Q1 2026: 1 crew",
+            "label": "Q1 2026",
+            "value": "1 crew"
+          },
+          {
+            "text": "Q2/Q3 2026: 2 crews",
+            "label": "Q2/Q3 2026",
+            "value": "2 crews"
+          },
+          {
+            "text": "2026 Lateral Feet Drilled"
+          },
+          {
+            "text": "~1.0MM feet"
+          },
+          {
+            "text": "2026\u20132027 Annual TIL Activity"
+          },
+          {
+            "text": "~950,000 lateral feet/year"
+          },
+          {
+            "text": "DUC Inventory"
+          },
+          {
+            "text": "~400,000 lateral feet"
+          },
+          {
+            "text": "Expected utilization: ~18\u201324 months",
+            "label": "Expected utilization",
+            "value": "~18\u201324 months"
+          },
+          {
+            "text": "2028+ Maintenance TIL Activity"
+          },
+          {
+            "text": "~725,000 lateral feet/year"
+          },
+          {
+            "text": "D&C Well Costs"
+          },
+          {
+            "text": "Wet: ~$850/ft",
+            "label": "Wet",
+            "value": "~$850/ft"
+          },
+          {
+            "text": "Dry: ~$830/ft",
+            "label": "Dry",
+            "value": "~$830/ft"
+          }
+        ],
+        "Infrastructure / Capacity": [
+          {
+            "text": "Incremental Processing Capacity"
+          },
+          {
+            "text": "~300 MMcf/d"
+          },
+          {
+            "text": "Expected in-service: Mid-2026",
+            "label": "Expected in-service",
+            "value": "Mid-2026"
+          },
+          {
+            "text": "NGL Takeaway / Export Capacity"
+          },
+          {
+            "text": "~20 MBbl/d incremental capacity"
+          }
+        ],
+        "Financial Targets": [
+          {
+            "text": "2026\u20132027 Cumulative Free Cash Flow"
+          },
+          {
+            "text": "$1.7B"
+          },
+          {
+            "text": "Pricing assumption: $3.75 NYMEX natural gas and ~$24 NGL realizations",
+            "label": "Pricing assumption",
+            "value": "$3.75 NYMEX natural gas and ~$24 NGL realizations"
+          },
+          {
+            "text": "Reinvestment Rate"
+          },
+          {
+            "text": "<50% at $3.75 NYMEX"
+          },
+          {
+            "text": "Cash Tax Rate"
+          },
+          {
+            "text": "~2%"
+          },
+          {
+            "text": "Share Repurchase Authorization"
+          },
+          {
+            "text": "$1.5B aggregate authorization remaining as of March 31, 2026"
+          }
+        ],
+        "Key Guidance Changes \u2014 Q1 2026": [
+          {
+            "text": "NGL Differential"
+          },
+          {
+            "text": "Prior: $0.00 to +$1.00/bbl",
+            "label": "Prior",
+            "value": "$0.00 to +$1.00/bbl"
+          },
+          {
+            "text": "Updated: +$1.25 to +$2.50/bbl",
+            "label": "Updated",
+            "value": "+$1.25 to +$2.50/bbl"
+          },
+          {
+            "text": "Raised"
+          },
+          {
+            "text": "Production"
+          },
+          {
+            "text": "~2.3 Bcfe/d Q2"
+          },
+          {
+            "text": "~2.5 Bcfe/d year-end 2026"
+          },
+          {
+            "text": "~2.6 Bcfe/d 2027"
+          },
+          {
+            "text": "Capital Cadence"
+          },
+          {
+            "text": "$650\u2013$700MM FY2026 unchanged"
+          },
+          {
+            "text": "Q2/Q3 expected to be peak spending periods"
+          },
+          {
+            "text": "Completion Activity"
+          },
+          {
+            "text": "Second completion crew added for Q2/Q3"
+          },
+          {
+            "text": "~400,000 lateral feet of DUC inventory available"
+          },
+          {
+            "text": "Long-Term Maintenance Case"
+          },
+          {
+            "text": "Production: ~2.6 Bcfe/d",
+            "label": "Production",
+            "value": "~2.6 Bcfe/d"
+          },
+          {
+            "text": "Maintenance D&C: ~$600MM/year",
+            "label": "Maintenance D&C",
+            "value": "~$600MM/year"
+          },
+          {
+            "text": "Maintenance TILs: ~725,000 lateral feet/year",
+            "label": "Maintenance TILs",
+            "value": "~725,000 lateral feet/year"
+          }
+        ]
+      },
+      "heading": "RANGE RESOURCES CORPORATION (RRC) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "AR": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "~4.1 Bcfe/d"
+          },
+          {
+            "text": "2026 Production Cadence"
+          },
+          {
+            "text": "Q1 2026: ~3.8 Bcfe/d",
+            "label": "Q1 2026",
+            "value": "~3.8 Bcfe/d"
+          },
+          {
+            "text": "Q2 2026: ~4.1 Bcfe/d",
+            "label": "Q2 2026",
+            "value": "~4.1 Bcfe/d"
+          },
+          {
+            "text": "2H 2026: ~4.2 Bcfe/d",
+            "label": "2H 2026",
+            "value": "~4.2 Bcfe/d"
+          },
+          {
+            "text": "2026 Natural Gas Production"
+          },
+          {
+            "text": "~2.8 Bcf/d"
+          },
+          {
+            "text": "2026 NGL Production"
+          },
+          {
+            "text": "~205 MBbl/d"
+          },
+          {
+            "text": "Ethane: ~80 MBbl/d",
+            "label": "Ethane",
+            "value": "~80 MBbl/d"
+          },
+          {
+            "text": "C3+ NGLs: ~125 MBbl/d",
+            "label": "C3+ NGLs",
+            "value": "~125 MBbl/d"
+          },
+          {
+            "text": "2026 Oil / Condensate Production"
+          },
+          {
+            "text": "~8 MBbl/d"
+          },
+          {
+            "text": "2027 Production Target"
+          },
+          {
+            "text": "~4.3\u20134.5 Bcfe/d"
+          },
+          {
+            "text": "Upper end dependent on discretionary growth activity"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Base D&C Capital"
+          },
+          {
+            "text": "~$1.0B"
+          },
+          {
+            "text": "2026 Maintenance D&C"
+          },
+          {
+            "text": "~$900MM"
+          },
+          {
+            "text": "Incremental Development D&C"
+          },
+          {
+            "text": "~$100MM"
+          },
+          {
+            "text": "2026 Land Capital"
+          },
+          {
+            "text": "~$100MM"
+          },
+          {
+            "text": "Discretionary Growth Capital"
+          },
+          {
+            "text": "Up to ~$200MM additional"
+          },
+          {
+            "text": "Primarily 2H 2026"
+          },
+          {
+            "text": "Potentially supports ~2\u20133 additional development pads"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "2026 Cash Production Expense"
+          },
+          {
+            "text": "$2.25\u2013$2.35/Mcfe"
+          },
+          {
+            "text": "Midpoint: ~$2.30/Mcfe",
+            "label": "Midpoint",
+            "value": "~$2.30/Mcfe"
+          },
+          {
+            "text": "Prior Guidance: $2.35\u2013$2.45/Mcfe",
+            "label": "Prior Guidance",
+            "value": "$2.35\u2013$2.45/Mcfe"
+          },
+          {
+            "text": "Status: Lowered",
+            "label": "Status",
+            "value": "Lowered"
+          },
+          {
+            "text": "Q2\u2013Q4 2026 Cash Production Expense"
+          },
+          {
+            "text": "$2.20\u2013$2.30/Mcfe"
+          },
+          {
+            "text": "2028 Cash Operating Cost Target"
+          },
+          {
+            "text": "~$2.00/Mcfe by year-end 2028"
+          },
+          {
+            "text": "2025 Base: ~$2.70/Mcfe",
+            "label": "2025 Base",
+            "value": "~$2.70/Mcfe"
+          },
+          {
+            "text": "Structural reduction: >$0.70/Mcfe",
+            "label": "Structural reduction",
+            "value": ">$0.70/Mcfe"
+          },
+          {
+            "text": "Cash G&A"
+          },
+          {
+            "text": "$0.11\u2013$0.13/Mcfe"
+          },
+          {
+            "text": "Excludes equity-based compensation"
+          },
+          {
+            "text": "Net Marketing Expense"
+          },
+          {
+            "text": "$0.02\u2013$0.04/Mcfe"
+          }
+        ],
+        "Commodity Realizations / Differentials": [
+          {
+            "text": "Natural Gas Differential"
+          },
+          {
+            "text": "+$0.10 to +$0.20/Mcf vs. NYMEX Henry Hub"
+          },
+          {
+            "text": "C3+ NGL Differential"
+          },
+          {
+            "text": "($0.50) to +$0.50/bbl vs. Mont Belvieu"
+          },
+          {
+            "text": "Oil / Condensate Differential"
+          },
+          {
+            "text": "($12.00)\u2013($16.00)/bbl vs. WTI"
+          },
+          {
+            "text": "Ethane Differential"
+          },
+          {
+            "text": "Updated indication: +$2.00 to +$3.00/bbl vs. Mont Belvieu",
+            "label": "Updated indication",
+            "value": "+$2.00 to +$3.00/bbl vs. Mont Belvieu"
+          },
+          {
+            "text": "Prior: +$1.00 to +$2.00/bbl",
+            "label": "Prior",
+            "value": "+$1.00 to +$2.00/bbl"
+          },
+          {
+            "text": "Requires direct company-source verification before model input"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "2026 Net Wells Completed"
+          },
+          {
+            "text": "~70\u201380 net wells"
+          },
+          {
+            "text": "Average Lateral Length"
+          },
+          {
+            "text": "~14,600 feet"
+          },
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "~3 rigs"
+          },
+          {
+            "text": "Completion Crews"
+          },
+          {
+            "text": "~2 crews"
+          }
+        ],
+        "HG Energy Acquisition / Synergies": [
+          {
+            "text": "2026 Synergy Target"
+          },
+          {
+            "text": "$80MM"
+          },
+          {
+            "text": "Original Synergy Target"
+          },
+          {
+            "text": "~$50MM"
+          },
+          {
+            "text": "Increase"
+          },
+          {
+            "text": "$30MM"
+          },
+          {
+            "text": "Key Cost Impact"
+          },
+          {
+            "text": "Supports lower 2026 cash production expense"
+          },
+          {
+            "text": "Supports long-term ~$2.00/Mcfe cash operating cost target"
+          }
+        ],
+        "Portfolio Changes": [
+          {
+            "text": "HG Energy Acquisition"
+          },
+          {
+            "text": "Materially increases AR production base and Marcellus scale"
+          },
+          {
+            "text": "Ohio Utica Divestiture"
+          },
+          {
+            "text": "Proceeds: ~$800MM",
+            "label": "Proceeds",
+            "value": "~$800MM"
+          },
+          {
+            "text": "Non-core Ohio Utica assets divested"
+          },
+          {
+            "text": "Development focus concentrated on core Marcellus acreage"
+          }
+        ],
+        "Financial Targets": [
+          {
+            "text": "Leverage Target"
+          },
+          {
+            "text": "<1.0x Net Debt / EBITDAX"
+          },
+          {
+            "text": "Expected Timing"
+          },
+          {
+            "text": "Mid-year 2026"
+          },
+          {
+            "text": "Prior Timing"
+          },
+          {
+            "text": "Year-end 2026"
+          },
+          {
+            "text": "Status"
+          },
+          {
+            "text": "Accelerated"
+          }
+        ],
+        "Key Guidance Changes \u2014 Q1 2026": [
+          {
+            "text": "Cash Production Expense"
+          },
+          {
+            "text": "Prior: $2.35\u2013$2.45/Mcfe",
+            "label": "Prior",
+            "value": "$2.35\u2013$2.45/Mcfe"
+          },
+          {
+            "text": "Updated: $2.25\u2013$2.35/Mcfe",
+            "label": "Updated",
+            "value": "$2.25\u2013$2.35/Mcfe"
+          },
+          {
+            "text": "Q2\u2013Q4: $2.20\u2013$2.30/Mcfe",
+            "label": "Q2\u2013Q4",
+            "value": "$2.20\u2013$2.30/Mcfe"
+          },
+          {
+            "text": "Lowered"
+          },
+          {
+            "text": "2028 Cash Operating Cost Target"
+          },
+          {
+            "text": "~$2.00/Mcfe by year-end 2028"
+          },
+          {
+            "text": "$0.70/Mcfe reduction vs. 2025"
+          },
+          {
+            "text": "HG Energy Synergies"
+          },
+          {
+            "text": "Original: ~$50MM",
+            "label": "Original",
+            "value": "~$50MM"
+          },
+          {
+            "text": "Updated: >$80MM",
+            "label": "Updated",
+            "value": ">$80MM"
+          },
+          {
+            "text": "Raised"
+          },
+          {
+            "text": "Leverage"
+          },
+          {
+            "text": "Target: <1.0x Net Debt / EBITDAX",
+            "label": "Target",
+            "value": "<1.0x Net Debt / EBITDAX"
+          },
+          {
+            "text": "Prior timing: Year-end 2026",
+            "label": "Prior timing",
+            "value": "Year-end 2026"
+          },
+          {
+            "text": "Updated timing: Mid-year 2026",
+            "label": "Updated timing",
+            "value": "Mid-year 2026"
+          },
+          {
+            "text": "Accelerated"
+          },
+          {
+            "text": "Production"
+          },
+          {
+            "text": "2026: ~4.1 Bcfe/d",
+            "label": "2026",
+            "value": "~4.1 Bcfe/d"
+          },
+          {
+            "text": "2H 2026: ~4.2 Bcfe/d",
+            "label": "2H 2026",
+            "value": "~4.2 Bcfe/d"
+          },
+          {
+            "text": "2027: ~4.3\u20134.5 Bcfe/d",
+            "label": "2027",
+            "value": "~4.3\u20134.5 Bcfe/d"
+          },
+          {
+            "text": "Capital"
+          },
+          {
+            "text": "Base D&C: ~$1.0B",
+            "label": "Base D&C",
+            "value": "~$1.0B"
+          },
+          {
+            "text": "Maintenance D&C: ~$900MM",
+            "label": "Maintenance D&C",
+            "value": "~$900MM"
+          },
+          {
+            "text": "Discretionary growth option: Up to ~$200MM additional",
+            "label": "Discretionary growth option",
+            "value": "Up to ~$200MM additional"
+          }
+        ]
+      },
+      "heading": "ANTERO RESOURCES (AR) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "CNX": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "605\u2013620 Bcfe"
+          },
+          {
+            "text": "Production expected to remain generally consistent quarter-to-quarter"
+          },
+          {
+            "text": "2026 Liquids Mix"
+          },
+          {
+            "text": "~7%\u20138% of total production"
+          },
+          {
+            "text": "Production Strategy"
+          },
+          {
+            "text": "Maintenance-mode development strategy"
+          },
+          {
+            "text": "Focus on maintaining production rather than pursuing incremental growth"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total Capital Budget"
+          },
+          {
+            "text": "$556\u2013$586MM"
+          },
+          {
+            "text": "Base Capital Program"
+          },
+          {
+            "text": "$540\u2013$570MM"
+          },
+          {
+            "text": "Utica Rights Acquisition"
+          },
+          {
+            "text": "~$16MM"
+          },
+          {
+            "text": "2026 D&C Capital"
+          },
+          {
+            "text": "$390\u2013$410MM"
+          },
+          {
+            "text": "Capital Cadence"
+          },
+          {
+            "text": "~60% of 2026 capital expected in 1H 2026"
+          },
+          {
+            "text": "Lower capital weighting in 2H 2026 provides activity flexibility"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Fully Burdened Cash Cost"
+          },
+          {
+            "text": "~$1.15/Mcfe"
+          },
+          {
+            "text": "Represents total cash costs before DD&A"
+          }
+        ],
+        "Commodity Realizations / Differentials": [
+          {
+            "text": "Natural Gas Differential"
+          },
+          {
+            "text": "Updated: ~($0.64)/MMBtu",
+            "label": "Updated",
+            "value": "~($0.64)/MMBtu"
+          },
+          {
+            "text": "Prior: ~($0.56)/MMBtu",
+            "label": "Prior",
+            "value": "~($0.56)/MMBtu"
+          },
+          {
+            "text": "Status: Widened",
+            "label": "Status",
+            "value": "Widened"
+          },
+          {
+            "text": "NGL Realized Price"
+          },
+          {
+            "text": "Updated: ~$24.75/bbl",
+            "label": "Updated",
+            "value": "~$24.75/bbl"
+          },
+          {
+            "text": "Prior: ~$20.75/bbl",
+            "label": "Prior",
+            "value": "~$20.75/bbl"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "2026 Wells Turned-in-Line (TIL)"
+          },
+          {
+            "text": "34 total wells"
+          },
+          {
+            "text": "Prior: 30 wells",
+            "label": "Prior",
+            "value": "30 wells"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Marcellus TILs"
+          },
+          {
+            "text": "27 wells"
+          },
+          {
+            "text": "Deep Utica TILs"
+          },
+          {
+            "text": "7 wells"
+          },
+          {
+            "text": "Prior plan: 3 wells",
+            "label": "Prior plan",
+            "value": "3 wells"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "~1.5 rigs"
+          },
+          {
+            "text": "Maintenance program utilizing a partial-year frac crew"
+          }
+        ],
+        "Deep Utica": [
+          {
+            "text": "Deep Utica Drilling Cost"
+          },
+          {
+            "text": "~$1,700\u2013$1,750/ft"
+          },
+          {
+            "text": "2024 Reference: ~$2,200/ft",
+            "label": "2024 Reference",
+            "value": "~$2,200/ft"
+          },
+          {
+            "text": "2026 Deep Utica TILs"
+          },
+          {
+            "text": "7 wells"
+          },
+          {
+            "text": "Spacing Evaluation"
+          },
+          {
+            "text": "~1,300-ft spacing test"
+          },
+          {
+            "text": "~1,500-ft spacing test"
+          }
+        ],
+        "Financial Guidance": [
+          {
+            "text": "2026 Adjusted EBITDAX"
+          },
+          {
+            "text": "Updated: $1.265\u2013$1.315B",
+            "label": "Updated",
+            "value": "$1.265\u2013$1.315B"
+          },
+          {
+            "text": "Prior: $1.310\u2013$1.360B",
+            "label": "Prior",
+            "value": "$1.310\u2013$1.360B"
+          },
+          {
+            "text": "Status: Lowered",
+            "label": "Status",
+            "value": "Lowered"
+          },
+          {
+            "text": "2026 Free Cash Flow"
+          },
+          {
+            "text": "Updated: ~$525MM",
+            "label": "Updated",
+            "value": "~$525MM"
+          },
+          {
+            "text": "Prior: ~$550MM",
+            "label": "Prior",
+            "value": "~$550MM"
+          },
+          {
+            "text": "Status: Lowered",
+            "label": "Status",
+            "value": "Lowered"
+          },
+          {
+            "text": "2026 FCF per Share"
+          },
+          {
+            "text": "Updated: ~$3.41/share",
+            "label": "Updated",
+            "value": "~$3.41/share"
+          },
+          {
+            "text": "Prior: ~$3.55/share",
+            "label": "Prior",
+            "value": "~$3.55/share"
+          },
+          {
+            "text": "Status: Lowered",
+            "label": "Status",
+            "value": "Lowered"
+          },
+          {
+            "text": "Leverage Target"
+          },
+          {
+            "text": "~1.4x Net Debt / EBITDAX"
+          },
+          {
+            "text": "Assumes expected 2026 FCF is used to reduce net debt"
+          }
+        ],
+        "New Technologies / Environmental Attributes": [
+          {
+            "text": "2026 Environmental Attribute FCF Contribution"
+          },
+          {
+            "text": "~$70MM recurring FCF contribution"
+          },
+          {
+            "text": "45Z Potential"
+          },
+          {
+            "text": "~$30MM annual run-rate potential"
+          },
+          {
+            "text": "Dependent on final regulatory treatment / qualification"
+          },
+          {
+            "text": "45V / Hydrogen"
+          },
+          {
+            "text": "Current implementation viewed as restrictive"
+          },
+          {
+            "text": "Alternative low-carbon gas monetization pathways under evaluation"
+          },
+          {
+            "text": "AI / Data Center Opportunity"
+          },
+          {
+            "text": "Evaluating behind-the-meter power opportunities"
+          },
+          {
+            "text": "Potential Appalachian demand viewed as longer-term"
+          },
+          {
+            "text": "Not currently incorporated as justification for incremental production growth"
+          }
+        ],
+        "Hedging": [
+          {
+            "text": "2027 Natural Gas Hedging"
+          },
+          {
+            "text": "~80% hedged"
+          },
+          {
+            "text": "2027 Weighted Average NYMEX Hedge Price"
+          },
+          {
+            "text": "~$4.00/MMBtu"
+          }
+        ],
+        "Shareholder Returns / Balance Sheet": [
+          {
+            "text": "Share Repurchase Authorization"
+          },
+          {
+            "text": "~$2.4B total authorized capacity"
+          },
+          {
+            "text": "Includes ~$2.0B additional authorization"
+          },
+          {
+            "text": "2034 Senior Notes"
+          },
+          {
+            "text": "$500MM"
+          },
+          {
+            "text": "5.875% coupon"
+          },
+          {
+            "text": "Due 2034"
+          },
+          {
+            "text": "2026 Debt Obligations"
+          },
+          {
+            "text": "~$208MM"
+          },
+          {
+            "text": "Primarily convertible notes"
+          },
+          {
+            "text": "Major Debt Maturities"
+          },
+          {
+            "text": "No major maturities until 2029 after 2026 obligations"
+          }
+        ],
+        "Key Guidance Changes \u2014 Q1 2026": [
+          {
+            "text": "Production"
+          },
+          {
+            "text": "605\u2013620 Bcfe"
+          },
+          {
+            "text": "Reiterated"
+          },
+          {
+            "text": "Total Capital"
+          },
+          {
+            "text": "$556\u2013$586MM"
+          },
+          {
+            "text": "Reiterated"
+          },
+          {
+            "text": "Adjusted EBITDAX"
+          },
+          {
+            "text": "Prior: $1.310\u2013$1.360B",
+            "label": "Prior",
+            "value": "$1.310\u2013$1.360B"
+          },
+          {
+            "text": "Updated: $1.265\u2013$1.315B",
+            "label": "Updated",
+            "value": "$1.265\u2013$1.315B"
+          },
+          {
+            "text": "Lowered"
+          },
+          {
+            "text": "Free Cash Flow"
+          },
+          {
+            "text": "Prior: ~$550MM",
+            "label": "Prior",
+            "value": "~$550MM"
+          },
+          {
+            "text": "Updated: ~$525MM",
+            "label": "Updated",
+            "value": "~$525MM"
+          },
+          {
+            "text": "Lowered"
+          },
+          {
+            "text": "FCF per Share"
+          },
+          {
+            "text": "Prior: ~$3.55",
+            "label": "Prior",
+            "value": "~$3.55"
+          },
+          {
+            "text": "Updated: ~$3.41",
+            "label": "Updated",
+            "value": "~$3.41"
+          },
+          {
+            "text": "Lowered"
+          },
+          {
+            "text": "Natural Gas Differential"
+          },
+          {
+            "text": "Prior: ~($0.56)/MMBtu",
+            "label": "Prior",
+            "value": "~($0.56)/MMBtu"
+          },
+          {
+            "text": "Updated: ~($0.64)/MMBtu",
+            "label": "Updated",
+            "value": "~($0.64)/MMBtu"
+          },
+          {
+            "text": "Widened"
+          },
+          {
+            "text": "NGL Realized Price"
+          },
+          {
+            "text": "Prior: ~$20.75/bbl",
+            "label": "Prior",
+            "value": "~$20.75/bbl"
+          },
+          {
+            "text": "Updated: ~$24.75/bbl",
+            "label": "Updated",
+            "value": "~$24.75/bbl"
+          },
+          {
+            "text": "Raised"
+          },
+          {
+            "text": "Total TILs"
+          },
+          {
+            "text": "Prior: 30 wells",
+            "label": "Prior",
+            "value": "30 wells"
+          },
+          {
+            "text": "Updated: 34 wells",
+            "label": "Updated",
+            "value": "34 wells"
+          },
+          {
+            "text": "Raised"
+          },
+          {
+            "text": "Deep Utica TILs"
+          },
+          {
+            "text": "Prior: 3 wells",
+            "label": "Prior",
+            "value": "3 wells"
+          },
+          {
+            "text": "Updated: 7 wells",
+            "label": "Updated",
+            "value": "7 wells"
+          },
+          {
+            "text": "Raised"
+          }
+        ]
+      },
+      "heading": "CNX RESOURCES (CNX) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "CRK": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "1,250\u20131,400 MMcfe/d"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total CapEx"
+          },
+          {
+            "text": "$1.4\u2013$1.5B"
+          },
+          {
+            "text": "2026 Midstream Capital \u2014 Pinnacle Gas Services"
+          },
+          {
+            "text": "$100\u2013$150MM"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Lease Operating Expense (LOE)"
+          },
+          {
+            "text": "$0.25\u2013$0.29/Mcfe"
+          },
+          {
+            "text": "Gathering & Transportation"
+          },
+          {
+            "text": "$0.34\u2013$0.40/Mcfe"
+          },
+          {
+            "text": "DD&A"
+          },
+          {
+            "text": "$1.40\u2013$1.50/Mcfe"
+          },
+          {
+            "text": "Cash G&A"
+          },
+          {
+            "text": "$32\u2013$34MM"
+          },
+          {
+            "text": "Cash Interest"
+          },
+          {
+            "text": "$220\u2013$230MM"
+          },
+          {
+            "text": "Effective Tax Rate"
+          },
+          {
+            "text": "22%\u201324%"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "2026 Operated Wells Drilled"
+          },
+          {
+            "text": "66 gross"
+          },
+          {
+            "text": "59.7 net"
+          },
+          {
+            "text": "2026 Operated Wells Turned to Sales"
+          },
+          {
+            "text": "72 gross"
+          },
+          {
+            "text": "63.1 net"
+          },
+          {
+            "text": "Western Haynesville Wells Drilled"
+          },
+          {
+            "text": "21 wells"
+          },
+          {
+            "text": "Western Haynesville Wells Turned to Sales"
+          },
+          {
+            "text": "20 wells"
+          },
+          {
+            "text": "Western Haynesville Lateral Length"
+          },
+          {
+            "text": "Recent laterals up to ~14,800 ft"
+          },
+          {
+            "text": "Legacy Haynesville Wells Drilled"
+          },
+          {
+            "text": "50 wells"
+          },
+          {
+            "text": "Legacy Haynesville Wells Turned to Sales"
+          },
+          {
+            "text": "48 wells"
+          },
+          {
+            "text": "2026 Horseshoe Wells"
+          },
+          {
+            "text": "16 wells"
+          },
+          {
+            "text": "Horseshoe Well Drilling Cost Benefit"
+          },
+          {
+            "text": "~35% drilling cost savings"
+          },
+          {
+            "text": "Legacy Haynesville Horseshoe Inventory"
+          },
+          {
+            "text": "114 future locations"
+          },
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "Increasing from 8 to 9 rigs"
+          }
+        ],
+        "Midstream \u2014 Pinnacle Gas Services": [
+          {
+            "text": "Pinnacle Implied Enterprise Value"
+          },
+          {
+            "text": "~$2.2B"
+          },
+          {
+            "text": "Expected Fixed-Charge Reduction"
+          },
+          {
+            "text": "~$40MM/year"
+          },
+          {
+            "text": "Midstream Credit Facility"
+          },
+          {
+            "text": "$150MM"
+          },
+          {
+            "text": "Strategic Impact"
+          },
+          {
+            "text": "Retires Pinnacle preferred equity and outstanding debt"
+          },
+          {
+            "text": "Supports balance-sheet deleveraging"
+          }
+        ],
+        "Hedging": [
+          {
+            "text": "Hedging Target"
+          },
+          {
+            "text": "55%+ of production"
+          },
+          {
+            "text": "2026 Natural Gas Swaps"
+          },
+          {
+            "text": "320 MMcf/d"
+          },
+          {
+            "text": "~$3.51/MMBtu"
+          },
+          {
+            "text": "2026 Natural Gas Collars"
+          },
+          {
+            "text": "460 MMcf/d"
+          },
+          {
+            "text": "~$3.50 floor / ~$4.35 ceiling"
+          },
+          {
+            "text": "2027 Natural Gas Swaps"
+          },
+          {
+            "text": "160 MMcf/d"
+          },
+          {
+            "text": "2027 Natural Gas Collars"
+          },
+          {
+            "text": "160 MMcf/d"
+          }
+        ],
+        "Financial / Balance Sheet": [
+          {
+            "text": "Leverage Covenant"
+          },
+          {
+            "text": "<3.5x"
+          },
+          {
+            "text": "Adjusted Current Ratio Covenant"
+          },
+          {
+            "text": "\u22651.0x"
+          },
+          {
+            "text": "Liquidity \u2014 March 31, 2026"
+          },
+          {
+            "text": "~$1.27B"
+          },
+          {
+            "text": "2026 Funding Strategy"
+          },
+          {
+            "text": "Operating plan targeted to be funded primarily through operating cash flow"
+          }
+        ],
+        "Data Center / Power Opportunity": [
+          {
+            "text": "NextEra Energy Data Center Project"
+          },
+          {
+            "text": "Potential start: As early as 2027",
+            "label": "Potential start",
+            "value": "As early as 2027"
+          },
+          {
+            "text": "Initial Power Generation Capacity"
+          },
+          {
+            "text": "Up to ~2 GW"
+          },
+          {
+            "text": "Potential Expanded Capacity"
+          },
+          {
+            "text": "Up to ~8 GW"
+          },
+          {
+            "text": "Strategy"
+          },
+          {
+            "text": "Behind-the-meter natural gas power generation"
+          },
+          {
+            "text": "Western Haynesville gas supply"
+          },
+          {
+            "text": "Targeted toward hyperscaler/data-center demand"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Production"
+          },
+          {
+            "text": "1,250\u20131,400 MMcfe/d"
+          },
+          {
+            "text": "Total CapEx"
+          },
+          {
+            "text": "$1.4\u2013$1.5B"
+          },
+          {
+            "text": "Midstream CapEx"
+          },
+          {
+            "text": "$100\u2013$150MM"
+          },
+          {
+            "text": "LOE"
+          },
+          {
+            "text": "$0.25\u2013$0.29/Mcfe"
+          },
+          {
+            "text": "Gathering & Transportation"
+          },
+          {
+            "text": "$0.34\u2013$0.40/Mcfe"
+          },
+          {
+            "text": "Cash G&A"
+          },
+          {
+            "text": "$32\u2013$34MM"
+          },
+          {
+            "text": "Cash Interest"
+          },
+          {
+            "text": "$220\u2013$230MM"
+          },
+          {
+            "text": "Wells Drilled"
+          },
+          {
+            "text": "66 gross / 59.7 net"
+          },
+          {
+            "text": "Wells Turned to Sales"
+          },
+          {
+            "text": "72 gross / 63.1 net"
+          },
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "8 \u2192 9 rigs"
+          }
+        ]
+      },
+      "heading": "COMSTOCK RESOURCES (CRK) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "EQT": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Sales Volume"
+          },
+          {
+            "text": "2,275\u20132,375 Bcfe"
+          },
+          {
+            "text": "Q1 2026 Sales Volume"
+          },
+          {
+            "text": "560\u2013610 Bcfe"
+          },
+          {
+            "text": "2026 Liquids Sales Volume"
+          },
+          {
+            "text": "19,850\u201321,050 MBbl"
+          },
+          {
+            "text": "Q1 2026 Liquids Sales Volume"
+          },
+          {
+            "text": "5,400\u20135,750 MBbl"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Maintenance Capital"
+          },
+          {
+            "text": "$2.07\u2013$2.21B"
+          },
+          {
+            "text": "Corporate & Capitalized Costs"
+          },
+          {
+            "text": "$205\u2013$225MM"
+          },
+          {
+            "text": "Included in maintenance capital"
+          },
+          {
+            "text": "2026 Growth Capital"
+          },
+          {
+            "text": "$580\u2013$640MM"
+          },
+          {
+            "text": "Focused on compression, water infrastructure, and strategic leasing"
+          },
+          {
+            "text": "2026 Total Maintenance + Growth Capital"
+          },
+          {
+            "text": "~$2.65\u2013$2.85B"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "2026 Total Unit Costs"
+          },
+          {
+            "text": "$1.07\u2013$1.21/Mcfe"
+          },
+          {
+            "text": "Includes full-year impact of Equitrans and Olympus"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "2026 Net Wells Turned-in-Line (TIL)"
+          },
+          {
+            "text": "125\u2013150 net wells"
+          },
+          {
+            "text": "Q1 2026 Net Wells TIL"
+          },
+          {
+            "text": "26\u201336 net wells"
+          }
+        ],
+        "Financial Guidance": [
+          {
+            "text": "2026 Free Cash Flow"
+          },
+          {
+            "text": "~$3.5B"
+          },
+          {
+            "text": "Based on recent strip pricing"
+          },
+          {
+            "text": "2026 Adjusted EBITDA"
+          },
+          {
+            "text": "~$6.5B"
+          },
+          {
+            "text": "Based on recent strip pricing"
+          },
+          {
+            "text": "2026 Capital Contributions"
+          },
+          {
+            "text": "$70\u2013$80MM"
+          },
+          {
+            "text": "Equity-method investments"
+          }
+        ],
+        "Long-Term Financial Targets": [
+          {
+            "text": "2026\u20132030 Cumulative Free Cash Flow"
+          },
+          {
+            "text": "~$16B"
+          },
+          {
+            "text": "Based on strip pricing"
+          },
+          {
+            "text": "Long-Term Total Debt Target"
+          },
+          {
+            "text": "~$5.0B"
+          },
+          {
+            "text": "Capital Allocation"
+          },
+          {
+            "text": "Free cash flow prioritized toward debt reduction and shareholder returns"
+          }
+        ],
+        "Strategic / Growth Capital": [
+          {
+            "text": "Growth Capital"
+          },
+          {
+            "text": "$580\u2013$640MM"
+          },
+          {
+            "text": "Primary Uses"
+          },
+          {
+            "text": "Compression"
+          },
+          {
+            "text": "Water infrastructure"
+          },
+          {
+            "text": "Strategic leasing"
+          },
+          {
+            "text": "Vertical Integration"
+          },
+          {
+            "text": "Equitrans Midstream integrated into EQT operating model"
+          },
+          {
+            "text": "Midstream integration incorporated into 2026 cost and capital framework"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Total Sales Volume"
+          },
+          {
+            "text": "2,275\u20132,375 Bcfe"
+          },
+          {
+            "text": "Liquids Sales Volume"
+          },
+          {
+            "text": "19,850\u201321,050 MBbl"
+          },
+          {
+            "text": "Maintenance Capital"
+          },
+          {
+            "text": "$2.07\u2013$2.21B"
+          },
+          {
+            "text": "Growth Capital"
+          },
+          {
+            "text": "$580\u2013$640MM"
+          },
+          {
+            "text": "Total Maintenance + Growth Capital"
+          },
+          {
+            "text": "~$2.65\u2013$2.85B"
+          },
+          {
+            "text": "Total Unit Costs"
+          },
+          {
+            "text": "$1.07\u2013$1.21/Mcfe"
+          },
+          {
+            "text": "Net Wells TIL"
+          },
+          {
+            "text": "125\u2013150"
+          },
+          {
+            "text": "Free Cash Flow"
+          },
+          {
+            "text": "~$3.5B"
+          },
+          {
+            "text": "Adjusted EBITDA"
+          },
+          {
+            "text": "~$6.5B"
+          },
+          {
+            "text": "2026\u20132030 Cumulative FCF"
+          },
+          {
+            "text": "~$16B"
+          },
+          {
+            "text": "Long-Term Total Debt Target"
+          },
+          {
+            "text": "~$5.0B"
+          }
+        ]
+      },
+      "heading": "EQT CORPORATION (EQT) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "EXE": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "7,400\u20137,600 MMcfe/d"
+          },
+          {
+            "text": "Midpoint: ~7.5 Bcfe/d",
+            "label": "Midpoint",
+            "value": "~7.5 Bcfe/d"
+          },
+          {
+            "text": "Haynesville Production"
+          },
+          {
+            "text": "~3,200 MMcfe/d"
+          },
+          {
+            "text": "Northeast Appalachia Production"
+          },
+          {
+            "text": "~2,675 MMcfe/d"
+          },
+          {
+            "text": "Southwest Appalachia Production"
+          },
+          {
+            "text": "~1,625 MMcfe/d"
+          },
+          {
+            "text": "Production Cadence"
+          },
+          {
+            "text": "Activity and production cadence expected to align with market demand"
+          },
+          {
+            "text": "Contemplates Q2 2026 curtailments"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total Capital Investment"
+          },
+          {
+            "text": "~$2.85B"
+          },
+          {
+            "text": "Prior Initial Capital Expectation"
+          },
+          {
+            "text": "~$3.0B"
+          },
+          {
+            "text": "Capital Efficiency"
+          },
+          {
+            "text": "Lower capital requirement driven by improved drilling and completion efficiencies"
+          },
+          {
+            "text": "Includes East Texas appraisal capital"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Production Expense"
+          },
+          {
+            "text": "$0.23\u2013$0.28/Mcfe"
+          },
+          {
+            "text": "GP&T Expense"
+          },
+          {
+            "text": "$0.95\u2013$1.05/Mcfe"
+          },
+          {
+            "text": "Excludes fair market value liability amortization"
+          },
+          {
+            "text": "General & Administrative"
+          },
+          {
+            "text": "$0.07\u2013$0.10/Mcfe"
+          },
+          {
+            "text": "DD&A"
+          },
+          {
+            "text": "$1.10\u2013$1.15/Mcfe"
+          }
+        ],
+        "Operational Efficiency": [
+          {
+            "text": "Haynesville Rig Count"
+          },
+          {
+            "text": "~7 rigs supporting current production program"
+          },
+          {
+            "text": "2023 comparison: ~13 rigs required for similar production volume",
+            "label": "2023 comparison",
+            "value": "~13 rigs required for similar production volume"
+          },
+          {
+            "text": "Haynesville Capital Efficiency"
+          },
+          {
+            "text": "FY2026 projected capital efficiency: ~$900/Mcfe/ft",
+            "label": "FY2026 projected capital efficiency",
+            "value": "~$900/Mcfe/ft"
+          },
+          {
+            "text": "Core Inventory"
+          },
+          {
+            "text": "20+ years of core drilling inventory"
+          }
+        ],
+        "Synergies / Cost Savings": [
+          {
+            "text": "2025 Annual Synergies"
+          },
+          {
+            "text": "~$400MM"
+          },
+          {
+            "text": "Year-End 2026 Annual Synergy Target"
+          },
+          {
+            "text": "~$500MM"
+          },
+          {
+            "text": "Key Drivers"
+          },
+          {
+            "text": "Chesapeake / Southwestern integration"
+          },
+          {
+            "text": "Drilling and completion efficiencies"
+          },
+          {
+            "text": "Corporate cost efficiencies"
+          },
+          {
+            "text": "Operating scale"
+          }
+        ],
+        "East Texas / Inventory Expansion": [
+          {
+            "text": "East Texas Acreage Acquired"
+          },
+          {
+            "text": "75,000 acres"
+          },
+          {
+            "text": "Acquisition Cost"
+          },
+          {
+            "text": "<$180MM"
+          },
+          {
+            "text": "2026 Activity"
+          },
+          {
+            "text": "Appraisal capital included in 2026 capital program"
+          },
+          {
+            "text": "Strategic Focus"
+          },
+          {
+            "text": "Proximity to Dallas-area demand"
+          },
+          {
+            "text": "LNG corridor exposure"
+          },
+          {
+            "text": "Future inventory expansion"
+          }
+        ],
+        "Marketing / LNG Strategy": [
+          {
+            "text": "Expected Demand Connectivity"
+          },
+          {
+            "text": "Access to ~90% of expected natural gas demand growth"
+          },
+          {
+            "text": "Expected Natural Gas Demand Growth"
+          },
+          {
+            "text": "~20% through 2030"
+          },
+          {
+            "text": "Marketing Optimization \u2014 Incremental FCF Target"
+          },
+          {
+            "text": "~$500MM"
+          },
+          {
+            "text": "Incremental Value"
+          },
+          {
+            "text": "~$0.20/Mcfe"
+          },
+          {
+            "text": "Marketing Strategy"
+          },
+          {
+            "text": "Long-term contracts"
+          },
+          {
+            "text": "Spot-market exposure"
+          },
+          {
+            "text": "International LNG-linked marketing"
+          }
+        ],
+        "Financial / Balance Sheet": [
+          {
+            "text": "2026 Gross Debt Reduction"
+          },
+          {
+            "text": "~$1.3B redeemed year-to-date"
+          },
+          {
+            "text": "Leverage"
+          },
+          {
+            "text": "~0.5x"
+          },
+          {
+            "text": "Q1 2026 Shareholder Returns"
+          },
+          {
+            "text": "$290MM"
+          },
+          {
+            "text": "Capital Return Strategy"
+          },
+          {
+            "text": "Base dividends"
+          },
+          {
+            "text": "Opportunistic share repurchases"
+          }
+        ],
+        "Hedging": [
+          {
+            "text": "Hedging Framework"
+          },
+          {
+            "text": "Rolling ~8-quarter hedging program"
+          },
+          {
+            "text": "Designed to provide downside protection while maintaining upside participation"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Total Production"
+          },
+          {
+            "text": "7,400\u20137,600 MMcfe/d"
+          },
+          {
+            "text": "Haynesville Production"
+          },
+          {
+            "text": "~3,200 MMcfe/d"
+          },
+          {
+            "text": "Northeast Appalachia"
+          },
+          {
+            "text": "~2,675 MMcfe/d"
+          },
+          {
+            "text": "Southwest Appalachia"
+          },
+          {
+            "text": "~1,625 MMcfe/d"
+          },
+          {
+            "text": "Total Capital Investment"
+          },
+          {
+            "text": "~$2.85B"
+          },
+          {
+            "text": "Production Expense"
+          },
+          {
+            "text": "$0.23\u2013$0.28/Mcfe"
+          },
+          {
+            "text": "GP&T"
+          },
+          {
+            "text": "$0.95\u2013$1.05/Mcfe"
+          },
+          {
+            "text": "G&A"
+          },
+          {
+            "text": "$0.07\u2013$0.10/Mcfe"
+          },
+          {
+            "text": "Year-End 2026 Annual Synergy Target"
+          },
+          {
+            "text": "~$500MM"
+          },
+          {
+            "text": "Marketing Optimization FCF Opportunity"
+          },
+          {
+            "text": "~$500MM / ~$0.20 per Mcfe"
+          }
+        ]
+      },
+      "heading": "EXPAND ENERGY (EXE) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "GPOR": {
+      "sections": {}
+    },
+    "CHRD": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Oil Volumes"
+          },
+          {
+            "text": "~161 MBopd midpoint"
+          },
+          {
+            "text": "Updated upward by ~2 MBopd at the midpoint"
+          },
+          {
+            "text": "Production Cadence"
+          },
+          {
+            "text": "Oil production expected to increase sequentially through Q2 and Q3"
+          },
+          {
+            "text": "Production expected to trend lower in Q4"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total CapEx"
+          },
+          {
+            "text": "~$1.4B midpoint"
+          },
+          {
+            "text": "Q2 2026 CapEx"
+          },
+          {
+            "text": "~$425MM midpoint"
+          },
+          {
+            "text": "Capital Cadence"
+          },
+          {
+            "text": "Q2 elevated due to faster drilling and completion cycle times"
+          },
+          {
+            "text": "CapEx expected to decline sequentially in Q3"
+          },
+          {
+            "text": "CapEx expected to decline further in Q4"
+          }
+        ],
+        "Financial Guidance": [
+          {
+            "text": "2026 Adjusted EBITDA"
+          },
+          {
+            "text": "~$3.1B"
+          },
+          {
+            "text": "2026 Adjusted Free Cash Flow"
+          },
+          {
+            "text": "~$1.4B"
+          },
+          {
+            "text": "Based on ~$80/bbl WTI"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Lease Operating Expense (LOE)"
+          },
+          {
+            "text": "~$9.95/boe midpoint"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "Operated Rig Count"
+          },
+          {
+            "text": "4\u20135 rigs"
+          },
+          {
+            "text": "Frac Crews"
+          },
+          {
+            "text": "1\u20132 crews for most of 2026"
+          },
+          {
+            "text": "2026 Gross Operated Wells TIL"
+          },
+          {
+            "text": "135\u2013165 wells"
+          },
+          {
+            "text": "Average Working Interest"
+          },
+          {
+            "text": "~75%"
+          },
+          {
+            "text": "Long-Lateral Mix"
+          },
+          {
+            "text": "~80% of 2026 TILs expected to be longer laterals"
+          },
+          {
+            "text": "3-Mile / 4-Mile Wells"
+          },
+          {
+            "text": "Longer-lateral mix split roughly evenly between 3-mile and 4-mile wells"
+          },
+          {
+            "text": "Spot Frac Crew"
+          },
+          {
+            "text": "Expected to be dropped around mid-year 2026"
+          },
+          {
+            "text": "Earlier than originally planned due to faster operational cycle times"
+          }
+        ],
+        "Efficiency / Cost Savings": [
+          {
+            "text": "Marketing & Midstream Optimization Savings"
+          },
+          {
+            "text": "~$30\u2013$50MM annual run-rate"
+          },
+          {
+            "text": "Production / LOE Savings"
+          },
+          {
+            "text": "~$25MM annual run-rate"
+          },
+          {
+            "text": "Efficiency Initiatives"
+          },
+          {
+            "text": "Longer-lateral development"
+          },
+          {
+            "text": "Marketing optimization"
+          },
+          {
+            "text": "Midstream optimization"
+          },
+          {
+            "text": "Production optimization"
+          },
+          {
+            "text": "AI-based rod lift optimization"
+          }
+        ],
+        "Shareholder Returns": [
+          {
+            "text": "Base Cash Dividend"
+          },
+          {
+            "text": "$5.20/share annualized"
+          },
+          {
+            "text": "$1.30/share quarterly"
+          },
+          {
+            "text": "Share Repurchase Authorization"
+          },
+          {
+            "text": "$1.0B"
+          },
+          {
+            "text": "Q1 2026 Share Repurchases"
+          },
+          {
+            "text": "~$70.7MM"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Oil Volumes"
+          },
+          {
+            "text": "~161 MBopd midpoint"
+          },
+          {
+            "text": "Total CapEx"
+          },
+          {
+            "text": "~$1.4B midpoint"
+          },
+          {
+            "text": "Q2 CapEx"
+          },
+          {
+            "text": "~$425MM midpoint"
+          },
+          {
+            "text": "Adjusted EBITDA"
+          },
+          {
+            "text": "~$3.1B"
+          },
+          {
+            "text": "Adjusted Free Cash Flow"
+          },
+          {
+            "text": "~$1.4B at ~$80/bbl WTI"
+          },
+          {
+            "text": "LOE"
+          },
+          {
+            "text": "~$9.95/boe midpoint"
+          },
+          {
+            "text": "Operated Rigs"
+          },
+          {
+            "text": "4\u20135"
+          },
+          {
+            "text": "Frac Crews"
+          },
+          {
+            "text": "1\u20132"
+          },
+          {
+            "text": "Gross Operated Wells TIL"
+          },
+          {
+            "text": "135\u2013165"
+          },
+          {
+            "text": "Long-Lateral TIL Mix"
+          },
+          {
+            "text": "~80%"
+          },
+          {
+            "text": "Base Dividend"
+          },
+          {
+            "text": "$5.20/share annualized"
+          }
+        ]
+      },
+      "heading": "CHORD ENERGY (CHRD) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "MGY": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Standalone Production Growth"
+          },
+          {
+            "text": "~6%"
+          },
+          {
+            "text": "Prior: ~5%",
+            "label": "Prior",
+            "value": "~5%"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Q2 2026 Production"
+          },
+          {
+            "text": "~105 Mboe/d"
+          },
+          {
+            "text": "Pro Forma Total Production"
+          },
+          {
+            "text": "~159 Mboe/d"
+          },
+          {
+            "text": "Pro Forma Oil Production"
+          },
+          {
+            "text": "~79 Mbbl/d"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Standalone D&C Capital"
+          },
+          {
+            "text": "$440\u2013$480MM"
+          },
+          {
+            "text": "Q2 2026 D&C Capital"
+          },
+          {
+            "text": "$120\u2013$125MM"
+          },
+          {
+            "text": "D&C Reinvestment Limit"
+          },
+          {
+            "text": "\u226455% of annual Adjusted EBITDAX"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "2 drilling rigs"
+          },
+          {
+            "text": "Completion Crews"
+          },
+          {
+            "text": "1 completion crew"
+          },
+          {
+            "text": "2026 Activity Plan"
+          },
+          {
+            "text": "Maintain 2 rigs and 1 completion crew throughout 2026"
+          }
+        ],
+        "WildFire Energy Acquisition": [
+          {
+            "text": "Transaction Value"
+          },
+          {
+            "text": "~$4.06B"
+          },
+          {
+            "text": "Expected Closing"
+          },
+          {
+            "text": "Late Q3 2026"
+          },
+          {
+            "text": "Strategic Impact"
+          },
+          {
+            "text": "Material expansion of Giddings development inventory"
+          },
+          {
+            "text": "Nearly doubles oil production"
+          },
+          {
+            "text": "Significantly increases Magnolia\u2019s production scale"
+          }
+        ],
+        "Synergies": [
+          {
+            "text": "Annual Run-Rate Synergy Target"
+          },
+          {
+            "text": "$100MM by year-end 2027"
+          },
+          {
+            "text": "Drilling, Completions & Facilities"
+          },
+          {
+            "text": "~$60MM"
+          },
+          {
+            "text": "Field Operations"
+          },
+          {
+            "text": "~$20MM"
+          },
+          {
+            "text": "Corporate G&A"
+          },
+          {
+            "text": "~$20MM"
+          }
+        ],
+        "Financial / Balance Sheet": [
+          {
+            "text": "Net Debt / EBITDA Target"
+          },
+          {
+            "text": "\u22641.0x by year-end 2027"
+          },
+          {
+            "text": "Deleveraging Strategy"
+          },
+          {
+            "text": "Excess free cash flow prioritized toward debt reduction following acquisition close"
+          }
+        ],
+        "Shareholder Returns": [
+          {
+            "text": "Quarterly Dividend"
+          },
+          {
+            "text": "$0.18/share beginning Q3 2026"
+          },
+          {
+            "text": "Dividend Increase"
+          },
+          {
+            "text": "~9%"
+          },
+          {
+            "text": "Long-Term Dividend Growth Target"
+          },
+          {
+            "text": "~10% CAGR"
+          },
+          {
+            "text": "Share Repurchases"
+          },
+          {
+            "text": "Targeting repurchases of at least ~1% of outstanding shares per quarter"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Standalone Production Growth"
+          },
+          {
+            "text": "~6%"
+          },
+          {
+            "text": "Q2 Production"
+          },
+          {
+            "text": "~105 Mboe/d"
+          },
+          {
+            "text": "Pro Forma Total Production"
+          },
+          {
+            "text": "~159 Mboe/d"
+          },
+          {
+            "text": "Pro Forma Oil Production"
+          },
+          {
+            "text": "~79 Mbbl/d"
+          },
+          {
+            "text": "Standalone D&C Capital"
+          },
+          {
+            "text": "$440\u2013$480MM"
+          },
+          {
+            "text": "Q2 D&C Capital"
+          },
+          {
+            "text": "$120\u2013$125MM"
+          },
+          {
+            "text": "Rig Count"
+          },
+          {
+            "text": "2"
+          },
+          {
+            "text": "Completion Crews"
+          },
+          {
+            "text": "1"
+          },
+          {
+            "text": "D&C Reinvestment Rate"
+          },
+          {
+            "text": "\u226455% of Adjusted EBITDAX"
+          },
+          {
+            "text": "Annual Run-Rate Synergies"
+          },
+          {
+            "text": "$100MM by YE2027"
+          },
+          {
+            "text": "Net Debt / EBITDA Target"
+          },
+          {
+            "text": "\u22641.0x by YE2027"
+          },
+          {
+            "text": "Quarterly Dividend"
+          },
+          {
+            "text": "$0.18/share"
+          },
+          {
+            "text": "Share Repurchases"
+          },
+          {
+            "text": "\u22651% of shares outstanding per quarter"
+          }
+        ]
+      },
+      "heading": "MAGNOLIA OIL & GAS (MGY) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "MTDR": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Oil Production"
+          },
+          {
+            "text": "~123 MBbl/d midpoint"
+          },
+          {
+            "text": "2026 Total BOE Production"
+          },
+          {
+            "text": "201\u2013205 Mboe/d"
+          },
+          {
+            "text": "Production Guidance"
+          },
+          {
+            "text": "Full-year production ranges raised in May 2026"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total CapEx"
+          },
+          {
+            "text": "$1.45\u2013$1.55B"
+          },
+          {
+            "text": "2026 D/C/E CapEx"
+          },
+          {
+            "text": "$1.35\u2013$1.44B"
+          },
+          {
+            "text": "2026 Midstream CapEx"
+          },
+          {
+            "text": "$100\u2013$110MM"
+          },
+          {
+            "text": "Capital Cadence"
+          },
+          {
+            "text": "~55%\u201360% of full-year capital expected in 1H 2026"
+          },
+          {
+            "text": "Front-loaded due to timing of large-batch completions"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Operating Expenses"
+          },
+          {
+            "text": "$31\u2013$33/BOE"
+          }
+        ],
+        "D&C Efficiency": [
+          {
+            "text": "2026 D&C Cost per Lateral Foot"
+          },
+          {
+            "text": "~$795/ft"
+          },
+          {
+            "text": "Year-over-Year Improvement"
+          },
+          {
+            "text": "~6% improvement vs. 2025"
+          },
+          {
+            "text": "Average Operated Lateral Length"
+          },
+          {
+            "text": "~11,450 ft"
+          },
+          {
+            "text": "Lateral Length Growth"
+          },
+          {
+            "text": "~10% increase vs. prior year"
+          },
+          {
+            "text": "Efficiency Drivers"
+          },
+          {
+            "text": "Simul-frac"
+          },
+          {
+            "text": "Trimul-frac"
+          },
+          {
+            "text": "Longer laterals"
+          }
+        ],
+        "Financial Guidance": [
+          {
+            "text": "2026 Adjusted Free Cash Flow"
+          },
+          {
+            "text": "$1.10\u2013$1.20B"
+          },
+          {
+            "text": "Based on strip pricing"
+          }
+        ],
+        "Midstream": [
+          {
+            "text": "2026 Midstream Adjusted EBITDA"
+          },
+          {
+            "text": "~$360MM"
+          },
+          {
+            "text": "Year-over-Year Growth"
+          },
+          {
+            "text": "~8%"
+          },
+          {
+            "text": "Hugh Brinson Project"
+          },
+          {
+            "text": "Expected fully in service in 2H 2026"
+          },
+          {
+            "text": "Strategic Impact"
+          },
+          {
+            "text": "Improves flow assurance"
+          },
+          {
+            "text": "Reduces exposure to negative Waha gas pricing"
+          }
+        ],
+        "Operational / Inventory Strategy": [
+          {
+            "text": "Delaware Basin Focus"
+          },
+          {
+            "text": "High-return development concentrated in core Delaware Basin inventory"
+          },
+          {
+            "text": "Inventory Life"
+          },
+          {
+            "text": "~10\u201315 years"
+          },
+          {
+            "text": "Woodford Shale"
+          },
+          {
+            "text": "Exploratory / delineation wells planned in 1H 2026"
+          },
+          {
+            "text": "Water Infrastructure"
+          },
+          {
+            "text": "New San Mateo water recycling facility under development in 2026"
+          }
+        ],
+        "Balance Sheet / Capital Allocation": [
+          {
+            "text": "Q1 2026 RBL Paydown"
+          },
+          {
+            "text": "~$350MM"
+          },
+          {
+            "text": "RBL Repayment Target"
+          },
+          {
+            "text": "Full repayment expected by mid-2026"
+          },
+          {
+            "text": "Quarterly Dividend"
+          },
+          {
+            "text": "$0.375/share"
+          },
+          {
+            "text": "Annualized Dividend"
+          },
+          {
+            "text": "$1.50/share"
+          },
+          {
+            "text": "Share Repurchase Authorization"
+          },
+          {
+            "text": "$400MM"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Oil Production"
+          },
+          {
+            "text": "~123 MBbl/d midpoint"
+          },
+          {
+            "text": "Total Production"
+          },
+          {
+            "text": "201\u2013205 Mboe/d"
+          },
+          {
+            "text": "Total CapEx"
+          },
+          {
+            "text": "$1.45\u2013$1.55B"
+          },
+          {
+            "text": "D/C/E CapEx"
+          },
+          {
+            "text": "$1.35\u2013$1.44B"
+          },
+          {
+            "text": "Midstream CapEx"
+          },
+          {
+            "text": "$100\u2013$110MM"
+          },
+          {
+            "text": "Operating Expenses"
+          },
+          {
+            "text": "$31\u2013$33/BOE"
+          },
+          {
+            "text": "D&C Cost"
+          },
+          {
+            "text": "~$795/ft"
+          },
+          {
+            "text": "Average Lateral Length"
+          },
+          {
+            "text": "~11,450 ft"
+          },
+          {
+            "text": "Adjusted Free Cash Flow"
+          },
+          {
+            "text": "$1.10\u2013$1.20B"
+          },
+          {
+            "text": "Midstream Adjusted EBITDA"
+          },
+          {
+            "text": "~$360MM"
+          }
+        ]
+      },
+      "heading": "MATADOR RESOURCES (MTDR) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "MUR": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Net Production"
+          },
+          {
+            "text": "167\u2013175 Mboe/d"
+          },
+          {
+            "text": "2026 Net Oil Production"
+          },
+          {
+            "text": "81\u201389 MBbl/d"
+          },
+          {
+            "text": "Oil + NGL Mix"
+          },
+          {
+            "text": "~50% of total production"
+          },
+          {
+            "text": "Midterm Production Growth"
+          },
+          {
+            "text": "~1%\u20135% annually"
+          },
+          {
+            "text": "Dependent on project timing and capital allocation"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Capital Expenditures"
+          },
+          {
+            "text": "$1.20\u2013$1.30B"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Lease Operating Expense (LOE)"
+          },
+          {
+            "text": "$10.00\u2013$12.00/BOE"
+          },
+          {
+            "text": "Exploration Expense"
+          },
+          {
+            "text": "$220\u2013$300MM"
+          }
+        ],
+        "Vietnam": [
+          {
+            "text": "Lac Da Vang / Golden Camel First Oil"
+          },
+          {
+            "text": "Q4 2026"
+          },
+          {
+            "text": "Lac Da Vang Net Peak Production"
+          },
+          {
+            "text": "~10\u201315 Mboe/d"
+          },
+          {
+            "text": "Long-Term Vietnam Production Potential"
+          },
+          {
+            "text": "~30\u201350 Mboe/d in the 2030s"
+          }
+        ],
+        "Gulf of Mexico / Gulf of America": [
+          {
+            "text": "Chinook #8 First Production"
+          },
+          {
+            "text": "2H 2026"
+          },
+          {
+            "text": "Chinook #8 Gross Initial Production"
+          },
+          {
+            "text": "~15 Mboe/d"
+          },
+          {
+            "text": "Banjo / Cello First Production"
+          },
+          {
+            "text": "Q4 2027"
+          },
+          {
+            "text": "Banjo / Cello Net Production Contribution"
+          },
+          {
+            "text": "~4 Mboe/d beginning in 2028"
+          }
+        ],
+        "C\u00f4te d\u2019Ivoire": [
+          {
+            "text": "Bubale-1X Exploration Results"
+          },
+          {
+            "text": "Expected Q2 2026"
+          },
+          {
+            "text": "Gross Recoverable Resource Potential"
+          },
+          {
+            "text": "~340\u2013850 MMBOE"
+          }
+        ],
+        "Shareholder Returns": [
+          {
+            "text": "Adjusted FCF Return Policy"
+          },
+          {
+            "text": "Minimum 50% of adjusted free cash flow returned to shareholders"
+          },
+          {
+            "text": "Share Repurchase Authorization Remaining"
+          },
+          {
+            "text": "~$550MM as of March 31, 2026"
+          },
+          {
+            "text": "Quarterly Dividend"
+          },
+          {
+            "text": "$0.35/share"
+          },
+          {
+            "text": "Annualized Dividend"
+          },
+          {
+            "text": "$1.40/share"
+          }
+        ],
+        "Balance Sheet": [
+          {
+            "text": "2026 Debt Reduction"
+          },
+          {
+            "text": "~$50MM paid down in early 2026"
+          },
+          {
+            "text": "Capital Allocation Priorities"
+          },
+          {
+            "text": "Debt reduction"
+          },
+          {
+            "text": "Shareholder returns"
+          },
+          {
+            "text": "Disciplined reinvestment"
+          },
+          {
+            "text": "Major offshore development projects"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Total Net Production"
+          },
+          {
+            "text": "167\u2013175 Mboe/d"
+          },
+          {
+            "text": "Net Oil Production"
+          },
+          {
+            "text": "81\u201389 MBbl/d"
+          },
+          {
+            "text": "Capital Expenditures"
+          },
+          {
+            "text": "$1.20\u2013$1.30B"
+          },
+          {
+            "text": "Exploration Expense"
+          },
+          {
+            "text": "$220\u2013$300MM"
+          },
+          {
+            "text": "LOE"
+          },
+          {
+            "text": "$10.00\u2013$12.00/BOE"
+          },
+          {
+            "text": "Lac Da Vang First Oil"
+          },
+          {
+            "text": "Q4 2026"
+          },
+          {
+            "text": "Chinook #8 First Production"
+          },
+          {
+            "text": "2H 2026"
+          },
+          {
+            "text": "Adjusted FCF Return Policy"
+          },
+          {
+            "text": "\u226550% to shareholders"
+          },
+          {
+            "text": "Quarterly Dividend"
+          },
+          {
+            "text": "$0.35/share"
+          }
+        ]
+      },
+      "heading": "MURPHY OIL (MUR) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "OVV": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "620\u2013645 Mboe/d"
+          },
+          {
+            "text": "2026 Oil & Condensate Production"
+          },
+          {
+            "text": "205\u2013212 Mbbl/d"
+          },
+          {
+            "text": "2026 Natural Gas Production"
+          },
+          {
+            "text": "2,000\u20132,100 MMcf/d"
+          },
+          {
+            "text": "2026 NGL Production"
+          },
+          {
+            "text": "80\u201385 Mbbl/d"
+          },
+          {
+            "text": "Q2 2026 Total Production"
+          },
+          {
+            "text": "610\u2013635 Mboe/d"
+          },
+          {
+            "text": "Expected toward lower end of run-rate due to planned Montney plant turnarounds"
+          },
+          {
+            "text": "Production Strategy"
+          },
+          {
+            "text": "Stay-flat / maintenance production program"
+          },
+          {
+            "text": "Level-loaded activity across core basins"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total Capital Investment"
+          },
+          {
+            "text": "$2.25\u2013$2.35B"
+          },
+          {
+            "text": "Q2 2026 Capital"
+          },
+          {
+            "text": "$550\u2013$600MM"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "Upstream Operating Expenses"
+          },
+          {
+            "text": "$3.00\u2013$3.50/BOE"
+          },
+          {
+            "text": "Transportation & Processing"
+          },
+          {
+            "text": "$8.75\u2013$9.25/BOE"
+          }
+        ],
+        "Operational Efficiency": [
+          {
+            "text": "2026 D&C Cost Improvement"
+          },
+          {
+            "text": "~$25/ft reduction vs. 2025"
+          },
+          {
+            "text": "Key Efficiency Drivers"
+          },
+          {
+            "text": "Faster drilling"
+          },
+          {
+            "text": "Optimized completion designs"
+          },
+          {
+            "text": "Facility optimization"
+          },
+          {
+            "text": "AI / machine-learning operational optimization"
+          }
+        ],
+        "NuVista Integration / Synergies": [
+          {
+            "text": "Annual Synergy Target"
+          },
+          {
+            "text": "~$100MM"
+          },
+          {
+            "text": "Capital Savings"
+          },
+          {
+            "text": "~$1MM per well"
+          },
+          {
+            "text": "Montney Inventory Added"
+          },
+          {
+            "text": "~930 net 10,000-ft equivalent well locations"
+          }
+        ],
+        "Inventory": [
+          {
+            "text": "Permian Premium Inventory"
+          },
+          {
+            "text": "~12\u201315 years"
+          },
+          {
+            "text": "Montney Premium Inventory"
+          },
+          {
+            "text": "~15\u201320 years"
+          }
+        ],
+        "Portfolio / Debt Reduction": [
+          {
+            "text": "Anadarko Divestiture"
+          },
+          {
+            "text": "Expected to close in 2026"
+          },
+          {
+            "text": "Proceeds targeted toward debt reduction"
+          },
+          {
+            "text": "Expected Net Debt Following Anadarko Sale"
+          },
+          {
+            "text": "~$3.6B"
+          },
+          {
+            "text": "Strategic Focus"
+          },
+          {
+            "text": "Permian"
+          },
+          {
+            "text": "Montney"
+          }
+        ],
+        "Shareholder Returns": [
+          {
+            "text": "Long-Term FCF Return Framework"
+          },
+          {
+            "text": "\u226550% of annual free cash flow returned to shareholders"
+          },
+          {
+            "text": "2026 Initial FCF Return Target"
+          },
+          {
+            "text": "\u226575%"
+          },
+          {
+            "text": "Potential 2026 FCF Allocation"
+          },
+          {
+            "text": "~50%\u201375% to shareholders if higher commodity prices support accelerated debt reduction"
+          },
+          {
+            "text": "Share Repurchase Authorization"
+          },
+          {
+            "text": "$3.0B"
+          },
+          {
+            "text": "Share Repurchases Through April 30, 2026"
+          },
+          {
+            "text": "~3.2MM shares"
+          },
+          {
+            "text": "~$180MM"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Total Production"
+          },
+          {
+            "text": "620\u2013645 Mboe/d"
+          },
+          {
+            "text": "Oil & Condensate"
+          },
+          {
+            "text": "205\u2013212 Mbbl/d"
+          },
+          {
+            "text": "Natural Gas"
+          },
+          {
+            "text": "2,000\u20132,100 MMcf/d"
+          },
+          {
+            "text": "NGLs"
+          },
+          {
+            "text": "80\u201385 Mbbl/d"
+          },
+          {
+            "text": "Total Capital Investment"
+          },
+          {
+            "text": "$2.25\u2013$2.35B"
+          },
+          {
+            "text": "Upstream Operating Expense"
+          },
+          {
+            "text": "$3.00\u2013$3.50/BOE"
+          },
+          {
+            "text": "Transportation & Processing"
+          },
+          {
+            "text": "$8.75\u2013$9.25/BOE"
+          },
+          {
+            "text": "Annual Synergies"
+          },
+          {
+            "text": "~$100MM"
+          },
+          {
+            "text": "Expected Net Debt Post-Anadarko Sale"
+          },
+          {
+            "text": "~$3.6B"
+          },
+          {
+            "text": "FCF Return Framework"
+          },
+          {
+            "text": "\u226550% of annual FCF"
+          }
+        ]
+      },
+      "heading": "OVINTIV (OVV) \u2014 MANAGEMENT GUIDANCE"
+    },
+    "SM": {
+      "sections": {
+        "Production": [
+          {
+            "text": "2026 Total Production"
+          },
+          {
+            "text": "410\u2013430 Mboe/d"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Q2 2026 Total Production"
+          },
+          {
+            "text": "435\u2013450 Mboe/d"
+          },
+          {
+            "text": "2026 Oil Production"
+          },
+          {
+            "text": "222\u2013228 Mbbl/d"
+          },
+          {
+            "text": "Q2 2026 Oil Production"
+          },
+          {
+            "text": "228\u2013235 Mbbl/d"
+          },
+          {
+            "text": "2H 2026 Production Run Rate"
+          },
+          {
+            "text": "~430 Mboe/d"
+          },
+          {
+            "text": "2H 2026 Oil Run Rate"
+          },
+          {
+            "text": "~238 Mbbl/d"
+          }
+        ],
+        "Capital Expenditures": [
+          {
+            "text": "2026 Total Capital Expenditures"
+          },
+          {
+            "text": "$2.65\u2013$2.85B"
+          },
+          {
+            "text": "Status: Reaffirmed",
+            "label": "Status",
+            "value": "Reaffirmed"
+          },
+          {
+            "text": "Q2 2026 Capital Expenditures"
+          },
+          {
+            "text": "$815\u2013$855MM"
+          },
+          {
+            "text": "2026 DC&E Costs"
+          },
+          {
+            "text": "$2.30\u2013$2.50B"
+          },
+          {
+            "text": "Q2 2026 DC&E Costs"
+          },
+          {
+            "text": "$710\u2013$750MM"
+          },
+          {
+            "text": "2027 Capital Outlook"
+          },
+          {
+            "text": "Expected to remain approximately similar to 2026 levels"
+          },
+          {
+            "text": "Final spending dependent on commodity prices"
+          }
+        ],
+        "Operating Costs": [
+          {
+            "text": "2026 Lease Operating Expense (LOE)"
+          },
+          {
+            "text": "$6.50\u2013$6.80/BOE"
+          },
+          {
+            "text": "Q2 2026 LOE"
+          },
+          {
+            "text": "$6.50\u2013$6.80/BOE"
+          },
+          {
+            "text": "2026 Transportation"
+          },
+          {
+            "text": "$3.60\u2013$3.90/BOE"
+          },
+          {
+            "text": "Q2 2026 Transportation"
+          },
+          {
+            "text": "$3.60\u2013$3.90/BOE"
+          }
+        ],
+        "Operational Activity": [
+          {
+            "text": "2026 Net Wells Drilled"
+          },
+          {
+            "text": "~245 wells"
+          },
+          {
+            "text": "Q2 2026 Net Wells Drilled"
+          },
+          {
+            "text": "~75 wells"
+          },
+          {
+            "text": "2026 Net Wells Turned-in-Line (TIL)"
+          },
+          {
+            "text": "~295 wells"
+          },
+          {
+            "text": "Q2 2026 Net Wells TIL"
+          },
+          {
+            "text": "~75 wells"
+          }
+        ],
+        "Merger Synergies": [
+          {
+            "text": "Total Identified Synergy Target"
+          },
+          {
+            "text": "~$375MM NPV-10"
+          },
+          {
+            "text": "Prior: ~$200\u2013$300MM",
+            "label": "Prior",
+            "value": "~$200\u2013$300MM"
+          },
+          {
+            "text": "Status: Raised",
+            "label": "Status",
+            "value": "Raised"
+          },
+          {
+            "text": "Synergies Actioned as of May 2026"
+          },
+          {
+            "text": "~$300MM"
+          },
+          {
+            "text": "Remaining Synergy Timing"
+          },
+          {
+            "text": "Targeted by year-end 2026"
+          }
+        ],
+        "Portfolio / Divestitures": [
+          {
+            "text": "South Texas Asset Divestiture"
+          },
+          {
+            "text": "~$950MM proceeds"
+          },
+          {
+            "text": "Closed April 30, 2026"
+          },
+          {
+            "text": "Divestiture Target"
+          },
+          {
+            "text": "~$1.0B"
+          },
+          {
+            "text": "Core Inventory"
+          },
+          {
+            "text": "10+ years of high-quality, low-breakeven drilling inventory"
+          },
+          {
+            "text": "Core Basins"
+          },
+          {
+            "text": "Permian Basin"
+          },
+          {
+            "text": "DJ Basin"
+          }
+        ],
+        "Balance Sheet / Leverage": [
+          {
+            "text": "Year-End 2026 Leverage Target"
+          },
+          {
+            "text": "Low ~1.0x"
+          },
+          {
+            "text": "2026 Senior Notes Retired"
+          },
+          {
+            "text": "~$819MM"
+          },
+          {
+            "text": "Deleveraging Drivers"
+          },
+          {
+            "text": "Free cash flow"
+          },
+          {
+            "text": "South Texas divestiture proceeds"
+          },
+          {
+            "text": "Merger synergy capture"
+          }
+        ],
+        "Shareholder Returns": [
+          {
+            "text": "Fixed Dividend"
+          },
+          {
+            "text": "Increased ~10% in Q1 2026"
+          },
+          {
+            "text": "Share Repurchase Allocation"
+          },
+          {
+            "text": "~20% of quarterly free cash flow"
+          },
+          {
+            "text": "Future Share Repurchases"
+          },
+          {
+            "text": "Potential to increase allocation as leverage targets are achieved"
+          }
+        ],
+        "Key 2026 Guidance Inputs": [
+          {
+            "text": "Total Production"
+          },
+          {
+            "text": "410\u2013430 Mboe/d"
+          },
+          {
+            "text": "Oil Production"
+          },
+          {
+            "text": "222\u2013228 Mbbl/d"
+          },
+          {
+            "text": "Total CapEx"
+          },
+          {
+            "text": "$2.65\u2013$2.85B"
+          },
+          {
+            "text": "DC&E Costs"
+          },
+          {
+            "text": "$2.30\u2013$2.50B"
+          },
+          {
+            "text": "LOE"
+          },
+          {
+            "text": "$6.50\u2013$6.80/BOE"
+          },
+          {
+            "text": "Transportation"
+          },
+          {
+            "text": "$3.60\u2013$3.90/BOE"
+          },
+          {
+            "text": "Net Wells Drilled"
+          },
+          {
+            "text": "~245"
+          },
+          {
+            "text": "Net Wells TIL"
+          },
+          {
+            "text": "~295"
+          },
+          {
+            "text": "2H Production Run Rate"
+          },
+          {
+            "text": "~430 Mboe/d"
+          },
+          {
+            "text": "2H Oil Run Rate"
+          },
+          {
+            "text": "~238 Mbbl/d"
+          },
+          {
+            "text": "Synergy Target"
+          },
+          {
+            "text": "~$375MM NPV-10"
+          },
+          {
+            "text": "Year-End Leverage Target"
+          },
+          {
+            "text": "Low ~1.0x"
+          }
+        ]
+      },
+      "heading": "SM ENERGY (SM) \u2014 MANAGEMENT GUIDANCE"
+    }
+  }
+}
