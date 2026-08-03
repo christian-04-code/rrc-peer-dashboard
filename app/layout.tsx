@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
+import { assertRuntimeRegistriesValid } from "@/lib/validation/runtime-validation";
 import "./globals.css";
+
+const registryValidation = assertRuntimeRegistriesValid();
+
+if (process.env.NODE_ENV !== "production" && registryValidation.warnings.length > 0) {
+  console.warn(
+    "Dashboard registry validation warnings:\n" +
+      registryValidation.warnings
+        .map((issue) => `- ${issue.code} at ${issue.path}: ${issue.message}`)
+        .join("\n")
+  );
+}
 
 export const metadata: Metadata = {
   title: "RRC Peer Intelligence",
