@@ -1,0 +1,35 @@
+{
+  "environment": "mock",
+  "generatedAt": "2026-08-03T00:00:00Z",
+  "disclaimer": "RRC guidance values reflect repository-supported project assumptions; live market values and unsupported peer values are mock or null until adapters are connected.",
+  "companies": {
+    "RRC": {
+      "metrics": {
+        "share_price": { "value": 41.2, "displayValue": "$41.20", "status": "mock", "note": "Mock market value" },
+        "total_production": { "value": 2.6, "displayValue": "~2.6 Bcfe/d", "status": "supported", "note": "2027 management target" },
+        "free_cash_flow": { "value": 1700, "displayValue": ">$1.7B", "status": "supported", "note": "Cumulative 2026–2027 at stated price case" },
+        "capital_expenditures": { "low": 650, "high": 700, "displayValue": "$650–700MM", "status": "supported", "note": "Annual 2026–2027 guidance" },
+        "net_leverage": { "value": 0.5, "displayValue": "0.5x", "status": "mock", "note": "Mock display value pending normalized selector" }
+      }
+    },
+    "AR": { "metrics": null },
+    "CNX": { "metrics": null },
+    "CRK": { "metrics": null },
+    "EQT": { "metrics": null },
+    "EXE": { "metrics": null },
+    "GPOR": { "metrics": null }
+  },
+  "marketRibbon": [
+    { "key": "henry_hub", "label": "Henry Hub", "displayValue": "$3.75", "change": "+1.4%", "status": "mock" },
+    { "key": "wti", "label": "WTI", "displayValue": "$65.00", "change": "-0.3%", "status": "mock" },
+    { "key": "rrc_price", "label": "RRC", "displayValue": "$41.20", "change": "+1.1%", "status": "mock" },
+    { "key": "ngl", "label": "NGL realization", "displayValue": "$24.00", "change": "+0.6%", "status": "mock" },
+    { "key": "appalachia_basis", "label": "Appalachia basis", "displayValue": "($0.42)", "change": "0.0%", "status": "mock" }
+  ],
+  "activityMessages": [
+    "Market prices refreshed",
+    "Peer metrics checked",
+    "Guidance records verified",
+    "Source graph synchronized"
+  ]
+}
