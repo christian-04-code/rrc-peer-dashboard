@@ -1,0 +1,70 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0e14;
+  --panel: #12171f;
+  --panel-alt: #161c26;
+  --border: #242b36;
+  --text: #e7ecf2;
+  --text-dim: #828e9c;
+  --text-faint: #525c68;
+  --pos: #2fbe8c;
+  --neg: #e5555c;
+
+  --blue: #0081c6;
+  --blue-soft: #3aa5de;
+  --blue-wash: rgba(0, 129, 198, 0.14);
+
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sans: "Inter", ui-sans-serif, sans-serif;
+  --display: "Space Grotesk", ui-sans-serif, sans-serif;
+
+  /* Peer brand colors — sampled directly from each company's logo */
+  --c-rrc: #0081c6;
+  --c-ar: #036a36;
+  --c-cnx: #168bbd;
+  --c-crk: #aa8c54;
+  --c-eqt: #e50670;
+  --c-exe: #0072b5;
+  --c-gpor: #93d500;
+  --c-neutral: #3d4552;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-alt: var(--panel-alt);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+
+  --color-c-rrc: var(--c-rrc);
+  --color-c-ar: var(--c-ar);
+  --color-c-cnx: var(--c-cnx);
+  --color-c-crk: var(--c-crk);
+  --color-c-eqt: var(--c-eqt);
+  --color-c-exe: var(--c-exe);
+  --color-c-gpor: var(--c-gpor);
+  --color-c-neutral: var(--c-neutral);
+
+  --font-mono: var(--mono);
+  --font-sans: var(--sans);
+  --font-display: var(--display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
