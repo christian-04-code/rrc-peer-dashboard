@@ -596,28 +596,28 @@
           "classification": "Company-Reported Historical (Actual)",
           "reported_or_calculated": "reported",
           "values": {
-            "Q1 2024": null,
-            "Q2 2024": null,
+            "Q1 2024": 13.0,
+            "Q2 2024": 10.0,
             "Q3 2024": null,
             "Q4 2024": null,
             "Q1 2025": 18.0,
             "Q2 2025": 20.0,
             "Q3 2025": 16.0,
-            "Q4 2025": null,
+            "Q4 2025": 15.0,
             "Q1 2026": 9.0
           },
           "source_by_quarter": {
-            "Q1 2024": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
-            "Q2 2024": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
+            "Q1 2024": "AlphaSense pull: RRC Q1 2024 Earnings Call Transcript, p. 1-2; directly reported",
+            "Q2 2024": "AlphaSense pull: RRC Q2 2024 earnings materials, p. 1-2; directly reported",
             "Q3 2024": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q4 2024": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q1 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q2 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q3 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
-            "Q4 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
+            "Q4 2025": "AlphaSense pull: Range Announces Fourth Quarter 2025 Results and 2026 Guidance, p. 1-2; wells drilled derived from annual total",
             "Q1 2026": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only"
           },
-          "notes": "Unavailable quarterly: RRC 10-K drilling table reports annual gross productive development wells (52 in 2024; 54 in 2025), but reviewed quarterly materials do not disclose comparable unique wells drilled by quarter. Quarterly activity-across-wells language was not used because it does not reconcile to the 10-K definition."
+          "notes": "Unavailable quarterly: RRC 10-K drilling table reports annual gross productive development wells (52 in 2024; 54 in 2025), but reviewed quarterly materials do not disclose comparable unique wells drilled by quarter. Quarterly activity-across-wells language was not used because it does not reconcile to the 10-K definition. Q1 2024, Q2 2024, and Q4 2025 filled from AlphaSense pull (2026-08-03); Q3 2024 and Q4 2024 remain not disclosed."
         },
         "Wells Turned-in-Line (TIL)": {
           "unit": "count",
@@ -2325,11 +2325,13 @@
             "Q1 2025": null,
             "Q2 2025": null,
             "Q3 2025": null,
-            "Q4 2025": null,
+            "Q4 2025": 15.0,
             "Q1 2026": null
           },
-          "source_by_quarter": {},
-          "notes": "Unavailable: no reliable standalone quarterly wells-drilled disclosure found in provided AR filings/releases; drilling records/spud/completion language not used."
+          "source_by_quarter": {
+            "Q4 2025": "AlphaSense pull: Antero Resources Fourth Quarter 2025 Results, p. 1; directly reported"
+          },
+          "notes": "Unavailable: no reliable standalone quarterly wells-drilled disclosure found in provided AR filings/releases; drilling records/spud/completion language not used. Q4 2025 filled from AlphaSense pull (2026-08-03); all other quarters remain not disclosed."
         },
         "Wells Turned-in-Line (TIL)": {
           "unit": "count",
