@@ -1,0 +1,162 @@
+{
+  "AR": {
+    "revenue_mm": {
+      "low": 2777.4,
+      "high": 2879.2,
+      "unit": "$mm",
+      "period": "2026 (annualized from full-year guided production)",
+      "source_text": "Natural gas stream only: 1017370-1017370 MMcf annual volume x $2.73-$2.83/Mcf realized price",
+      "confidence": "medium",
+      "classification": "model_calculation",
+      "partial": true,
+      "note": "This is AR's GAS-STREAM revenue only, not total company revenue. Ethane, C3+ NGL, and oil volumes are computed (see inputs_used.annual_volume_split) but are NOT priced or included here — this repo has no Mont Belvieu benchmark price (needed for ethane/NGL) and no WTI spot price (needed for oil) anywhere in market-data.json. See inputs_used.excluded_streams for the sourced differentials that exist and are ready to use once those benchmarks are added."
+    },
+    "ebitdax_mm": {
+      "low": 213.6,
+      "high": 457.9,
+      "unit": "$mm",
+      "period": "2026",
+      "source_text": "revenue_mm ($2777.4-$2879.2MM, gas-stream only) minus cash_unit_cost_total ($2.38-$2.52/Mcfe) x gas volume only (1017.4-1017.4 Bcf, NOT total production) = $2421.3-$2563.8MM",
+      "confidence": "low",
+      "classification": "model_calculation",
+      "partial": true,
+      "note": "Gas-only Revenue minus gas-only share of costs (cash_unit_cost_total applied to gas volume only, not total production, to keep revenue/cost on the same basis). Assumes AR's blended per-Mcfe cost rate applies uniformly across gas/NGL/oil — may not hold exactly. Ethane/C3+NGL/oil revenue and cost shares excluded entirely, same reasons as revenue_mm."
+    },
+    "inputs_used": {
+      "production_guidance_bcfe_per_day": {
+        "low": 4.1,
+        "high": 4.1,
+        "period": "2026",
+        "source_text": "2026 Total Production | ~4.1 Bcfe/d",
+        "confidence": "high",
+        "classification": "company_guidance"
+      },
+      "annual_production_bcfe": {
+        "low": 1496.5,
+        "high": 1496.5,
+        "unit": "Bcfe",
+        "source_text": "4.1-4.1 Bcfe/d x 365 days (2026 is not a leap year)",
+        "confidence": "high",
+        "classification": "model_calculation"
+      },
+      "q1_2026_actual_commodity_mix": {
+        "natural_gas_bcf": 236,
+        "ethane_mbbl": 6836,
+        "c3_plus_ngl_mbbl": 10872,
+        "oil_mbbl": 816,
+        "combined_bcfe_disclosed": 347,
+        "source": "2026_Q1_AR_10-Q.pdf",
+        "combined_bcfe_recomputed_from_components": 347.144,
+        "conversion_factor_note": "6 Mcf-equivalent per Bbl applied to ethane/C3+NGL/oil MBbl figures; recomputed combined total (347.144 Bcfe) matches AR's own disclosed combined total (347 Bcfe) within 0.144 Bcfe — confirms the conversion factor rather than assuming it."
+      },
+      "computed_mix_ratios": {
+        "natural_gas": 0.679833,
+        "ethane": 0.118153,
+        "c3_plus_ngl": 0.18791,
+        "oil": 0.014104,
+        "classification": "model_calculation",
+        "confidence": "medium",
+        "note": "Volume split applies AR's actual Q1 2026 commodity mix (from 10-Q) to 2026 full-year guided production — mix may shift over the year, not a company disclosure."
+      },
+      "annual_volume_split": {
+        "natural_gas_bcf": {
+          "low": 1017.37,
+          "high": 1017.37
+        },
+        "ethane_mbbl": {
+          "low": 29469.3,
+          "high": 29469.3
+        },
+        "c3_plus_ngl_mbbl": {
+          "low": 46868,
+          "high": 46868
+        },
+        "oil_mbbl": {
+          "low": 3517.7,
+          "high": 3517.7
+        }
+      },
+      "henry_hub_spot": {
+        "value": 2.63,
+        "unit": "$/MMBtu",
+        "date": "2026-07-27",
+        "source_text": "data/market-data.json henry_hub_daily_spot_price_usd_per_mmbtu, most recent date available",
+        "confidence": "high",
+        "classification": "live_market_data"
+      },
+      "natural_gas_differential": {
+        "low": 0.1,
+        "high": 0.2,
+        "unit": "$/Mcf",
+        "benchmark": "NYMEX Henry Hub",
+        "period": "2026",
+        "source_text": "Natural Gas Differential | +$0.10 to +$0.20/Mcf vs. NYMEX Henry Hub",
+        "confidence": "high",
+        "classification": "company_guidance"
+      },
+      "gas_price_per_mcf": {
+        "low": 2.73,
+        "high": 2.83,
+        "unit": "$/Mcf",
+        "period": "2026",
+        "source_text": "Henry Hub spot $2.63/MMBtu (2026-07-27, data/market-data.json) + AR guided natural gas differential +$0.1-$0.2/Mcf vs. NYMEX Henry Hub (data/differentials_normalized.json)",
+        "confidence": "medium",
+        "classification": "model_calculation",
+        "note": "Henry Hub is quoted in $/MMBtu; this treats $/MMBtu as numerically equal to $/Mcf per common industry shorthand. Pipeline-quality natural gas is typically ~1.02-1.035 MMBtu per Mcf, so this introduces a small, un-adjusted ~2-4% approximation — not a Btu-content-adjusted price."
+      },
+      "cash_unit_cost_total": {
+        "low": 2.38,
+        "high": 2.52,
+        "unit": "$/Mcfe",
+        "period": "2026",
+        "source_text": "2026 Cash Production Expense: $2.25–$2.35/Mcfe + Cash G&A: $0.11–$0.13/Mcfe + Net Marketing Expense: $0.02–$0.04/Mcfe (summed by this script — see classification)",
+        "confidence": "high",
+        "classification": "model_calculation",
+        "note": "AR bundles LOE+GP&T+taxes into one line; not directly comparable to peers who report these separately."
+      },
+      "excluded_streams": {
+        "ethane": {
+          "differential": {
+            "low": 2,
+            "high": 3,
+            "unit": "$/bbl",
+            "benchmark": "Mont Belvieu",
+            "period": "2026",
+            "source_text": "Ethane Differential | Updated indication: +$2.00 to +$3.00/bbl vs. Mont Belvieu (Prior: +$1.00 to +$2.00/bbl)",
+            "confidence": "low",
+            "note": "Requires direct company-source verification before model input — AR's own source text flags this as an indication, not confirmed guidance. Do not use for Layer 3 forecasting until independently verified.",
+            "classification": "company_guidance"
+          },
+          "excluded_because": "Ethane volume is computed in annual_volume_split, and AR's own guided differential exists in differentials_normalized.json, but this repo has no Mont Belvieu benchmark spot price anywhere — so ethane is excluded from revenue_mm entirely, not estimated."
+        },
+        "c3_plus_ngl": {
+          "differential": {
+            "low": -0.5,
+            "high": 0.5,
+            "unit": "$/bbl",
+            "benchmark": "Mont Belvieu",
+            "period": "2026",
+            "source_text": "C3+ NGL Differential | ($0.50) to +$0.50/bbl vs. Mont Belvieu",
+            "confidence": "high",
+            "note": "AR discloses a C3+ NGL differential (propane-plus only), not a blanket NGL differential like RRC's — narrower scope, not directly comparable to RRC's ngl_differential.",
+            "classification": "company_guidance"
+          },
+          "excluded_because": "C3+ NGL volume is computed in annual_volume_split, and AR's own guided differential exists in differentials_normalized.json, but this repo has no Mont Belvieu benchmark spot price anywhere — so c3+ ngl is excluded from revenue_mm entirely, not estimated."
+        },
+        "oil": {
+          "differential": {
+            "low": -16,
+            "high": -12,
+            "unit": "$/bbl",
+            "benchmark": "WTI",
+            "period": "2026",
+            "source_text": "Oil / Condensate Differential | ($12.00)–($16.00)/bbl vs. WTI",
+            "confidence": "high",
+            "classification": "company_guidance"
+          },
+          "excluded_because": "Oil volume is computed in annual_volume_split, and AR's own guided differential exists in differentials_normalized.json, but this repo has no WTI benchmark spot price anywhere — so oil is excluded from revenue_mm entirely, not estimated."
+        }
+      }
+    }
+  }
+}

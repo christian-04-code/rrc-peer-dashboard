@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "refresh-market-data": "tsx scripts/refresh-market-data.ts",
     "normalize-guidance": "tsx scripts/normalize-guidance.ts",
-    "normalize-differentials": "tsx scripts/normalize-differentials.ts"
+    "normalize-differentials": "tsx scripts/normalize-differentials.ts",
+    "build-forecast-management-case": "tsx scripts/build-forecast-management-case.ts"
   },
   "repository": {
     "type": "git",
