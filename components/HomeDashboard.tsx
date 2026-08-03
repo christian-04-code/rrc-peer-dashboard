@@ -9,8 +9,14 @@ import crkLogo from "@/assets/logos/CRK.png";
 import eqtLogo from "@/assets/logos/EQT.png";
 import exeLogo from "@/assets/logos/EXE.png";
 import gporLogo from "@/assets/logos/GPOR.svg";
+import {
+  activityMessages,
+  fixtureDisclaimer,
+  getHomepageMetrics,
+  marketRibbon,
+  type Ticker
+} from "@/lib/dashboard/homepage-data";
 
-type Ticker = "RRC" | "AR" | "CNX" | "CRK" | "EQT" | "EXE" | "GPOR";
 type Metric = "production" | "fcf" | "capex" | "debt" | "valuation";
 type Workspace = "chart" | "map";
 
@@ -18,47 +24,17 @@ type CompanyView = {
   name: string;
   subtitle: string;
   logo: StaticImageData | string;
-  metrics: { label: string; value: string; note: string }[];
 };
 
 const companies: Record<Ticker, CompanyView> = {
-  RRC: {
-    name: "Range Resources",
-    subtitle: "Appalachian natural gas and NGL producer",
-    logo: rrcLogo,
-    metrics: [
-      { label: "Share price", value: "$41.20", note: "Mock market value" },
-      { label: "2027 production", value: "~2.6 Bcfe/d", note: "Management target" },
-      { label: "2026–27 FCF", value: ">$1.7B", note: "At stated price case" },
-      { label: "Annual capital", value: "$650–700MM", note: "2026–2027" },
-      { label: "Net leverage", value: "0.5x", note: "Mock display value" }
-    ]
-  },
-  AR: { name: "Antero Resources", subtitle: "Appalachian gas and NGL producer", logo: arLogo, metrics: mockMetrics("AR") },
-  CNX: { name: "CNX Resources", subtitle: "Appalachian natural gas producer", logo: cnxLogo, metrics: mockMetrics("CNX") },
-  CRK: { name: "Comstock Resources", subtitle: "Haynesville natural gas producer", logo: crkLogo, metrics: mockMetrics("CRK") },
-  EQT: { name: "EQT Corporation", subtitle: "Large-scale Appalachian gas producer", logo: eqtLogo, metrics: mockMetrics("EQT") },
-  EXE: { name: "Expand Energy", subtitle: "Diversified U.S. natural gas producer", logo: exeLogo, metrics: mockMetrics("EXE") },
-  GPOR: { name: "Gulfport Energy", subtitle: "Appalachian-focused gas producer", logo: gporLogo, metrics: mockMetrics("GPOR") }
+  RRC: { name: "Range Resources", subtitle: "Appalachian natural gas and NGL producer", logo: rrcLogo },
+  AR: { name: "Antero Resources", subtitle: "Appalachian gas and NGL producer", logo: arLogo },
+  CNX: { name: "CNX Resources", subtitle: "Appalachian natural gas producer", logo: cnxLogo },
+  CRK: { name: "Comstock Resources", subtitle: "Haynesville natural gas producer", logo: crkLogo },
+  EQT: { name: "EQT Corporation", subtitle: "Large-scale Appalachian gas producer", logo: eqtLogo },
+  EXE: { name: "Expand Energy", subtitle: "Diversified U.S. natural gas producer", logo: exeLogo },
+  GPOR: { name: "Gulfport Energy", subtitle: "Appalachian-focused gas producer", logo: gporLogo }
 };
-
-function mockMetrics(ticker: string) {
-  return [
-    { label: "Share price", value: "—", note: `${ticker} adapter pending` },
-    { label: "Production", value: "—", note: "Normalized data pending" },
-    { label: "Free cash flow", value: "—", note: "Consensus adapter pending" },
-    { label: "Capital", value: "—", note: "Guidance adapter pending" },
-    { label: "Net leverage", value: "—", note: "Derived selector pending" }
-  ];
-}
-
-const marketItems = [
-  ["Henry Hub", "$3.75", "+1.4%"],
-  ["WTI", "$65.00", "-0.3%"],
-  ["RRC", "$41.20", "+1.1%"],
-  ["NGL realization", "$24.00", "+0.6%"],
-  ["Appalachia basis", "($0.42)", "0.0%"]
-];
 
 export function HomeDashboard() {
   const [ticker, setTicker] = useState<Ticker>("RRC");
@@ -68,12 +44,12 @@ export function HomeDashboard() {
   const [activity, setActivity] = useState("Market ribbon initialized");
   const [drawer, setDrawer] = useState<string | null>(null);
   const company = companies[ticker];
+  const metrics = useMemo(() => getHomepageMetrics(ticker), [ticker]);
 
   useEffect(() => {
-    const messages = ["Market prices refreshed", "Peer metrics checked", "Guidance records verified", "Source graph synchronized"];
     let index = 0;
     const timer = window.setInterval(() => {
-      setActivity(messages[index % messages.length]);
+      setActivity(activityMessages[index % activityMessages.length]);
       index += 1;
     }, 2600);
     return () => window.clearInterval(timer);
@@ -98,9 +74,9 @@ export function HomeDashboard() {
       </header>
 
       <section className="market-ribbon" aria-label="Mock live market ribbon">
-        {marketItems.map(([label, value, change]) => (
-          <button key={label} onClick={() => setDrawer(`${label}: mock market context, timestamp, range, and source details.`)}>
-            <span>{label}</span><strong>{value}</strong><em>{change}</em>
+        {marketRibbon.map((item) => (
+          <button key={item.key} onClick={() => setDrawer(`${item.label}: ${item.status} market context, timestamp, range, and source details.`)}>
+            <span>{item.label}</span><strong>{item.displayValue}</strong><em>{item.change}</em>
           </button>
         ))}
       </section>
@@ -115,9 +91,9 @@ export function HomeDashboard() {
         </div>
 
         <section className="metric-grid">
-          {company.metrics.map((item, index) => (
-            <button key={item.label} className={index === metricIndex(metric) ? "metric active" : "metric"} onClick={() => setMetric(metricFromIndex(index))}>
-              <span>{item.label}</span><strong>{item.value}</strong><small>{item.note}</small>
+          {metrics.map((item, index) => (
+            <button key={item.key} className={index === metricIndex(metric) ? "metric active" : "metric"} onClick={() => setMetric(metricFromIndex(index))}>
+              <span>{item.label}</span><strong>{item.displayValue}</strong><small>{item.note}</small>
             </button>
           ))}
         </section>
@@ -142,6 +118,8 @@ export function HomeDashboard() {
             <div className="panel"><h2>Live data engine</h2><ul><li><span>Market prices</span><strong>Updating</strong></li><li><span>SEC filings</span><strong>Synced</strong></li><li><span>Guidance parser</span><strong>Complete</strong></li><li><span>Peer metrics</span><strong>Ready</strong></li></ul></div>
           </aside>
         </section>
+
+        <p className="fixture-note">{fixtureDisclaimer}</p>
       </section>
 
       {drawer && <div className="drawer-backdrop" onClick={() => setDrawer(null)}><aside className="drawer" onClick={(event) => event.stopPropagation()}><button onClick={() => setDrawer(null)}>Close</button><h2>Detail drawer</h2><p>{drawer}</p><p className="muted">Production build must attach exact source metadata and normalized record IDs here.</p></aside></div>}
