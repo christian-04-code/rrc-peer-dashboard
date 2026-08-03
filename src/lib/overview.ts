@@ -86,6 +86,12 @@ const SCORECARD_CONFIG: {
   },
   { name: "Total Cash Unit Cost", metricName: "Total Cash Unit Costs", group: "metrics", higherIsBetter: false },
   { name: "Realized Gas Price", metricName: "Realized Natural Gas Price", group: "metrics", higherIsBetter: true },
+  {
+    name: "EV / LTM EBITDAX",
+    metricName: "EV / LTM Normalized EBITDAX",
+    group: "normalized_metrics",
+    higherIsBetter: false,
+  },
 ];
 
 function buildScorecard(historical: ReturnType<typeof getHistoricalData>, quarter: Quarter): ScorecardCardData[] {

@@ -24,11 +24,13 @@ export default function ValuationPage() {
             share price, shares outstanding, net debt, and forecast EBITDAX / FCF — rather than hard-coded.
           </p>
           <p>
-            Historical (actual, non-forecast) EV / LTM EBITDAX and leverage are already available on the{" "}
+            Historical (non-forecast) leverage and EV / LTM EBITDAX are already available on the{" "}
             <Link href="/" className="text-blue-soft underline">
               Overview
             </Link>{" "}
-            page, sourced directly from <code>data/historical.json</code>.
+            page scorecard, sourced from <code>data/historical.json</code>. EV / LTM EBITDAX there is a calculated
+            valuation multiple (Enterprise Value ÷ trailing four-quarter Normalized EBITDAX) — not a company-reported
+            figure — as noted on that card.
           </p>
         </div>
       </div>
