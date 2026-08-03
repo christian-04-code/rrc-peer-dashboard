@@ -1,0 +1,93 @@
+{
+  "RRC": {
+    "natural_gas_differential": {
+      "low": -0.45,
+      "high": -0.35,
+      "unit": "$/Mcf",
+      "benchmark": "NYMEX",
+      "period": "2026",
+      "source_text": "Natural Gas Differential | ($0.35)–($0.45)/Mcf vs. NYMEX",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "ngl_differential": {
+      "low": 1.25,
+      "high": 2.5,
+      "unit": "$/bbl",
+      "benchmark": "Mont Belvieu",
+      "period": "2026",
+      "source_text": "NGL Differential | 2026 Guidance: +$1.25 to +$2.50/bbl vs. Mont Belvieu (Prior Guidance: $0.00 to +$1.00/bbl, Status: Raised)",
+      "confidence": "high",
+      "note": "Raised from prior guidance of $0.00 to +$1.00/bbl.",
+      "classification": "company_guidance"
+    },
+    "oil_condensate_differential": {
+      "low": -14,
+      "high": -10,
+      "unit": "$/bbl",
+      "benchmark": "WTI",
+      "period": "2026",
+      "source_text": "Oil / Condensate Differential | ($10.00)–($14.00)/bbl vs. WTI",
+      "confidence": "high",
+      "classification": "company_guidance"
+    }
+  },
+  "AR": {
+    "natural_gas_differential": {
+      "low": 0.1,
+      "high": 0.2,
+      "unit": "$/Mcf",
+      "benchmark": "NYMEX Henry Hub",
+      "period": "2026",
+      "source_text": "Natural Gas Differential | +$0.10 to +$0.20/Mcf vs. NYMEX Henry Hub",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "ngl_differential": {
+      "low": -0.5,
+      "high": 0.5,
+      "unit": "$/bbl",
+      "benchmark": "Mont Belvieu",
+      "period": "2026",
+      "source_text": "C3+ NGL Differential | ($0.50) to +$0.50/bbl vs. Mont Belvieu",
+      "confidence": "high",
+      "note": "AR discloses a C3+ NGL differential (propane-plus only), not a blanket NGL differential like RRC's — narrower scope, not directly comparable to RRC's ngl_differential.",
+      "classification": "company_guidance"
+    },
+    "oil_condensate_differential": {
+      "low": -16,
+      "high": -12,
+      "unit": "$/bbl",
+      "benchmark": "WTI",
+      "period": "2026",
+      "source_text": "Oil / Condensate Differential | ($12.00)–($16.00)/bbl vs. WTI",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "ethane_differential": {
+      "low": 2,
+      "high": 3,
+      "unit": "$/bbl",
+      "benchmark": "Mont Belvieu",
+      "period": "2026",
+      "source_text": "Ethane Differential | Updated indication: +$2.00 to +$3.00/bbl vs. Mont Belvieu (Prior: +$1.00 to +$2.00/bbl)",
+      "confidence": "low",
+      "note": "Requires direct company-source verification before model input — AR's own source text flags this as an indication, not confirmed guidance. Do not use for Layer 3 forecasting until independently verified.",
+      "classification": "company_guidance"
+    }
+  },
+  "CNX": {
+    "natural_gas_differential": {
+      "low": -0.64,
+      "high": -0.64,
+      "unit": "$/MMBtu",
+      "period": "2026",
+      "source_text": "Natural Gas Differential | Updated: ~($0.64)/MMBtu (Prior: ~($0.56)/MMBtu, Status: Widened)",
+      "confidence": "medium",
+      "note": "Unit is $/MMBtu, not $/Mcf like RRC and AR — do not convert or compare directly against their natural_gas_differential without an explicit Btu-content conversion. No benchmark named in the source bullet (unlike RRC/AR's 'vs. NYMEX'), so benchmark is omitted rather than assumed. Widened from prior guidance of ~($0.56)/MMBtu.",
+      "classification": "company_guidance"
+    },
+    "ngl_differential": null,
+    "oil_condensate_differential": null
+  }
+}

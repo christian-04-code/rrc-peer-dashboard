@@ -1,7 +1,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import type { GuidanceNormalizedData, HistoricalData, MarketData } from "./types";
+import type { DifferentialNormalizedData, GuidanceNormalizedData, HistoricalData, MarketData } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -21,4 +21,8 @@ export function getMarketData(): MarketData {
 
 export function getGuidanceNormalized(): GuidanceNormalizedData {
   return readJson<GuidanceNormalizedData>("guidance_normalized.json");
+}
+
+export function getDifferentialsNormalized(): DifferentialNormalizedData {
+  return readJson<DifferentialNormalizedData>("differentials_normalized.json");
 }

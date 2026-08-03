@@ -117,3 +117,36 @@ export interface GuidanceNormalizedPeer {
 }
 
 export type GuidanceNormalizedData = Record<string, GuidanceNormalizedPeer>;
+
+/** Same meaning as GuidanceClassification, reused for scripts/normalize-differentials.ts output.
+ *  In practice every differential is "company_guidance" (a direct quote) — no differential
+ *  currently requires summing components — but kept distinct for schema clarity. */
+export type DifferentialClassification = "company_guidance" | "model_calculation";
+
+export interface DifferentialValue {
+  low: number;
+  high: number;
+  unit: string;
+  /** Named benchmark the differential is quoted against (e.g. "NYMEX", "Mont Belvieu", "WTI").
+   *  Omitted when the source bullet doesn't state one — see CNX natural gas. */
+  benchmark?: string;
+  period: string;
+  source_text: string;
+  confidence: "high" | "medium" | "low";
+  classification: DifferentialClassification;
+  note?: string;
+}
+
+/** Only RRC, AR, and CNX are represented in differentials_normalized.json — CRK/EQT/EXE have no
+ *  differential disclosures and GPOR discloses absolute price assumptions, not differentials, so
+ *  none of the four appear as keys at all. */
+export interface DifferentialNormalizedPeer {
+  natural_gas_differential: DifferentialValue | null;
+  ngl_differential: DifferentialValue | null;
+  oil_condensate_differential: DifferentialValue | null;
+  /** Peer-specific extra (AR only). AR's own source text flags this as needing verification —
+   *  never fold into ngl_differential or drop that caveat from its `note`. */
+  ethane_differential?: DifferentialValue;
+}
+
+export type DifferentialNormalizedData = Record<string, DifferentialNormalizedPeer>;
