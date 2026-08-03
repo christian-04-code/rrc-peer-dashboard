@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "defaultCompany": "RRC",
+  "displayOrder": [
+    "RRC",
+    "AR",
+    "CNX",
+    "CRK",
+    "EQT",
+    "EXE",
+    "GPOR"
+  ],
+  "companies": {
+    "RRC": {
+      "ticker": "RRC",
+      "name": "Range Resources Corporation",
+      "shortName": "Range Resources",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/RRC.png",
+        "alt": "Range Resources logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": true,
+        "selectorLabel": "RRC",
+        "description": "Appalachian natural gas and NGL producer"
+      },
+      "business": {
+        "primaryRegion": "Appalachia",
+        "primaryBasin": "Marcellus",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs",
+          "Oil and Condensate"
+        ]
+      },
+      "map": {
+        "defaultView": "appalachia",
+        "exposureKeys": [
+          "marcellus",
+          "southwest-pennsylvania"
+        ],
+        "routeLayerKeys": [
+          "midwest",
+          "gulf-coast",
+          "lng-premium-gulf",
+          "local-northeast",
+          "ngl-export"
+        ]
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "AR": {
+      "ticker": "AR",
+      "name": "Antero Resources Corporation",
+      "shortName": "Antero Resources",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/AR.png",
+        "alt": "Antero Resources logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "AR",
+        "description": "Appalachian natural gas and NGL producer"
+      },
+      "business": {
+        "primaryRegion": "Appalachia",
+        "primaryBasin": "Marcellus and Utica",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs",
+          "Oil and Condensate"
+        ]
+      },
+      "map": {
+        "defaultView": "appalachia",
+        "exposureKeys": [
+          "marcellus",
+          "utica"
+        ],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "CNX": {
+      "ticker": "CNX",
+      "name": "CNX Resources Corporation",
+      "shortName": "CNX Resources",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/CNX.png",
+        "alt": "CNX Resources logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "CNX",
+        "description": "Appalachian natural gas producer"
+      },
+      "business": {
+        "primaryRegion": "Appalachia",
+        "primaryBasin": "Marcellus and Utica",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs"
+        ]
+      },
+      "map": {
+        "defaultView": "appalachia",
+        "exposureKeys": [
+          "marcellus",
+          "utica"
+        ],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "CRK": {
+      "ticker": "CRK",
+      "name": "Comstock Resources, Inc.",
+      "shortName": "Comstock Resources",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/CRK.png",
+        "alt": "Comstock Resources logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "CRK",
+        "description": "Haynesville-focused natural gas producer"
+      },
+      "business": {
+        "primaryRegion": "Gulf Coast",
+        "primaryBasin": "Haynesville and Bossier",
+        "productFocus": [
+          "Natural Gas"
+        ]
+      },
+      "map": {
+        "defaultView": "gulf-coast",
+        "exposureKeys": [
+          "haynesville",
+          "bossier"
+        ],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "EQT": {
+      "ticker": "EQT",
+      "name": "EQT Corporation",
+      "shortName": "EQT",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/EQT.png",
+        "alt": "EQT Corporation logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "EQT",
+        "description": "Large-scale Appalachian natural gas producer"
+      },
+      "business": {
+        "primaryRegion": "Appalachia",
+        "primaryBasin": "Marcellus and Utica",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs"
+        ]
+      },
+      "map": {
+        "defaultView": "appalachia",
+        "exposureKeys": [
+          "marcellus",
+          "utica"
+        ],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "EXE": {
+      "ticker": "EXE",
+      "name": "Expand Energy Corporation",
+      "shortName": "Expand Energy",
+      "exchange": "NASDAQ",
+      "logo": {
+        "path": "assets/logos/EXE.png",
+        "alt": "Expand Energy logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "EXE",
+        "description": "Diversified U.S. natural gas producer"
+      },
+      "business": {
+        "primaryRegion": "United States",
+        "primaryBasin": "Diversified",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs",
+          "Oil and Condensate"
+        ]
+      },
+      "map": {
+        "defaultView": "united-states",
+        "exposureKeys": [],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    },
+    "GPOR": {
+      "ticker": "GPOR",
+      "name": "Gulfport Energy Corporation",
+      "shortName": "Gulfport Energy",
+      "exchange": "NYSE",
+      "logo": {
+        "path": "assets/logos/GPOR.svg",
+        "alt": "Gulfport Energy logo"
+      },
+      "ui": {
+        "enabled": true,
+        "defaultSelected": false,
+        "selectorLabel": "GPOR",
+        "description": "Appalachian-focused natural gas producer"
+      },
+      "business": {
+        "primaryRegion": "Appalachia",
+        "primaryBasin": "Utica and Marcellus",
+        "productFocus": [
+          "Natural Gas",
+          "NGLs",
+          "Oil and Condensate"
+        ]
+      },
+      "map": {
+        "defaultView": "appalachia",
+        "exposureKeys": [
+          "utica",
+          "marcellus"
+        ],
+        "routeLayerKeys": []
+      },
+      "data": {
+        "historicalEnabled": true,
+        "guidanceEnabled": true,
+        "consensusEnabled": true,
+        "marketEnabled": true
+      }
+    }
+  },
+  "implementationRules": {
+    "identitySource": "Use this registry as the single source of truth for company identity, selector labels, logo paths, descriptions, and default map context.",
+    "selectionBehavior": "When primaryCompany changes, update the logo, company name, description, metrics, chart, map, insights, and source context atomically.",
+    "logoFallback": "If a logo fails to load, render the ticker in a neutral fallback mark and record a non-blocking UI error.",
+    "noStaleBranding": "Never display a logo, company name, metric, insight, map exposure, or source from the previously selected company after selection completes.",
+    "unsupportedExposure": "Do not invent map coordinates, routes, assets, or operating boundaries. Empty map arrays are intentional until authoritative geographic data is added."
+  }
+}
