@@ -1,9 +1,11 @@
+import { DifferentialsSnapshot } from "@/components/DifferentialsSnapshot";
 import { GuidanceSnapshot } from "@/components/GuidanceSnapshot";
 import { SectionLabel } from "@/components/SectionLabel";
-import { getGuidanceNormalized } from "@/lib/data";
+import { getDifferentialsNormalized, getGuidanceNormalized } from "@/lib/data";
 
 export default function ForecastPage() {
   const guidance = getGuidanceNormalized();
+  const differentials = getDifferentialsNormalized();
 
   return (
     <main className="mx-auto max-w-[1220px] px-5 py-7 sm:px-8">
@@ -16,6 +18,9 @@ export default function ForecastPage() {
 
       <SectionLabel>2026 Guidance Snapshot — Stage 1</SectionLabel>
       <GuidanceSnapshot guidance={guidance} />
+
+      <SectionLabel>Pricing Differentials</SectionLabel>
+      <DifferentialsSnapshot differentials={differentials} />
 
       <SectionLabel>Scenario Modeling — Not Yet Built</SectionLabel>
       <div className="rounded-[10px] border border-border bg-panel px-6.5 py-8">
