@@ -1,0 +1,37 @@
+{
+  "RRC": {
+    "companyName": "Range Resources Corporation",
+    "logoPath": "assets/logos/RRC.png",
+    "alt": "Range Resources logo"
+  },
+  "AR": {
+    "companyName": "Antero Resources Corporation",
+    "logoPath": "assets/logos/AR.png",
+    "alt": "Antero Resources logo"
+  },
+  "CNX": {
+    "companyName": "CNX Resources Corporation",
+    "logoPath": "assets/logos/CNX.png",
+    "alt": "CNX Resources logo"
+  },
+  "CRK": {
+    "companyName": "Comstock Resources, Inc.",
+    "logoPath": "assets/logos/CRK.png",
+    "alt": "Comstock Resources logo"
+  },
+  "EQT": {
+    "companyName": "EQT Corporation",
+    "logoPath": "assets/logos/EQT.png",
+    "alt": "EQT Corporation logo"
+  },
+  "EXE": {
+    "companyName": "Expand Energy Corporation",
+    "logoPath": "assets/logos/EXE.png",
+    "alt": "Expand Energy logo"
+  },
+  "GPOR": {
+    "companyName": "Gulfport Energy Corporation",
+    "logoPath": "assets/logos/GPOR.svg",
+    "alt": "Gulfport Energy logo"
+  }
+}
