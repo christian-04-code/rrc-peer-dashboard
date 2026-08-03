@@ -1,0 +1,280 @@
+{
+  "RRC": {
+    "production_total_bcfe_per_day": null,
+    "production_yearend_target_bcfe_per_day": {
+      "value": 2.5,
+      "unit": "Bcfe/d",
+      "period": "2026 YE (exit rate, not a full-year average)",
+      "source_text": "Year-End 2026 Target: ~2.5 Bcfe/d",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 650,
+      "high": 700,
+      "period": "2026",
+      "source_text": "2026 Total Capital Budget | $650\u2013$700MM",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 0.37,
+      "high": 0.39,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "Lease Operating Expense (LOE): $0.14\u2013$0.16/Mcfe + Cash G&A / G&A: ~$0.23/Mcfe (summed by this script \u2014 see classification)",
+      "confidence": "medium",
+      "classification": "model_calculation",
+      "partial": true,
+      "note": "Excludes GP&T \u2014 RRC discloses only price sensitivities, no absolute GP&T figure, so it cannot be included in a sum."
+    },
+    "financial_guidance": {
+      "fcf_mm": {
+        "low": 1700,
+        "high": 1700,
+        "period": "2026-2027 cumulative (not a single-year figure)",
+        "source_text": "2026\u20132027 Cumulative Free Cash Flow | $1.7B",
+        "confidence": "medium",
+        "classification": "company_guidance"
+      },
+      "ebitdax_mm": null
+    }
+  },
+  "AR": {
+    "production_total_bcfe_per_day": {
+      "low": 4.1,
+      "high": 4.1,
+      "period": "2026",
+      "source_text": "2026 Total Production | ~4.1 Bcfe/d",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 1100,
+      "high": 1300,
+      "period": "2026",
+      "source_text": "2026 Base D&C Capital: ~$1.0B + 2026 Land Capital: ~$100MM + Discretionary Growth Capital: up to ~$200MM additional (summed by this script \u2014 see classification)",
+      "confidence": "medium",
+      "classification": "model_calculation",
+      "note": "$1,300MM (top of range) includes discretionary growth capital, which AR describes as conditional/optional. Excludes Maintenance D&C (~$900MM) and Incremental Development D&C (~$100MM) \u2014 these are subsets already contained within Base D&C Capital, not additional spend."
+    },
+    "cash_unit_cost_total": {
+      "low": 2.38,
+      "high": 2.52,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "2026 Cash Production Expense: $2.25\u2013$2.35/Mcfe + Cash G&A: $0.11\u2013$0.13/Mcfe + Net Marketing Expense: $0.02\u2013$0.04/Mcfe (summed by this script \u2014 see classification)",
+      "confidence": "high",
+      "classification": "model_calculation",
+      "note": "AR bundles LOE+GP&T+taxes into one line; not directly comparable to peers who report these separately."
+    },
+    "financial_guidance": {
+      "fcf_mm": null,
+      "ebitdax_mm": null
+    }
+  },
+  "CNX": {
+    "production_total_bcfe_per_day": {
+      "low": 1.6575342465753424,
+      "high": 1.6986301369863013,
+      "period": "2026 (converted from annual total)",
+      "source_text": "2026 Total Production | 605\u2013620 Bcfe annual (\u00f7 365 days = 1.657534\u20131.698630 Bcfe/d)",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 556,
+      "high": 586,
+      "period": "2026",
+      "source_text": "2026 Total Capital Budget | $556\u2013$586MM",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 1.15,
+      "high": 1.15,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "Fully Burdened Cash Cost | ~$1.15/Mcfe | Represents total cash costs before DD&A",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "financial_guidance": {
+      "fcf_mm": {
+        "low": 525,
+        "high": 525,
+        "period": "2026",
+        "source_text": "2026 Free Cash Flow | Updated: ~$525MM (Prior: ~$550MM, Status: Lowered)",
+        "confidence": "medium",
+        "classification": "company_guidance"
+      },
+      "ebitdax_mm": {
+        "low": 1265,
+        "high": 1315,
+        "period": "2026",
+        "source_text": "2026 Adjusted EBITDAX | Updated: $1.265\u2013$1.315B (Prior: $1.310\u2013$1.360B, Status: Lowered)",
+        "confidence": "medium",
+        "classification": "company_guidance"
+      }
+    }
+  },
+  "CRK": {
+    "production_total_bcfe_per_day": {
+      "low": 1.25,
+      "high": 1.4,
+      "period": "2026",
+      "source_text": "2026 Total Production | 1,250\u20131,400 MMcfe/d (\u00f7 1000 = 1.25\u20131.4 Bcfe/d)",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 1400,
+      "high": 1500,
+      "period": "2026",
+      "source_text": "2026 Total CapEx | $1.4\u2013$1.5B",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 0.59,
+      "high": 0.69,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "Lease Operating Expense (LOE): $0.25\u2013$0.29/Mcfe + Gathering & Transportation: $0.34\u2013$0.40/Mcfe (summed by this script \u2014 see classification)",
+      "confidence": "medium",
+      "classification": "model_calculation",
+      "partial": true,
+      "note": "Excludes Cash G&A ($32\u201334MM, disclosed in absolute dollars not $/Mcfe \u2014 converting would require a production volume estimate, out of scope here) and excludes DD&A (non-cash)."
+    },
+    "financial_guidance": {
+      "fcf_mm": null,
+      "ebitdax_mm": null
+    }
+  },
+  "EQT": {
+    "production_total_bcfe_per_day": {
+      "low": 6.232876712328767,
+      "high": 6.506849315068493,
+      "period": "2026 (converted from annual total)",
+      "source_text": "2026 Total Sales Volume | 2,275\u20132,375 Bcfe annual (\u00f7 365 days = 6.232877\u20136.506849 Bcfe/d). Note: EQT's disclosed metric is \"Sales Volume,\" not literally \"Production.\"",
+      "confidence": "medium",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 2650,
+      "high": 2850,
+      "period": "2026",
+      "source_text": "2026 Total Maintenance + Growth Capital | ~$2.65\u2013$2.85B",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 1.07,
+      "high": 1.21,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "2026 Total Unit Costs | $1.07\u2013$1.21/Mcfe (includes full-year impact of Equitrans and Olympus)",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "financial_guidance": {
+      "fcf_mm": {
+        "low": 3500,
+        "high": 3500,
+        "period": "2026",
+        "source_text": "2026 Free Cash Flow | ~$3.5B (based on recent strip pricing)",
+        "confidence": "high",
+        "classification": "company_guidance"
+      },
+      "ebitdax_mm": {
+        "low": 6500,
+        "high": 6500,
+        "period": "2026",
+        "source_text": "2026 Adjusted EBITDA | ~$6.5B (based on recent strip pricing). Note: EQT labels this \"EBITDA,\" not \"EBITDAX,\" in this guidance excerpt.",
+        "confidence": "medium",
+        "classification": "company_guidance"
+      }
+    }
+  },
+  "EXE": {
+    "production_total_bcfe_per_day": {
+      "low": 7.4,
+      "high": 7.6,
+      "period": "2026",
+      "source_text": "2026 Total Production | 7,400\u20137,600 MMcfe/d (\u00f7 1000 = 7.4\u20137.6 Bcfe/d)",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 2850,
+      "high": 2850,
+      "period": "2026",
+      "source_text": "2026 Total Capital Investment | ~$2.85B",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 1.25,
+      "high": 1.43,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "Production Expense: $0.23\u2013$0.28/Mcfe + GP&T Expense: $0.95\u2013$1.05/Mcfe + General & Administrative: $0.07\u2013$0.10/Mcfe (summed by this script \u2014 see classification)",
+      "confidence": "high",
+      "classification": "model_calculation",
+      "note": "Excludes DD&A (non-cash)."
+    },
+    "financial_guidance": {
+      "fcf_mm": null,
+      "ebitdax_mm": null
+    },
+    "marketing_incremental_fcf_target_mm": {
+      "value": 500,
+      "unit": "$mm",
+      "period": "2026",
+      "source_text": "Marketing Optimization \u2014 Incremental FCF Target | ~$500MM",
+      "confidence": "high",
+      "note": "One-initiative target (Marketing Optimization), explicitly not company-wide FCF guidance \u2014 do not use as EXE's total FCF.",
+      "classification": "company_guidance"
+    }
+  },
+  "GPOR": {
+    "production_total_bcfe_per_day": {
+      "low": 1.03,
+      "high": 1.055,
+      "period": "2026",
+      "source_text": "2026 Total Net Production | 1.03\u20131.055 Bcfe per day",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "capex_total_mm": {
+      "low": 400,
+      "high": 430,
+      "period": "2026",
+      "source_text": "2026 Total Operated Capital Expenditures | $400\u2013$430MM",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "cash_unit_cost_total": {
+      "low": 1.35,
+      "high": 1.48,
+      "unit": "$/Mcfe",
+      "period": "2026",
+      "source_text": "2026 Total Unit Cash Costs | $1.35\u2013$1.48/Mcfe (includes lease operating expense, gathering, processing and transportation, production taxes, and recurring cash G&A)",
+      "confidence": "high",
+      "classification": "company_guidance"
+    },
+    "financial_guidance": {
+      "fcf_mm": null,
+      "ebitdax_mm": null
+    },
+    "fcf_growth_rate_pct": {
+      "value": 40,
+      "direction": "more than",
+      "period": "2026 YoY",
+      "source_text": "2026 Adjusted Free Cash Flow Growth | More than 40% year-over-year",
+      "confidence": "high",
+      "note": "Growth rate only, no dollar base disclosed. Could theoretically combine with a historical actual FCF base for a Layer 3 forecast calculation later \u2014 not used in Layer 2 normalization.",
+      "classification": "company_guidance"
+    }
+  }
+}

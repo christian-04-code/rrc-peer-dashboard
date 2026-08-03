@@ -73,3 +73,47 @@ export interface MarketData {
   eia_monthly_natural_gas_pricing: Record<string, unknown>[];
   us_electric_demand_pct_change_vs_prior_week: ElectricDemandRecord[];
 }
+
+/** "company_guidance" = direct quote from data/guidance.json. "model_calculation" = summed
+ *  by scripts/normalize-guidance.ts from multiple disclosed components. Distinct from
+ *  DataClassification above, which describes historical.json's actual-vs-guidance-vs-consensus
+ *  provenance — this describes whether a guidance figure itself was quoted or computed. */
+export type GuidanceClassification = "company_guidance" | "model_calculation";
+
+export interface GuidanceRangeValue {
+  low: number;
+  high: number;
+  unit?: string;
+  period: string;
+  source_text: string;
+  confidence: "high" | "medium" | "low";
+  classification: GuidanceClassification;
+  partial?: boolean;
+  note?: string;
+}
+
+export interface GuidancePointValue {
+  value: number;
+  unit?: string;
+  period: string;
+  source_text: string;
+  confidence: "high" | "medium" | "low";
+  classification: GuidanceClassification;
+  note?: string;
+  direction?: string;
+}
+
+export interface GuidanceNormalizedPeer {
+  production_total_bcfe_per_day: GuidanceRangeValue | null;
+  production_yearend_target_bcfe_per_day?: GuidancePointValue;
+  capex_total_mm: GuidanceRangeValue | null;
+  cash_unit_cost_total: GuidanceRangeValue | null;
+  financial_guidance: {
+    fcf_mm: GuidanceRangeValue | null;
+    ebitdax_mm: GuidanceRangeValue | null;
+  };
+  marketing_incremental_fcf_target_mm?: GuidancePointValue;
+  fcf_growth_rate_pct?: GuidancePointValue;
+}
+
+export type GuidanceNormalizedData = Record<string, GuidanceNormalizedPeer>;

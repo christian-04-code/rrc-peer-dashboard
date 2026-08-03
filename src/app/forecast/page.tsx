@@ -1,6 +1,10 @@
+import { GuidanceSnapshot } from "@/components/GuidanceSnapshot";
 import { SectionLabel } from "@/components/SectionLabel";
+import { getGuidanceNormalized } from "@/lib/data";
 
 export default function ForecastPage() {
+  const guidance = getGuidanceNormalized();
+
   return (
     <main className="mx-auto max-w-[1220px] px-5 py-7 sm:px-8">
       <div className="mb-6">
@@ -10,20 +14,20 @@ export default function ForecastPage() {
         </p>
       </div>
 
-      <SectionLabel>Not Yet Built</SectionLabel>
+      <SectionLabel>2026 Guidance Snapshot — Stage 1</SectionLabel>
+      <GuidanceSnapshot guidance={guidance} />
+
+      <SectionLabel>Scenario Modeling — Not Yet Built</SectionLabel>
       <div className="rounded-[10px] border border-border bg-panel px-6.5 py-8">
         <div className="max-w-[680px] font-mono text-[12.5px] leading-relaxed text-text-dim">
           <p className="mb-3 text-text">
-            This page is a placeholder. The dynamic forecast engine (Layer 3) has not been implemented yet.
+            The dynamic forecast engine (Layer 3) has not been implemented yet. The guidance figures above are a
+            direct display of what each company has disclosed — no EBITDAX, FCF, or other derived output is
+            calculated from them here.
           </p>
-          <p className="mb-3">
-            No forecast values — modeled, guided, or otherwise — are displayed here. Per project instructions, forecast
-            outputs must be calculated at runtime from historical data, management guidance, and market inputs, never
-            hard-coded.
-          </p>
-          <p className="mb-1 text-text-faint">When built, this page will support three views:</p>
+          <p className="mb-1 text-text-faint">When built, this page will support three scenario views on top of this guidance data:</p>
           <ul className="mb-3 list-disc space-y-1 pl-5 text-text-faint">
-            <li><span className="text-text-dim">Management Case</span> — driven by company guidance (data/guidance.json).</li>
+            <li><span className="text-text-dim">Management Case</span> — driven by the company guidance shown above.</li>
             <li><span className="text-text-dim">Live Market Case</span> — driven by current market inputs (data/market-data.json) applied to company-specific realization and cost models.</li>
             <li><span className="text-text-dim">Custom Case</span> — user-adjustable assumptions (Henry Hub, WTI, production, capex, unit costs) recalculating downstream outputs live.</li>
           </ul>

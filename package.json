@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "refresh-market-data": "tsx scripts/refresh-market-data.ts"
+    "refresh-market-data": "tsx scripts/refresh-market-data.ts",
+    "normalize-guidance": "tsx scripts/normalize-guidance.ts"
   },
   "repository": {
     "type": "git",
