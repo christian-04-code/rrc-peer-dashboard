@@ -1,5 +1,6 @@
 import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
-import { runRrcCompleteScenario, type RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
+import type { RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
+import { runRrcHedgedScenario } from "@/lib/forecast/scenarios/rrc-hedged";
 import { calculateDcf, calculateMultipleValuation } from "@/lib/forecast/valuation";
 
 export type RrcValuationAssumptions = {
@@ -19,7 +20,9 @@ function sumYear(
   year: number,
   field: "ebitdaxMillion" | "freeCashFlowMillion"
 ): number | null {
-  const values = periods.filter((period) => period.period.startsWith(String(year))).map((period) => period[field]);
+  const values = periods
+    .filter((period) => period.period.startsWith(String(year)))
+    .map((period) => period[field]);
   if (values.length !== 4 || values.some((value) => value === null)) return null;
   return (values as number[]).reduce((sum, value) => sum + value, 0);
 }
@@ -28,7 +31,7 @@ export function runRrcValuedScenario(
   strategy: RrcPost2027Strategy = "maintenance",
   assumptions: RrcValuationAssumptions = defaultRrcValuationAssumptions
 ) {
-  const complete = runRrcCompleteScenario(strategy);
+  const complete = runRrcHedgedScenario(strategy);
   const forecastPeriods = complete.forecast.periods;
   const endingBalanceSheet = complete.balanceSheet[complete.balanceSheet.length - 1];
   const dilutedSharesMillion = rrcQ1_2026Baseline.dilutedSharesMillion.value;
@@ -55,18 +58,28 @@ export function runRrcValuedScenario(
     dilutedSharesMillion
   });
 
+  const equityValueForFcfYield = multiple.equityValueMillion;
+  const forecast2027FcfMillion = annualFreeCashFlowMillion.find((item) => item.year === 2027)?.value ?? null;
+  const forecast2027FcfYield =
+    forecast2027FcfMillion === null || equityValueForFcfYield === null || equityValueForFcfYield <= 0
+      ? null
+      : forecast2027FcfMillion / equityValueForFcfYield;
+
   return {
     strategy,
     assumptions,
     complete,
     annualFreeCashFlowMillion,
     forecast2027EbitdaxMillion,
+    forecast2027FcfMillion,
+    forecast2027FcfYield,
     endingNetDebtMillion: netDebtMillion,
     multiple,
     dcf,
     notes: [
+      ...complete.notes,
       "The target EV/EBITDAX multiple, discount rate, and terminal growth rate are explicit modeled assumptions, not reported company facts.",
-      "The valuation uses the deterministic forecast engine and does not substitute a market-price target when an input is unavailable.",
+      "The valuation uses the deterministic hedged forecast engine and does not substitute a market-price target when an input is unavailable.",
       "DCF is included as a scenario output; for a cyclical E&P company it should be reviewed alongside the multiple method rather than used in isolation."
     ]
   };
