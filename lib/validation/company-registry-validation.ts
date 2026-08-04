@@ -62,11 +62,13 @@ export function validateCompanyRegistry(): ValidationResult {
     if (!company.map.defaultView.trim()) {
       issues.push({ severity: "error", code: "DEFAULT_MAP_VIEW_REQUIRED", path: `${basePath}.map.defaultView`, message: "defaultView is required." });
     }
-    const duplicateExposureKeys = company.map.exposureKeys.filter((key, index) => company.map.exposureKeys.indexOf(key) !== index);
+    const exposureKeys = company.map.exposureKeys as string[];
+    const duplicateExposureKeys = exposureKeys.filter((key, index) => exposureKeys.indexOf(key) !== index);
     if (duplicateExposureKeys.length > 0) {
       issues.push({ severity: "error", code: "DUPLICATE_EXPOSURE_KEY", path: `${basePath}.map.exposureKeys`, message: "Exposure keys must be unique." });
     }
-    const duplicateRouteKeys = company.map.routeLayerKeys.filter((key, index) => company.map.routeLayerKeys.indexOf(key) !== index);
+    const routeLayerKeys = company.map.routeLayerKeys as string[];
+    const duplicateRouteKeys = routeLayerKeys.filter((key, index) => routeLayerKeys.indexOf(key) !== index);
     if (duplicateRouteKeys.length > 0) {
       issues.push({ severity: "error", code: "DUPLICATE_ROUTE_KEY", path: `${basePath}.map.routeLayerKeys`, message: "Route layer keys must be unique." });
     }

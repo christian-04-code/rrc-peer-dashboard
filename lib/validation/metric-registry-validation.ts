@@ -2,7 +2,7 @@ import rawMetrics from "@/config/metric-definitions.json";
 import { buildValidationResult, formatValidationIssues, type ValidationIssue, type ValidationResult } from "./validation-types";
 
 const ALLOWED_VALUE_TYPES = new Set(["number", "integer", "currency", "percentage", "multiple", "text"]);
-const ALLOWED_AGGREGATIONS = new Set(["period_average", "period_sum", "period_end", "point_in_time", "not_applicable"]);
+const ALLOWED_AGGREGATIONS = new Set(["period_average", "period_sum", "period_end", "point_in_time", "latest", "not_applicable"]);
 const ALLOWED_PEER_COMPARABLE = new Set([true, false, "conditional"]);
 
 export function validateMetricRegistry(): ValidationResult {
