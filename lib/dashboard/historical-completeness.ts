@@ -42,9 +42,13 @@ export type HistoricalCompletenessSummary = {
   byTicker: Record<Ticker, { populated: number; total: number; missing: number; coveragePct: number }>;
 };
 
+type QuarterlyFinancialsWithOptionalFcf = QuarterlyFinancials & {
+  freeCashFlow?: SourcedValue;
+};
+
 const metricReaders: Array<{
   key: HistoricalMetricKey;
-  read: (row: QuarterlyFinancials) => SourcedValue | undefined;
+  read: (row: QuarterlyFinancialsWithOptionalFcf) => SourcedValue | undefined;
 }> = [
   { key: "revenue", read: (row) => row.revenue },
   { key: "adjustedEbitdax", read: (row) => row.adjustedEbitdax },
@@ -77,7 +81,7 @@ export function getHistoricalCompletenessSummary(): HistoricalCompletenessSummar
     const total = quarters.length * metricReaders.length;
 
     for (const quarter of quarters) {
-      const row = financialsQuarterly[ticker][quarter];
+      const row = financialsQuarterly[ticker][quarter] as QuarterlyFinancialsWithOptionalFcf;
       for (const metric of metricReaders) {
         const sourced = metric.read(row);
         if (sourced?.value === null || sourced?.value === undefined) {
