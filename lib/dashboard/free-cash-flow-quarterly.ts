@@ -11,6 +11,9 @@ const unavailable = (ticker: Ticker, quarter: Quarter): SourcedValue => ({
 const RRC_FCF_NOTE =
   "Derived as Range cash flow from operations before changes in working capital less all-in capital spending. Both inputs are company-reported in quarterly earnings materials; values are standalone quarters in $MM. This is a non-GAAP derived measure and must not be silently mixed with a different peer FCF definition.";
 
+const CRK_FCF_NOTE =
+  "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain a CRK free cash flow series. FactSet models FCF from its quarterly operating cash flow and capital expenditure rows. Values are standalone quarters in $MM, source-tagged FactSet, and must not overwrite or be silently blended with a future filing-verified Codex series.";
+
 const rrc: Record<Quarter, SourcedValue> = {
   "Q1 2024": { value: 137.898, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q2 2024": { value: 61.902, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
@@ -23,11 +26,23 @@ const rrc: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 406.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE }
 };
 
+const crk: Record<Quarter, SourcedValue> = {
+  "Q1 2024": { value: -73.536, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q2 2024": { value: -109.5855, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q3 2024": { value: -41.674, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q4 2024": { value: -51.0, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q1 2025": { value: -22.004, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q2 2025": { value: -68.498, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q3 2025": { value: -92.35, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q4 2025": { value: -67.0, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
+  "Q1 2026": { value: -151.4, source: "factset", basis: "derived", note: CRK_FCF_NOTE }
+};
+
 export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>> = {
   RRC: rrc,
   AR: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("AR", quarter)])) as Record<Quarter, SourcedValue>,
   CNX: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("CNX", quarter)])) as Record<Quarter, SourcedValue>,
-  CRK: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("CRK", quarter)])) as Record<Quarter, SourcedValue>,
+  CRK: crk,
   EQT: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("EQT", quarter)])) as Record<Quarter, SourcedValue>,
   EXE: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("EXE", quarter)])) as Record<Quarter, SourcedValue>,
   GPOR: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("GPOR", quarter)])) as Record<Quarter, SourcedValue>
