@@ -1,0 +1,55 @@
+{
+  "ticker": "EXE",
+  "auditDate": "2026-08-04",
+  "primarySource": "Range_Peer_Quarterly_Data_Input_Template_Q1_2024_to_Q1_2026",
+  "fallbackSource": "E&P_Facset_Company_Model.xlsx",
+  "rules": [
+    "Codex filing-derived values remain controlling.",
+    "FactSet may fill only blank historical cells.",
+    "FactSet estimates and forward periods are excluded.",
+    "Zero is not accepted when it may represent missing or non-applicable data.",
+    "Fallback values remain source-tagged FactSet and must be replaced, not blended, if a filing-verified Codex value is later added."
+  ],
+  "accepted": [
+    {
+      "metric": "freeCashFlow",
+      "quarters": ["Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024", "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Q1 2026"],
+      "reason": "FactSet provides a complete historical quarterly FCF row and the primary Codex template does not contain an EXE FCF series."
+    }
+  ],
+  "reviewedNotYetImported": [
+    {
+      "metric": "realizedNglPrice",
+      "quarters": ["Q1 2024", "Q2 2024"],
+      "factSetValues": [0, 0],
+      "reason": "Rejected because zero may reflect missing/non-applicable pre-merger data rather than a verified realized price."
+    },
+    {
+      "metric": "realizedOilCondensatePrice",
+      "quarters": ["Q1 2024"],
+      "factSetValues": [0],
+      "reason": "Rejected because zero is inconsistent with a valid realized oil price and likely reflects missing/non-applicable data."
+    },
+    {
+      "metric": "realizedOilCondensatePrice",
+      "quarters": ["Q2 2024", "Q3 2024"],
+      "factSetValues": [80.67, 75.09],
+      "reason": "Nonzero historical values are plausible, but integration is deferred until the pre-merger company-definition basis is confirmed against the Codex template and filing source notes."
+    },
+    {
+      "metric": "realizedNglPrice",
+      "quarters": ["Q3 2024"],
+      "factSetValues": [24.7],
+      "reason": "Nonzero historical value is plausible, but integration is deferred until the pre-merger company-definition basis is confirmed against the Codex template and filing source notes."
+    }
+  ],
+  "unavailableInFactSetWorkbook": [
+    "wellsDrilled",
+    "wellsTurnedInLine",
+    "ducInventory",
+    "leaseOperatingExpensePerMcfe",
+    "gatheringProcessingTransportationPerMcfe",
+    "cashGAPerMcfe",
+    "totalCashUnitCostsPerMcfe"
+  ]
+}
