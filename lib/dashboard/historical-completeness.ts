@@ -5,6 +5,7 @@ import {
   type QuarterlyFinancials,
   type SourcedValue
 } from "@/lib/dashboard/financials-quarterly";
+import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
 
 export type HistoricalMetricKey =
   | "revenue"
@@ -42,17 +43,15 @@ export type HistoricalCompletenessSummary = {
   byTicker: Record<Ticker, { populated: number; total: number; missing: number; coveragePct: number }>;
 };
 
-type QuarterlyFinancialsWithOptionalFcf = QuarterlyFinancials & {
-  freeCashFlow?: SourcedValue;
+type MetricReader = {
+  key: HistoricalMetricKey;
+  read: (row: QuarterlyFinancials, ticker: Ticker, quarter: (typeof quarters)[number]) => SourcedValue | undefined;
 };
 
-const metricReaders: Array<{
-  key: HistoricalMetricKey;
-  read: (row: QuarterlyFinancialsWithOptionalFcf) => SourcedValue | undefined;
-}> = [
+const metricReaders: MetricReader[] = [
   { key: "revenue", read: (row) => row.revenue },
   { key: "adjustedEbitdax", read: (row) => row.adjustedEbitdax },
-  { key: "freeCashFlow", read: (row) => row.freeCashFlow },
+  { key: "freeCashFlow", read: (_row, ticker, quarter) => getQuarterlyFreeCashFlow(ticker, quarter) },
   { key: "capitalExpenditures", read: (row) => row.capitalExpenditures },
   { key: "netDebt", read: (row) => row.netDebt },
   { key: "production.total", read: (row) => row.production.total },
@@ -81,9 +80,9 @@ export function getHistoricalCompletenessSummary(): HistoricalCompletenessSummar
     const total = quarters.length * metricReaders.length;
 
     for (const quarter of quarters) {
-      const row = financialsQuarterly[ticker][quarter] as QuarterlyFinancialsWithOptionalFcf;
+      const row = financialsQuarterly[ticker][quarter];
       for (const metric of metricReaders) {
-        const sourced = metric.read(row);
+        const sourced = metric.read(row, ticker, quarter);
         if (sourced?.value === null || sourced?.value === undefined) {
           issues.push({ ticker, quarter, metric: metric.key });
         } else {
