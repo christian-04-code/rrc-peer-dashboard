@@ -151,7 +151,7 @@ export function HomeDashboard() {
                     <div className="tabs">{(["production", "fcf", "capex", "debt", "valuation"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
                   </div>
 
-                  {workspace === "chart" ? <ChartWorkspace comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
+                  {workspace === "chart" ? <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
                 </div>
 
                 <aside>
