@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { assertRuntimeRegistriesValid } from "@/lib/validation/runtime-validation";
 import "./globals.css";
 import "@/components/dashboard/PeersPanel.css";
+import "@/components/dashboard/SourcesPanel.css";
 
 const registryValidation = assertRuntimeRegistriesValid();
 
