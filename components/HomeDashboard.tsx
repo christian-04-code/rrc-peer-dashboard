@@ -32,6 +32,7 @@ export function HomeDashboard() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const company = getCompany(ticker);
+  const brandCompany = getCompany("RRC");
   const metrics = useMemo(() => getHomepageMetrics(ticker), [ticker]);
 
   useEffect(() => {
@@ -53,12 +54,17 @@ export function HomeDashboard() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [drawer]);
 
-  const insight = useMemo(() => {
-    if (ticker !== "RRC") return `${ticker} is selected. Detailed insights remain disabled until its normalized adapter is connected.`;
-    if (metric === "production") return "Range targets approximately 2.6 Bcfe/d by 2027 while holding annual capital near $650–$700MM.";
-    if (metric === "fcf") return "The repository guidance framework references more than $1.7B of cumulative 2026–2027 free cash flow at the stated commodity case.";
-    return "Click any metric, company, market item, or workspace control to change analytical context.";
-  }, [ticker, metric]);
+  const insightRows = useMemo((): { label?: string; text: string }[] => {
+    if (ticker !== "RRC") {
+      return [{ text: `${ticker} is selected. Detailed insights remain disabled until its normalized adapter is connected.` }];
+    }
+    return [
+      { label: "Growth", text: "Range targets roughly 2.6 Bcfe/d by 2027." },
+      { label: "Capital", text: "Annual spending remains $650–$700MM." },
+      { label: "FCF", text: "More than $1.7B cumulative at the stated price case." }
+    ];
+  }, [ticker]);
+  const insightSummary = insightRows.map((row) => row.text).join(" ");
 
   function selectPrimaryCompany(nextTicker: Ticker) {
     setTicker(nextTicker);
@@ -77,12 +83,19 @@ export function HomeDashboard() {
   return (
     <main className="dashboard-shell">
       <header className="topbar">
-        <div>
-          <strong>RRC Peer Intelligence</strong>
-          <span>Interactive energy research workspace</span>
+        <div className="topbar-main">
+          <div className="brand">
+            <strong>RRC Peer Intelligence</strong>
+            <span>Interactive energy research workspace</span>
+          </div>
+          <div className="topbar-right">
+            <nav aria-label="Primary navigation"><button className="active">Overview</button><button>Peers</button><button>Guidance</button><button>Sources</button></nav>
+            <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
+          </div>
         </div>
-        <nav aria-label="Primary navigation"><button className="active">Overview</button><button>Peers</button><button>Guidance</button><button>Sources</button></nav>
-        <button className="live-button" onClick={() => setDrawer("Data activity and source health")}>● 6 feeds active</button>
+        <div className="status-row">
+          <button className="live-button" onClick={() => setDrawer("Data activity and source health")}>● 6 feeds active</button>
+        </div>
       </header>
 
       <section className="market-ribbon" aria-label="Mock live market ribbon">
@@ -96,7 +109,6 @@ export function HomeDashboard() {
       <section className="content">
         <div className="company-header">
           <div className="company-identity">
-            <div className="logo-frame"><Image src={company.logo} alt={company.logoAlt} fill sizes="68px" /></div>
             <div><h1>{company.shortName}</h1><p>{company.ticker} · {company.exchange} · {company.description}</p></div>
           </div>
           <div className="updated"><span>Mock environment</span><strong>{activity}</strong></div>
@@ -133,8 +145,22 @@ export function HomeDashboard() {
           </div>
 
           <aside>
-            <div className="panel"><h2>Today’s intelligence</h2><p>{insight}</p><button onClick={() => setDrawer(insight)}>Explore supporting data →</button></div>
-            <div className="panel"><h2>Live data engine</h2><ul><li><span>Market prices</span><strong>Updating</strong></li><li><span>SEC filings</span><strong>Synced</strong></li><li><span>Guidance parser</span><strong>Complete</strong></li><li><span>Peer metrics</span><strong>Ready</strong></li></ul></div>
+            <div className="panel">
+              <h2>Today’s intelligence</h2>
+              <div className="insight-list">
+                {insightRows.map((row) => (
+                  <div className="insight-row" key={row.label ?? row.text}>
+                    {row.label ? <b>{row.label}: </b> : null}
+                    {row.text}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setDrawer(insightSummary)}>Explore supporting data →</button>
+            </div>
+            <div className="panel">
+              <div className="panel-head"><h2>Live data engine</h2><span className="badge">Simulated</span></div>
+              <ul>{activityMessages.map((message) => <li key={message}><span>{message}</span><strong>now</strong></li>)}</ul>
+            </div>
           </aside>
         </section>
 
