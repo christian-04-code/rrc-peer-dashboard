@@ -18,9 +18,15 @@ import {
 
 type Metric = "production" | "fcf" | "capex" | "debt" | "valuation";
 type Workspace = "chart" | "map";
+type FinancePanelTab = "guidance" | "financials";
 
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
+
+// RRC, EQT, EXE, and GPOR mark colors sit close in luminance to the dark panel
+// background (or rely on transparent negative space) and lose legibility without
+// a light backing. AR and CNX have enough contrast to render directly.
+const LOGOS_REQUIRING_LIGHT_BACKING = new Set<Ticker>(["RRC", "EQT", "EXE", "GPOR"]);
 
 export function HomeDashboard() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
@@ -29,6 +35,7 @@ export function HomeDashboard() {
   const [comparisonTickers, setComparisonTickers] = useState<Ticker[]>(DEFAULT_COMPARISONS);
   const [activity, setActivity] = useState("Market ribbon initialized");
   const [drawer, setDrawer] = useState<string | null>(null);
+  const [financePanelTab, setFinancePanelTab] = useState<FinancePanelTab>("guidance");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const company = getCompany(ticker);
@@ -66,6 +73,16 @@ export function HomeDashboard() {
   }, [ticker]);
   const insightSummary = insightRows.map((row) => row.text).join(" ");
 
+  const financialsRows = useMemo((): { label?: string; text: string }[] => {
+    return metrics
+      .filter((item) => item.key === "free_cash_flow" || item.key === "capital_expenditures" || item.key === "net_leverage")
+      .map((item) => ({ label: item.label, text: `${item.displayValue} — ${item.note}` }));
+  }, [metrics]);
+  const financialsSummary = financialsRows.map((row) => row.text).join(" ");
+
+  const financePanelRows = financePanelTab === "guidance" ? insightRows : financialsRows;
+  const financePanelSummary = financePanelTab === "guidance" ? insightSummary : financialsSummary;
+
   function selectPrimaryCompany(nextTicker: Ticker) {
     setTicker(nextTicker);
     setComparisonTickers((current) => current.filter((peer) => peer !== nextTicker));
@@ -91,7 +108,7 @@ export function HomeDashboard() {
               <span>Interactive energy research workspace</span>
             </div>
           </div>
-          <nav aria-label="Primary navigation"><button className="active">Overview</button><button>Peers</button><button>Guidance</button><button>Sources</button></nav>
+          <nav aria-label="Primary navigation"><button className={workspace === "chart" ? "active" : ""} onClick={() => setWorkspace("chart")}>Overview</button><button>Peers</button><button className={workspace === "map" ? "active" : ""} onClick={() => setWorkspace("map")}>Map</button><button>Sources</button></nav>
         </div>
         <div className="status-row">
           <button className="live-button" onClick={() => setDrawer("Data activity and source health")}>● 6 feeds active</button>
@@ -109,7 +126,7 @@ export function HomeDashboard() {
       <section className="content">
         <div className="company-header">
           <div className="company-identity">
-            <div className="hero-logo"><Image src={company.logo} alt={company.logoAlt} fill sizes="36px" /></div>
+            <div className={LOGOS_REQUIRING_LIGHT_BACKING.has(ticker) ? "hero-logo hero-logo--boxed" : "hero-logo"}><Image src={company.logo} alt={company.logoAlt} fill sizes="36px" /></div>
             <div><h1>{company.shortName}</h1><p>{company.ticker} · {company.exchange} · {company.description}</p></div>
           </div>
           <div className="updated"><span>Mock environment</span><strong>{activity}</strong></div>
@@ -139,10 +156,9 @@ export function HomeDashboard() {
           <div className="workspace">
             <div className="workspace-toolbar">
               <div className="tabs">{(["production", "fcf", "capex", "debt", "valuation"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
-              <div className="view-toggle"><button className={workspace === "chart" ? "active" : ""} onClick={() => setWorkspace("chart")}>Chart</button><button className={workspace === "map" ? "active" : ""} onClick={() => setWorkspace("map")}>Map</button></div>
             </div>
 
-            {workspace === "chart" ? <ChartMock comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} /> : <MapMock ticker={ticker} comparisonTickers={comparisonTickers} onOpen={setDrawer} />}
+            {workspace === "chart" ? <ChartMock comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapMock ticker={ticker} comparisonTickers={comparisonTickers} onOpen={setDrawer} />}
           </div>
 
           <aside>
@@ -159,6 +175,24 @@ export function HomeDashboard() {
               <button onClick={() => setDrawer(insightSummary)}>Explore supporting data →</button>
             </div>
             <div className="panel">
+              <div className="panel-head">
+                <h2>{financePanelTab === "guidance" ? "Guidance" : "Financials"}</h2>
+                <div className="panel-toggle" role="group" aria-label="Guidance or financials view">
+                  <button className={financePanelTab === "guidance" ? "active" : ""} aria-pressed={financePanelTab === "guidance"} onClick={() => setFinancePanelTab("guidance")}>Guidance</button>
+                  <button className={financePanelTab === "financials" ? "active" : ""} aria-pressed={financePanelTab === "financials"} onClick={() => setFinancePanelTab("financials")}>Financials</button>
+                </div>
+              </div>
+              <div className="insight-list">
+                {financePanelRows.map((row) => (
+                  <div className="insight-row" key={row.label ?? row.text}>
+                    {row.label ? <b>{row.label}: </b> : null}
+                    {row.text}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setDrawer(financePanelSummary)}>View full {financePanelTab === "guidance" ? "guidance" : "financials"} →</button>
+            </div>
+            <div className="panel">
               <div className="panel-head"><h2>Live data engine</h2><span className="badge">Simulated</span></div>
               <ul>{activityMessages.map((message) => <li key={message}><span>{message}</span><strong>now</strong></li>)}</ul>
             </div>
@@ -173,7 +207,7 @@ export function HomeDashboard() {
   );
 }
 
-function ChartMock({ comparisonTickers, title }: { comparisonTickers: Ticker[]; title: string }) {
+function ChartMock({ comparisonTickers, title, metric }: { comparisonTickers: Ticker[]; title: string; metric: Metric }) {
   const peerPaths = [
     "M70 205 C180 198 250 184 330 170 S490 146 570 132 S665 120 715 108",
     "M70 220 C180 205 250 200 330 182 S490 165 570 145 S665 135 715 122",
@@ -182,7 +216,37 @@ function ChartMock({ comparisonTickers, title }: { comparisonTickers: Ticker[]; 
     "M70 198 C180 190 250 178 330 165 S490 140 570 126 S665 116 715 105",
     "M70 214 C180 208 250 198 330 188 S490 160 570 148 S665 134 715 125"
   ];
-  return <div className="chart-area"><div><h2>{title}</h2><p>Primary company with up to six selected peer overlays</p></div><svg viewBox="0 0 760 300" role="img" aria-label={`${title} mock chart`}><g className="grid-lines"><line x1="55" y1="50" x2="730" y2="50"/><line x1="55" y1="115" x2="730" y2="115"/><line x1="55" y1="180" x2="730" y2="180"/><line x1="55" y1="245" x2="730" y2="245"/></g><path className="primary-line" d="M70 230 C180 220 250 210 330 195 S490 150 570 110 S665 78 715 62"/>{comparisonTickers.map((peer, index) => <path key={peer} className={`peer-line peer-${index + 1}`} d={peerPaths[index]} />)}<circle cx="715" cy="62" r="6"/></svg><div className="chart-legend"><span className="primary-legend">Primary</span>{comparisonTickers.map((peer) => <span key={peer}>{peer}</span>)}</div></div>;
+  const axisUnit = metric === "production" ? "Bcfe/d" : "";
+  return (
+    <div className="chart-area">
+      <div><h2>{title}</h2><p>Primary company with up to six selected peer overlays · solid = historical, dashed = forecast</p></div>
+      <svg viewBox="0 0 760 300" role="img" aria-label={`${title} mock chart. Historical actuals shown solid through Q1'26, forecast shown dashed through 2027E.`}>
+        <g className="grid-lines">
+          <line x1="55" y1="50" x2="730" y2="50"/>
+          <line x1="55" y1="115" x2="730" y2="115"/>
+          <line x1="55" y1="180" x2="730" y2="180"/>
+          <line x1="55" y1="245" x2="730" y2="245"/>
+        </g>
+        <g className="axis-labels">
+          {axisUnit ? <text className="axis-unit" x="18" y="30">{axisUnit}</text> : null}
+          <text className="y-axis-label" x="48" y="54">2.7</text>
+          <text className="y-axis-label" x="48" y="119">2.5</text>
+          <text className="y-axis-label" x="48" y="184">2.3</text>
+          <text className="y-axis-label" x="48" y="249">2.1</text>
+          <text className="x-axis-label" x="70" y="268" textAnchor="middle">Q1&apos;25</text>
+          <text className="x-axis-label" x="330" y="268" textAnchor="middle">Q1&apos;26</text>
+          <text className="x-axis-label" x="570" y="268" textAnchor="middle">Q3&apos;26E</text>
+          <text className="x-axis-label" x="715" y="268" textAnchor="middle">2027E</text>
+        </g>
+        <path className="primary-line" d="M70 230 C180 220 250 210 330 195"/>
+        <path className="primary-line forecast-line" d="M330 195 C410 180 490 150 570 110 C650 70 665 78 715 62"/>
+        {comparisonTickers.map((peer, index) => <path key={peer} className={`peer-line peer-${index + 1}`} d={peerPaths[index]} />)}
+        <circle className="forecast-pulse-ring" cx="715" cy="62" r="6"/>
+        <circle cx="715" cy="62" r="6"/>
+      </svg>
+      <div className="chart-legend"><span className="primary-legend">Primary</span>{comparisonTickers.map((peer) => <span key={peer}>{peer}</span>)}</div>
+    </div>
+  );
 }
 
 function MapMock({ ticker, comparisonTickers, onOpen }: { ticker: Ticker; comparisonTickers: Ticker[]; onOpen: (value: string) => void }) {
