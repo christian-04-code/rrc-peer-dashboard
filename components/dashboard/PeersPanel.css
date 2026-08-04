@@ -1,0 +1,33 @@
+.peers-panel { display: grid; gap: 16px; }
+.peers-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.peers-head h1 { margin-bottom: 4px; }
+.peers-head p { margin: 0; color: var(--muted); font-size: 13px; }
+.quarter-control { display: grid; gap: 6px; min-width: 150px; }
+.quarter-control span { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.quarter-control select { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; background: var(--panel); color: var(--text); }
+.peer-group-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.peer-group-tabs button { border: 1px solid var(--border); border-radius: 999px; padding: 8px 12px; background: transparent; color: var(--muted); }
+.peer-group-tabs button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.peer-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+.peer-table { width: 100%; min-width: 1080px; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.peer-table th, .peer-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 12px 14px; text-align: right; }
+.peer-table tr:last-child th, .peer-table tr:last-child td { border-bottom: 0; }
+.peer-table th:last-child, .peer-table td:last-child { border-right: 0; }
+.peer-table thead th { position: sticky; top: 0; z-index: 2; background: var(--panel-2); vertical-align: bottom; }
+.peer-table thead th:first-child { left: 0; z-index: 4; min-width: 230px; text-align: left; }
+.peer-table tbody th { position: sticky; left: 0; z-index: 1; min-width: 230px; background: var(--panel); text-align: left; }
+.peer-table th strong { display: block; }
+.peer-table th span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.peer-table td { min-width: 125px; font-weight: 700; }
+.peer-table td small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.peer-table .primary-company { background: rgba(0, 129, 198, .1); }
+.peer-table thead .primary-company { box-shadow: inset 0 3px 0 var(--accent); }
+.peer-disclosures { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--panel); }
+.peer-disclosures p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.peer-disclosures strong { color: var(--text); }
+
+@media (max-width: 720px) {
+  .peers-head { align-items: stretch; flex-direction: column; }
+  .quarter-control { width: 100%; }
+  .peer-table th, .peer-table td { padding: 10px 11px; }
+}
