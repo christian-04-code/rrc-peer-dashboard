@@ -84,14 +84,14 @@ export function HomeDashboard() {
     <main className="dashboard-shell">
       <header className="topbar">
         <div className="topbar-main">
-          <div className="brand">
-            <strong>RRC Peer Intelligence</strong>
-            <span>Interactive energy research workspace</span>
-          </div>
-          <div className="topbar-right">
-            <nav aria-label="Primary navigation"><button className="active">Overview</button><button>Peers</button><button>Guidance</button><button>Sources</button></nav>
+          <div className="topbar-left">
             <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
+            <div className="brand">
+              <strong>RRC Peer Intelligence</strong>
+              <span>Interactive energy research workspace</span>
+            </div>
           </div>
+          <nav aria-label="Primary navigation"><button className="active">Overview</button><button>Peers</button><button>Guidance</button><button>Sources</button></nav>
         </div>
         <div className="status-row">
           <button className="live-button" onClick={() => setDrawer("Data activity and source health")}>● 6 feeds active</button>
@@ -109,6 +109,7 @@ export function HomeDashboard() {
       <section className="content">
         <div className="company-header">
           <div className="company-identity">
+            <div className="hero-logo"><Image src={company.logo} alt={company.logoAlt} fill sizes="36px" /></div>
             <div><h1>{company.shortName}</h1><p>{company.ticker} · {company.exchange} · {company.description}</p></div>
           </div>
           <div className="updated"><span>Mock environment</span><strong>{activity}</strong></div>
