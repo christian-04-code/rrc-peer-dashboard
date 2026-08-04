@@ -12,21 +12,30 @@ const hedges = fs.readFileSync(
   "utf8"
 );
 
-test("RRC baseline captures verified Q1 2026 reported facts", () => {
-  assert.match(baseline, /totalProductionBcfePerDay: reported\(\s*2\.21/);
-  assert.match(baseline, /liquidsPercentOfTotalMcfe: reported\(\s*0\.32/);
-  assert.match(baseline, /gasDifferentialToNymexPerMcfIncludingBasisHedges: reported\(\s*0\.18/);
+test("RRC baseline captures verified Q1 2026 operating facts", () => {
+  assert.match(baseline, /totalProductionBcfePerDay: reported\(\s*2\.207436/);
+  assert.match(baseline, /naturalGasMmcfPerDay: reported\(\s*1508\.842/);
+  assert.match(baseline, /nglMbblPerDay: reported\(\s*108\.193/);
+  assert.match(baseline, /oilMbblPerDay: reported\(\s*8\.239/);
+  assert.match(baseline, /realizedGasExDerivativesPerMcf: reported\(\s*5\.18/);
   assert.match(baseline, /realizedNglPerBbl: reported\(\s*26\.62/);
-  assert.match(baseline, /oilDifferentialToWtiPerBbl: reported\(\s*-10\.68/);
+  assert.match(baseline, /realizedOilPerBbl: reported\(\s*63\.3/);
 });
 
-test("RRC baseline does not fabricate missing product or cost data", () => {
-  assert.match(baseline, /naturalGasMmcfPerDay: unavailable/);
-  assert.match(baseline, /nglMbblPerDay: unavailable/);
-  assert.match(baseline, /oilMbblPerDay: unavailable/);
-  assert.match(baseline, /directOperatingExpensePerMcfe: unavailable/);
-  assert.match(baseline, /netDebtMillion: unavailable/);
-  assert.match(baseline, /dilutedSharesMillion: unavailable/);
+test("RRC baseline captures verified cost and capital-structure facts", () => {
+  assert.match(baseline, /directOperatingExpensePerMcfe: reported\(\s*0\.14/);
+  assert.match(baseline, /gatheringProcessingTransportationPerMcfe: reported\(\s*1\.63/);
+  assert.match(baseline, /productionTaxesPerMcfe: reported\(\s*0\.02931/);
+  assert.match(baseline, /reportedGaMillion: reported\(\s*45\.351/);
+  assert.match(baseline, /reportedInterestExpenseMillion: reported\(\s*19\.419/);
+  assert.match(baseline, /balanceSheetNetDebtMillion: reported\(\s*819\.007/);
+  assert.match(baseline, /dilutedSharesMillion: reported\(\s*236\.396/);
+});
+
+test("RRC baseline does not misclassify accrual expenses as cash inputs", () => {
+  assert.match(baseline, /cashGaMillion: unavailable/);
+  assert.match(baseline, /cashInterestMillion: unavailable/);
+  assert.match(baseline, /carrying-value net debt, not face-value debt/);
 });
 
 test("hedge engine supports the required upstream instruments", () => {
