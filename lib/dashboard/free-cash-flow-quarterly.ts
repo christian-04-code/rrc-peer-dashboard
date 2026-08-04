@@ -1,21 +1,20 @@
 import type { Ticker } from "@/lib/dashboard/types";
-import { quarters, type Quarter, type SourcedValue } from "@/lib/dashboard/financials-quarterly";
-
-const unavailable = (ticker: Ticker, quarter: Quarter): SourcedValue => ({
-  value: null,
-  source: "codex",
-  basis: "derived",
-  note: `${ticker} ${quarter} free cash flow has not yet been verified under the project definition.`
-});
+import { type Quarter, type SourcedValue } from "@/lib/dashboard/financials-quarterly";
 
 const RRC_FCF_NOTE =
   "Derived as Range cash flow from operations before changes in working capital less all-in capital spending. Both inputs are company-reported in quarterly earnings materials; values are standalone quarters in $MM. This is a non-GAAP derived measure and must not be silently mixed with a different peer FCF definition.";
+
+const AR_FCF_NOTE =
+  "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain an AR free cash flow series. Values come from the historical quarterly Free Cash Flow row in the AR staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
 
 const CNX_FCF_NOTE =
   "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain a CNX free cash flow series. Values come from the historical quarterly Free Cash Flow row in the CNX staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
 
 const CRK_FCF_NOTE =
   "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain a CRK free cash flow series. FactSet models FCF from its quarterly operating cash flow and capital expenditure rows. Values are standalone quarters in $MM, source-tagged FactSet, and must not overwrite or be silently blended with a future filing-verified Codex series.";
+
+const EQT_FCF_NOTE =
+  "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain an EQT free cash flow series. Values come from the historical quarterly Free Cash Flow row in the EQT staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
 
 const EXE_FCF_NOTE =
   "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain an EXE free cash flow series. Values come from the historical quarterly Free Cash Flow row in the EXE staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
@@ -33,6 +32,18 @@ const rrc: Record<Quarter, SourcedValue> = {
   "Q3 2025": { value: 89.254, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q4 2025": { value: 169.532, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q1 2026": { value: 406.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE }
+};
+
+const ar: Record<Quarter, SourcedValue> = {
+  "Q1 2024": { value: 29.874, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q2 2024": { value: -42.8755, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q3 2024": { value: -6.0, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q4 2024": { value: 160.0, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q1 2025": { value: 336.4715, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q2 2025": { value: 179.0, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q3 2025": { value: -145.5, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q4 2025": { value: 186.5, source: "factset", basis: "derived", note: AR_FCF_NOTE },
+  "Q1 2026": { value: 464.55, source: "factset", basis: "derived", note: AR_FCF_NOTE }
 };
 
 const cnx: Record<Quarter, SourcedValue> = {
@@ -57,6 +68,18 @@ const crk: Record<Quarter, SourcedValue> = {
   "Q3 2025": { value: -92.35, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q4 2025": { value: -67.0, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q1 2026": { value: -151.4, source: "factset", basis: "derived", note: CRK_FCF_NOTE }
+};
+
+const eqt: Record<Quarter, SourcedValue> = {
+  "Q1 2024": { value: 401.554, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q2 2024": { value: -171.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q3 2024": { value: -47.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q4 2024": { value: 580.223, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q1 2025": { value: 1151.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q2 2025": { value: 240.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q3 2025": { value: 601.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q4 2025": { value: 743.866, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
+  "Q1 2026": { value: 1832.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE }
 };
 
 const exe: Record<Quarter, SourcedValue> = {
@@ -85,10 +108,10 @@ const gpor: Record<Quarter, SourcedValue> = {
 
 export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>> = {
   RRC: rrc,
-  AR: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("AR", quarter)])) as Record<Quarter, SourcedValue>,
+  AR: ar,
   CNX: cnx,
   CRK: crk,
-  EQT: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("EQT", quarter)])) as Record<Quarter, SourcedValue>,
+  EQT: eqt,
   EXE: exe,
   GPOR: gpor
 };
