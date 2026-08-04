@@ -9,23 +9,30 @@ export type RrcOperatingBaseline = {
   nglMbblPerDay: SourcedValue;
   oilMbblPerDay: SourcedValue;
   gasDifferentialToNymexPerMcfIncludingBasisHedges: SourcedValue;
+  realizedGasExDerivativesPerMcf: SourcedValue;
+  realizedGasIncludingDerivativesPerMcf: SourcedValue;
   realizedNglPerBbl: SourcedValue;
+  realizedOilPerBbl: SourcedValue;
   oilDifferentialToWtiPerBbl: SourcedValue;
   directOperatingExpensePerMcfe: SourcedValue;
   gatheringProcessingTransportationPerMcfe: SourcedValue;
   productionTaxesPerMcfe: SourcedValue;
+  reportedGaMillion: SourcedValue;
   cashGaMillion: SourcedValue;
+  reportedInterestExpenseMillion: SourcedValue;
   cashInterestMillion: SourcedValue;
-  netDebtMillion: SourcedValue;
+  balanceSheetNetDebtMillion: SourcedValue;
   dilutedSharesMillion: SourcedValue;
 };
 
 const retrievedAt = "2026-08-04T00:00:00.000Z";
+const filingReference =
+  "Range Resources Corporation Form 10-Q for the quarter ended March 31, 2026";
 
 function source(notes: string): AssumptionSource {
   return {
-    name: "Range Resources Q1 2026 disclosures",
-    reference: "Forecast Scenario Engine Design research; underlying Range Q1 2026 materials",
+    name: "Range Resources Q1 2026 Form 10-Q",
+    reference: filingReference,
     period: "Q1 2026",
     retrievedAt,
     classification: "reported",
@@ -38,89 +45,116 @@ function reported(value: number, unit: string, notes: string): SourcedValue {
 }
 
 function unavailable(unit: string, notes: string): SourcedValue {
-  return {
-    value: null,
-    unit,
-    source: {
-      ...source(notes),
-      classification: "reported"
-    }
-  };
+  return { value: null, unit, source: source(notes) };
 }
 
 /**
- * Latest source-backed operating baseline currently available to the project.
+ * Source-backed Q1 2026 operating and financial baseline.
  *
- * Important: the disclosed 32% liquids mix is not enough to split liquids into
- * NGL and oil volumes. Product-level volumes remain null until the underlying
- * Q1 2026 filing or supplement is loaded and verified.
+ * Reported values come directly from the Q1 2026 Form 10-Q. Derived values are
+ * explicitly identified in their source notes. Cash G&A and cash interest stay
+ * unavailable because the filing line items include accrual/non-cash effects and
+ * should not be silently treated as cash forecast inputs.
  */
 export const rrcQ1_2026Baseline: RrcOperatingBaseline = {
   company: "RRC",
   period: "2026-Q1",
   totalProductionBcfePerDay: reported(
-    2.21,
+    2.207436,
     "Bcfe/d",
-    "Reported total production for Q1 2026."
+    "Average daily total production reported as 2,207,436 Mcfe/d."
   ),
   liquidsPercentOfTotalMcfe: reported(
-    0.32,
+    0.316517,
     "% of total Mcfe",
-    "Reported product mix was approximately 32% liquids. Stored as decimal."
+    "Derived from reported NGL and oil volumes converted at 6 Mcfe per barrel, divided by reported total Mcfe. Stored as a decimal."
   ),
-  naturalGasMmcfPerDay: unavailable(
+  naturalGasMmcfPerDay: reported(
+    1508.842,
     "MMcf/d",
-    "Exact product-level natural gas volume not verified from the currently loaded source excerpt."
+    "Average daily natural gas production reported as 1,508,842 Mcf/d."
   ),
-  nglMbblPerDay: unavailable(
+  nglMbblPerDay: reported(
+    108.193,
     "Mbbl/d",
-    "Exact NGL volume not verified; do not infer from the disclosed aggregate liquids percentage."
+    "Average daily NGL production reported as 108,193 bbl/d."
   ),
-  oilMbblPerDay: unavailable(
+  oilMbblPerDay: reported(
+    8.239,
     "Mbbl/d",
-    "Exact oil/condensate volume not verified; do not infer from the disclosed aggregate liquids percentage."
+    "Average daily oil production reported as 8,239 bbl/d."
   ),
   gasDifferentialToNymexPerMcfIncludingBasisHedges: reported(
     0.18,
     "$/Mcf",
-    "Q1 2026 natural gas realization was reported at a $0.18/Mcf premium to NYMEX including basis hedges."
+    "Derived from the reported $0.21/Mcf average differential above NYMEX plus a $0.03/Mcf realized loss on basis hedging."
+  ),
+  realizedGasExDerivativesPerMcf: reported(
+    5.18,
+    "$/Mcf",
+    "Reported average realized natural gas price excluding derivative settlements and third-party transportation costs."
+  ),
+  realizedGasIncludingDerivativesPerMcf: reported(
+    4.85,
+    "$/Mcf",
+    "Reported average realized natural gas price including derivative settlements but before third-party transportation costs paid by Range."
   ),
   realizedNglPerBbl: reported(
     26.62,
     "$/bbl",
-    "Reported Q1 2026 NGL realization."
+    "Reported average realized NGL price excluding derivative settlements and third-party transportation costs."
+  ),
+  realizedOilPerBbl: reported(
+    63.3,
+    "$/bbl",
+    "Reported average realized oil price excluding derivative settlements and third-party transportation costs."
   ),
   oilDifferentialToWtiPerBbl: reported(
     -10.68,
     "$/bbl",
-    "Reported Q1 2026 oil realization was $10.68/bbl below WTI."
+    "Company disclosure used by the project for the Q1 2026 oil realization differential to WTI."
   ),
-  directOperatingExpensePerMcfe: unavailable(
+  directOperatingExpensePerMcfe: reported(
+    0.14,
     "$/Mcfe",
-    "Exact Q1 2026 direct operating expense per Mcfe requires the underlying filing or supplement."
+    "Reported Q1 2026 direct operating expense per Mcfe."
   ),
-  gatheringProcessingTransportationPerMcfe: unavailable(
+  gatheringProcessingTransportationPerMcfe: reported(
+    1.63,
     "$/Mcfe",
-    "Exact Q1 2026 GP&T cost per Mcfe requires the underlying filing or supplement."
+    "Reported Q1 2026 transportation, gathering, processing and compression expense per Mcfe."
   ),
-  productionTaxesPerMcfe: unavailable(
+  productionTaxesPerMcfe: reported(
+    0.02931,
     "$/Mcfe",
-    "Exact Q1 2026 taxes other than income per Mcfe require the underlying filing or supplement."
+    "Derived from $5.823 million of taxes other than income divided by 198.669207 million Mcfe of reported production."
+  ),
+  reportedGaMillion: reported(
+    45.351,
+    "$MM",
+    "Reported Q1 2026 general and administrative expense."
   ),
   cashGaMillion: unavailable(
     "$MM",
-    "Exact Q1 2026 cash G&A requires the underlying filing or supplement."
+    "The Form 10-Q reports total G&A but does not provide a directly usable cash G&A line in the cited table."
+  ),
+  reportedInterestExpenseMillion: reported(
+    19.419,
+    "$MM",
+    "Reported Q1 2026 interest expense."
   ),
   cashInterestMillion: unavailable(
     "$MM",
-    "Exact Q1 2026 cash interest requires the underlying filing or supplement."
+    "Reported interest expense is not automatically equivalent to cash interest; a cash-interest reconciliation is required."
   ),
-  netDebtMillion: unavailable(
+  balanceSheetNetDebtMillion: reported(
+    819.007,
     "$MM",
-    "Exact Q1 2026 net debt requires the underlying balance sheet and debt reconciliation."
+    "Derived from bank debt net of issuance costs of $323.294 million plus senior notes net of issuance costs of $495.960 million less $0.247 million cash. This is carrying-value net debt, not face-value debt."
   ),
-  dilutedSharesMillion: unavailable(
+  dilutedSharesMillion: reported(
+    236.396,
     "MM shares",
-    "Exact Q1 2026 diluted weighted-average shares require the underlying filing."
+    "Reported diluted weighted-average common shares outstanding for Q1 2026."
   )
 };
