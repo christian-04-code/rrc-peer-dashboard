@@ -82,6 +82,11 @@ Do not confuse:
 
 The `aggregation` field in the registry is a UI and adapter hint, not permission to derive missing values.
 
+`point_in_time` and `latest` are distinct aggregation values and must not be treated as synonyms:
+
+- `point_in_time` — a value as of one specific past date (e.g., share price at a filing date). Not refreshed; a historical snapshot.
+- `latest` — the most recently fetched value, independent of any period. Used for live/current market and valuation metrics (`SHARE_PRICE`, `MARKET_CAP`, `ENTERPRISE_VALUE`, `EV_TO_EBITDAX`, `FCF_YIELD`, `HENRY_HUB`, `WTI`). Adapters must always resolve this to the freshest available fetch, not a period-average or period-end value.
+
 ---
 
 ## Canonical metric keys
