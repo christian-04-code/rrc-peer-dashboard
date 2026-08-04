@@ -1,5 +1,5 @@
 export function getEiaApiKey(): string {
-  const key = process.env.EIA_API_KEY;
+  const key = process.env.EIA_API_KEY?.trim();
   if (!key) {
     throw new Error(
       "EIA_API_KEY is not set. Add it to .env.local before calling the EIA client."
@@ -10,8 +10,10 @@ export function getEiaApiKey(): string {
 
 const EIA_BASE_URL = "https://api.eia.gov/v2";
 
+export type EiaFrequency = "daily" | "weekly" | "monthly" | "annual";
+
 export type EiaDataPoint = {
-  /** ISO date string as returned by EIA, e.g. "2026-08-01" for daily series. */
+  /** ISO-like period string as returned by EIA. */
   period: string;
   value: number;
 };
@@ -19,32 +21,59 @@ export type EiaDataPoint = {
 export type EiaFetchResult = {
   route: string;
   seriesId: string;
-  frequency: string;
+  frequency: EiaFrequency;
   /** Sorted most-recent-first. */
   points: EiaDataPoint[];
   fetchedAt: string;
 };
 
-/**
- * Low-level fetcher for any EIA v2 API route/series.
- *
- * Throws on network failure, non-2xx response, or a payload with no usable
- * numeric rows -- it never returns a fabricated/interpolated value. Callers
- * must catch and render "--" (never a guessed number), per project rule:
- * "Unsupported values render '--', never zero, never a guess."
- */
-async function fetchEiaSeries(params: {
+type EiaApiRow = {
+  period?: unknown;
+  value?: unknown;
+};
+
+type EiaApiPayload = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+export type FetchEiaSeriesParams = {
   /** EIA v2 route beneath /v2/, e.g. "natural-gas/pri/fut/data". */
   route: string;
   /** facet[series][] value, e.g. "RNGWHHD" for Henry Hub daily spot. */
   seriesId: string;
-  frequency: "daily" | "weekly" | "monthly" | "annual";
-  /** How many most-recent points to request. Default 30. */
+  frequency: EiaFrequency;
+  /** Number of most-recent points to request. Default 30. */
   length?: number;
-}): Promise<EiaFetchResult> {
-  const { route, seriesId, frequency, length = 30 } = params;
-  const apiKey = getEiaApiKey();
+};
 
+/**
+ * Low-level fetcher for any EIA v2 API route/series.
+ *
+ * Throws on invalid input, network failure, non-2xx response, invalid JSON,
+ * or a payload with no usable numeric rows. It never fabricates, interpolates,
+ * or silently substitutes values.
+ */
+export async function fetchEiaSeries(
+  params: FetchEiaSeriesParams
+): Promise<EiaFetchResult> {
+  const route = params.route.trim().replace(/^\/+|\/+$/g, "");
+  const seriesId = params.seriesId.trim();
+  const { frequency } = params;
+  const length = params.length ?? 30;
+
+  if (!route) {
+    throw new Error("EIA route is required.");
+  }
+  if (!seriesId) {
+    throw new Error("EIA series ID is required.");
+  }
+  if (!Number.isInteger(length) || length < 1 || length > 5000) {
+    throw new Error("EIA request length must be an integer between 1 and 5000.");
+  }
+
+  const apiKey = getEiaApiKey();
   const url = new URL(`${EIA_BASE_URL}/${route}`);
   url.searchParams.set("api_key", apiKey);
   url.searchParams.set("frequency", frequency);
@@ -55,47 +84,61 @@ async function fetchEiaSeries(params: {
   url.searchParams.set("offset", "0");
   url.searchParams.set("length", String(length));
 
-  let res: Response;
+  let response: Response;
   try {
-    res = await fetch(url.toString());
-  } catch (err) {
+    response = await fetch(url);
+  } catch (error) {
     throw new Error(
       `EIA API network request failed for route "${route}" series "${seriesId}": ${
-        err instanceof Error ? err.message : String(err)
+        error instanceof Error ? error.message : String(error)
       }`
     );
   }
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    const detail = body.trim() ? ` ${body.slice(0, 300)}` : "";
     throw new Error(
-      `EIA API request failed: ${res.status} ${res.statusText} for route "${route}" series "${seriesId}". ${body.slice(
-        0,
-        300
-      )}`
+      `EIA API request failed: ${response.status} ${response.statusText} for route "${route}" series "${seriesId}".${detail}`
     );
   }
 
-  const json = await res.json();
-  const rows: unknown = json?.response?.data;
+  let payload: EiaApiPayload;
+  try {
+    payload = (await response.json()) as EiaApiPayload;
+  } catch (error) {
+    throw new Error(
+      `EIA API returned invalid JSON for route "${route}" series "${seriesId}": ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
 
+  const rows = payload.response?.data;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error(
-      `EIA API returned no rows for route "${route}" series "${seriesId}". Check that the route path and series ID are still valid -- EIA occasionally restructures routes.`
+      `EIA API returned no rows for route "${route}" series "${seriesId}". Check that the route path and series ID are still valid.`
     );
   }
 
-  const points: EiaDataPoint[] = rows
-    .map((row: any) => {
-      const raw = row?.value;
-      const numeric = typeof raw === "string" ? parseFloat(raw) : raw;
-      return { period: row?.period as string, value: numeric as number };
+  const points = rows
+    .map((row: EiaApiRow): EiaDataPoint | null => {
+      const period = row?.period;
+      const rawValue = row?.value;
+      const value =
+        typeof rawValue === "string" ? Number.parseFloat(rawValue) : rawValue;
+
+      if (typeof period !== "string" || typeof value !== "number" || !Number.isFinite(value)) {
+        return null;
+      }
+
+      return { period, value };
     })
-    .filter((p) => typeof p.period === "string" && Number.isFinite(p.value));
+    .filter((point): point is EiaDataPoint => point !== null);
 
   if (points.length === 0) {
     throw new Error(
-      `EIA API response for series "${seriesId}" contained rows but none had a valid numeric "value" field -- payload shape may have changed.`
+      `EIA API response for series "${seriesId}" contained rows but none had valid period and numeric value fields.`
     );
   }
 
@@ -108,16 +151,10 @@ async function fetchEiaSeries(params: {
   };
 }
 
-/**
- * Henry Hub Natural Gas Spot Price, daily, $/MMBtu.
- *
- * EIA v2 route: natural-gas/pri/fut/data
- * Series ID: RNGWHHD (legacy v1 series ID "NG.RNGWHHD.D"; this is the
- * correct facet[series][] value for the v2 route -- confirmed against
- * EIA's own historical-data page sourcekey and third-party EIA API
- * wrapper libraries, and confirmed live via curl test 2026-08-04.
- */
-export async function fetchHenryHubDailySpot(length = 30): Promise<EiaFetchResult> {
+/** Henry Hub Natural Gas Spot Price, daily, $/MMBtu. */
+export async function fetchHenryHubDailySpot(
+  length = 30
+): Promise<EiaFetchResult> {
   return fetchEiaSeries({
     route: "natural-gas/pri/fut/data",
     seriesId: "RNGWHHD",
@@ -126,11 +163,7 @@ export async function fetchHenryHubDailySpot(length = 30): Promise<EiaFetchResul
   });
 }
 
-/**
- * Convenience helper: the single most recent Henry Hub spot price point.
- * Throws if no data is available -- callers must not substitute a
- * fabricated fallback value (e.g. a hardcoded "typical" price).
- */
+/** Return the single most recent Henry Hub spot price point. */
 export async function getLatestHenryHubPrice(): Promise<EiaDataPoint> {
   const result = await fetchHenryHubDailySpot(5);
   return result.points[0];
