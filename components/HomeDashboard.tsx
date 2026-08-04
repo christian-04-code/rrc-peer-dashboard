@@ -22,6 +22,7 @@ import { FinancialsPanel } from "@/components/dashboard/FinancialsPanel";
 import { DataActivityPanel } from "@/components/dashboard/DataActivityPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { PeersPanel } from "@/components/dashboard/PeersPanel";
+import { SourcesPanel } from "@/components/dashboard/SourcesPanel";
 import { DetailDrawer } from "@/components/dashboard/DetailDrawer";
 
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
@@ -120,7 +121,7 @@ export function HomeDashboard() {
               <button className={view === "dashboard" && workspace === "chart" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("chart"); }}>Overview</button>
               <button className={view === "peers" ? "active" : ""} onClick={() => setView("peers")}>Peers</button>
               <button className={view === "dashboard" && workspace === "map" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("map"); }}>Map</button>
-              <button onClick={() => openDrawer("Source inventory and normalized record lineage")}>Sources</button>
+              <button className={view === "sources" ? "active" : ""} onClick={() => setView("sources")}>Sources</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
             </nav>
           </div>
@@ -134,8 +135,10 @@ export function HomeDashboard() {
         <section className="content">
           {view === "macro" ? (
             <MacroPanel />
+          ) : view === "sources" ? (
+            <SourcesPanel />
           ) : view === "peers" ? (
-            <PeersPanel companies={selectableCompanies} primaryTicker={ticker} />
+            <PeersPanel companies={selectableCompanies} primaryTicker={ticker} onOpenSource={openDrawer} />
           ) : (
             <>
               <CompanyHero company={company} activity={activity} />
