@@ -1,10 +1,35 @@
 import { NextResponse } from "next/server";
 
-const USGS_BASIN_LAYER =
+const USGS_SEDIMENTARY_BASIN_LAYER =
   "https://energy.usgs.gov/arcgis/rest/services/BaseMaps/Sedimentary_Basin/MapServer/0/query";
+const USGS_HAYNESVILLE_FORMATION_LAYER =
+  "https://energy.usgs.gov/arcgis/rest/services/StudyAreas/USGulfCoast_webformat/MapServer/61/query";
 
-const BASINS_BY_VIEW: Record<string, string[]> = {
-  appalachia: ["Appalachian Basin"]
+type GeographySource = {
+  endpoint: string;
+  where: string;
+  outFields: string;
+  source: string;
+  methodology: string;
+};
+
+const SOURCES_BY_VIEW: Record<string, GeographySource> = {
+  appalachia: {
+    endpoint: USGS_SEDIMENTARY_BASIN_LAYER,
+    where: "name = 'Appalachian Basin'",
+    outFields: "name",
+    source: "U.S. Geological Survey — Sedimentary Basins of the U.S.A.",
+    methodology:
+      "Reconnaissance-scale sedimentary basin geometry. This layer represents Appalachian basin context, not company acreage or play boundaries."
+  },
+  "gulf-coast": {
+    endpoint: USGS_HAYNESVILLE_FORMATION_LAYER,
+    where: "1=1",
+    outFields: "*",
+    source: "U.S. Geological Survey — U.S. Gulf Coast, Haynesville Formation",
+    methodology:
+      "USGS Gulf Coast assessment geometry for the Haynesville Formation. This layer provides formation context only and does not represent company acreage, ownership, proved reserves, or operating boundaries."
+  }
 };
 
 type GeoJsonFeatureCollection = {
@@ -14,24 +39,20 @@ type GeoJsonFeatureCollection = {
 
 export async function GET(request: Request) {
   const view = new URL(request.url).searchParams.get("view") ?? "";
-  const basinNames = BASINS_BY_VIEW[view];
+  const source = SOURCES_BY_VIEW[view];
 
-  if (!basinNames) {
+  if (!source) {
     return NextResponse.json({
       status: "unsupported",
       view,
-      source: "USGS Sedimentary Basins of the U.S.A.",
-      sourceUrl: USGS_BASIN_LAYER,
+      source: "No authoritative geographic source configured",
       features: []
     });
   }
 
-  const where = basinNames
-    .map((name) => `name = '${name.replaceAll("'", "''")}'`)
-    .join(" OR ");
   const query = new URLSearchParams({
-    where,
-    outFields: "name",
+    where: source.where,
+    outFields: source.outFields,
     returnGeometry: "true",
     outSR: "4326",
     f: "geojson"
@@ -39,7 +60,7 @@ export async function GET(request: Request) {
 
   let response: Response;
   try {
-    response = await fetch(`${USGS_BASIN_LAYER}?${query.toString()}`, {
+    response = await fetch(`${source.endpoint}?${query.toString()}`, {
       headers: { Accept: "application/geo+json, application/json" },
       next: { revalidate: 86_400 }
     });
@@ -47,7 +68,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: `USGS basin request failed: ${error instanceof Error ? error.message : String(error)}`
+        message: `USGS geography request failed: ${error instanceof Error ? error.message : String(error)}`
       },
       { status: 502 }
     );
@@ -57,7 +78,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: `USGS basin request returned ${response.status} ${response.statusText}`
+        message: `USGS geography request returned ${response.status} ${response.statusText}`
       },
       { status: 502 }
     );
@@ -66,7 +87,7 @@ export async function GET(request: Request) {
   const payload: unknown = await response.json();
   if (!isFeatureCollection(payload)) {
     return NextResponse.json(
-      { status: "error", message: "USGS basin response was not a GeoJSON FeatureCollection." },
+      { status: "error", message: "USGS geography response was not a GeoJSON FeatureCollection." },
       { status: 502 }
     );
   }
@@ -74,10 +95,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     status: "ok",
     view,
-    source: "U.S. Geological Survey — Sedimentary Basins of the U.S.A.",
-    sourceUrl: USGS_BASIN_LAYER,
-    methodology:
-      "Reconnaissance-scale sedimentary basin geometry. This layer represents basin context, not company acreage or play boundaries.",
+    source: source.source,
+    sourceUrl: source.endpoint,
+    methodology: source.methodology,
     featureCollection: payload
   });
 }
