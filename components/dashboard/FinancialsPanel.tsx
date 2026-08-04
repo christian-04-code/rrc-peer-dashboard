@@ -1,10 +1,12 @@
 import type { InsightRow } from "@/lib/dashboard/types";
 
-export function IntelligencePanel({ rows, onOpenDetail }: { rows: InsightRow[]; onOpenDetail: (summary: string) => void }) {
-  const summary = rows.map((row) => row.text).join(" ");
+export function FinancialsPanel({ rows }: { rows: InsightRow[] }) {
   return (
     <div className="panel">
-      <h2>Today’s intelligence</h2>
+      <div className="panel-head">
+        <h2>Financials</h2>
+        <button disabled title="Full quarterly history — coming soon">Expand</button>
+      </div>
       <div className="insight-list">
         {rows.map((row) => (
           <div className="insight-row" key={row.label ?? row.text}>
@@ -13,7 +15,7 @@ export function IntelligencePanel({ rows, onOpenDetail }: { rows: InsightRow[]; 
           </div>
         ))}
       </div>
-      <button onClick={() => onOpenDetail(summary)}>Explore supporting data →</button>
+      <p className="muted panel-note">Full quarterly history — coming soon</p>
     </div>
   );
 }

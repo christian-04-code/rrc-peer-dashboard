@@ -113,6 +113,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .panel ul { padding: 0; margin: 0; list-style: none; display: grid; gap: 10px; }
 .panel li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 13px; }
 .panel li strong { color: var(--muted); font-weight: 600; }
+.panel-note { font-size: 12px; margin: 0; }
 .insight-list { display: grid; gap: 8px; margin: 10px 0 12px; }
 .insight-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
 .insight-row b { font-weight: 700; }
@@ -136,6 +137,13 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drawer > button { float: right; border: 1px solid var(--border); border-radius: 9px; background: transparent; padding: 8px 10px; }
 .drawer h2 { margin-top: 52px; font-size: 22px; }
 .drawer p { line-height: 1.6; }
+.macro-panel { display: grid; gap: 18px; padding-top: 4px; }
+.macro-market-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.macro-market-card { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 14px; }
+.macro-market-card span { color: var(--muted); font-size: 13px; }
+.macro-market-card strong { font-size: clamp(18px, 2vw, 25px); }
+.macro-market-card em { color: var(--positive); font-style: normal; font-size: 13px; }
+.macro-section { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 16px; }
 .muted, .fixture-note { color: var(--muted); }
 .fixture-note { margin-top: 14px; font-size: 12px; }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -151,6 +159,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .metric:last-child { grid-column: 1 / -1; }
   .workspace-grid { grid-template-columns: 1fr; }
   aside { display: grid; grid-template-columns: 1fr 1fr; }
+  .macro-market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
@@ -162,6 +171,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .company-header { align-items: flex-start; }
   .updated { display: none; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
+  .macro-market-grid { grid-template-columns: 1fr 1fr; }
   .comparison-block { grid-template-columns: 1fr; }
   .workspace-toolbar { align-items: flex-start; flex-direction: column; }
   aside { grid-template-columns: 1fr; }
