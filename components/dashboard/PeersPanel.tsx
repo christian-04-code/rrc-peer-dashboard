@@ -28,6 +28,8 @@ type ChangeResult = {
   change: number;
 };
 
+type Quartile = 1 | 2 | 3 | 4;
+
 const metricGroups: Record<MetricGroup, { label: string; metrics: MetricDefinition[] }> = {
   financial: {
     label: "Financial",
@@ -126,6 +128,32 @@ export function PeersPanel({
     };
   }, [changes, primaryTicker]);
 
+  const trendQuarters = useMemo(() => {
+    const endIndex = quarters.indexOf(quarter);
+    return quarters.slice(Math.max(0, endIndex - 4), endIndex + 1);
+  }, [quarter]);
+
+  const quartilesByQuarter = useMemo(() => {
+    return new Map(
+      trendQuarters.map((trendQuarter) => {
+        const ranked = companies
+          .map((company) => ({
+            ticker: company.ticker,
+            value: selectedAnalysisMetric.value(getQuarterlyFinancials(company.ticker, trendQuarter)).value
+          }))
+          .filter((item): item is { ticker: Ticker; value: number } => item.value !== null)
+          .sort((left, right) => right.value - left.value);
+
+        const quartiles = new Map<Ticker, Quartile>();
+        ranked.forEach((item, index) => {
+          const quartile = Math.min(4, Math.floor((index * 4) / ranked.length) + 1) as Quartile;
+          quartiles.set(item.ticker, quartile);
+        });
+        return [trendQuarter, quartiles] as const;
+      })
+    );
+  }, [companies, selectedAnalysisMetric, trendQuarters]);
+
   const orderedCompanies = useMemo(() => {
     const base = [...companies];
     const metric = selectedGroup.metrics.find((item) => item.label === sortMetric);
@@ -169,7 +197,7 @@ export function PeersPanel({
       <div className="peers-head">
         <div>
           <h1 id="peers-title">Quarterly peer comparison</h1>
-          <p>Click a metric to rank peers and update period-change analysis. Click a populated value to inspect its lineage.</p>
+          <p>Click a metric to rank peers and update period-change and multi-quarter positioning analysis.</p>
         </div>
         <label className="quarter-control">
           <span>Quarter</span>
@@ -205,6 +233,53 @@ export function PeersPanel({
           <ChangeCard label={`${primaryTicker} change`} result={changeSummary.primary} unit={selectedAnalysisMetric.unit} primary />
         </div>
         <p className="change-methodology">Changes use reported quarterly values only. Percentage-mix metrics are shown in percentage points; all other metrics use percentage change. Missing values and zero denominators are excluded.</p>
+      </section>
+
+      <section className="trend-positioning" aria-labelledby="trend-positioning-title">
+        <div className="trend-positioning-head">
+          <div>
+            <span className="eyebrow">Multi-quarter positioning</span>
+            <h2 id="trend-positioning-title">{selectedAnalysisMetric.label}</h2>
+            <p>Five-quarter window ending {quarter}. Quartiles rank reported numeric values from highest (Q1) to lowest (Q4).</p>
+          </div>
+          <div className="quartile-key" aria-label="Quartile key">
+            <span className="quartile q1">Q1</span>
+            <span className="quartile q2">Q2</span>
+            <span className="quartile q3">Q3</span>
+            <span className="quartile q4">Q4</span>
+          </div>
+        </div>
+        <div className="trend-table-wrap">
+          <table className="trend-table">
+            <thead>
+              <tr>
+                <th scope="col">Company</th>
+                {trendQuarters.map((trendQuarter) => <th key={trendQuarter} scope="col">{trendQuarter}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {orderedCompanies.map((company) => (
+                <tr key={company.ticker} className={company.ticker === primaryTicker ? "primary-row" : ""}>
+                  <th scope="row">
+                    <strong>{company.ticker}</strong>
+                    <span>{company.shortName}</span>
+                  </th>
+                  {trendQuarters.map((trendQuarter) => {
+                    const sourced = selectedAnalysisMetric.value(getQuarterlyFinancials(company.ticker, trendQuarter));
+                    const quartile = quartilesByQuarter.get(trendQuarter)?.get(company.ticker);
+                    return (
+                      <td key={trendQuarter}>
+                        <strong>{formatValue(sourced.value, selectedAnalysisMetric.unit)}</strong>
+                        {quartile ? <span className={`quartile q${quartile}`}>Q{quartile}</span> : <span className="quartile unavailable">--</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="trend-methodology">Quartiles indicate relative numeric position only. They are not directional investment judgments: for example, a high quartile in production differs economically from a high quartile in debt or unit costs.</p>
       </section>
 
       {sortMetric ? (
