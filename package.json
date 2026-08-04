@@ -7,9 +7,10 @@
     "build": "npm run validate:config && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test tests/*.test.cjs",
     "typecheck": "tsc --noEmit",
     "validate:config": "node scripts/validate-config.mjs",
-    "validate": "npm run validate:config && npm run typecheck"
+    "validate": "npm run validate:config && npm run typecheck && npm test"
   },
   "dependencies": {
     "next": "14.2.15",
