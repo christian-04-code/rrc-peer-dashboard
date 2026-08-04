@@ -17,6 +17,9 @@ const CRK_FCF_NOTE =
 const EXE_FCF_NOTE =
   "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain an EXE free cash flow series. Values come from the historical quarterly Free Cash Flow row in the EXE staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
 
+const GPOR_FCF_NOTE =
+  "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain a GPOR free cash flow series. Values come from the historical quarterly Free Cash Flow row in the GPOR staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
+
 const rrc: Record<Quarter, SourcedValue> = {
   "Q1 2024": { value: 137.898, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q2 2024": { value: 61.902, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
@@ -53,6 +56,18 @@ const exe: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 1704.0, source: "factset", basis: "derived", note: EXE_FCF_NOTE }
 };
 
+const gpor: Record<Quarter, SourcedValue> = {
+  "Q1 2024": { value: 53.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q2 2024": { value: 26.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q3 2024": { value: 58.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q4 2024": { value: 125.21, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q1 2025": { value: 36.6, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q2 2025": { value: 73.85, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q3 2025": { value: 105.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q4 2025": { value: 129.25, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
+  "Q1 2026": { value: 124.2, source: "factset", basis: "derived", note: GPOR_FCF_NOTE }
+};
+
 export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>> = {
   RRC: rrc,
   AR: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("AR", quarter)])) as Record<Quarter, SourcedValue>,
@@ -60,7 +75,7 @@ export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>
   CRK: crk,
   EQT: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("EQT", quarter)])) as Record<Quarter, SourcedValue>,
   EXE: exe,
-  GPOR: Object.fromEntries(quarters.map((quarter) => [quarter, unavailable("GPOR", quarter)])) as Record<Quarter, SourcedValue>
+  GPOR: gpor
 };
 
 export function getQuarterlyFreeCashFlow(ticker: Ticker, quarter: Quarter): SourcedValue {
