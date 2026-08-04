@@ -3,6 +3,7 @@ import { assertRuntimeRegistriesValid } from "@/lib/validation/runtime-validatio
 import "./globals.css";
 import "@/components/dashboard/PeersPanel.css";
 import "@/components/dashboard/SourcesPanel.css";
+import "@/components/dashboard/MapWorkspace.css";
 
 const registryValidation = assertRuntimeRegistriesValid();
 
