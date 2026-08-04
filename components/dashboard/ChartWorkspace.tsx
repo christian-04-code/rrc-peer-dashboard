@@ -1,49 +1,188 @@
 import { Fragment } from "react";
+import { getAllQuartersForTicker, quarters, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
-export function ChartWorkspace({ comparisonTickers, title, metric }: { comparisonTickers: Ticker[]; title: string; metric: Metric }) {
-  const peerPaths = [
-    { historical: "M70 205 C180 198 250 184 330 170", forecast: "M330 170 S490 146 570 132 S665 120 715 108" },
-    { historical: "M70 220 C180 205 250 200 330 182", forecast: "M330 182 S490 165 570 145 S665 135 715 122" },
-    { historical: "M70 190 C180 186 250 177 330 162", forecast: "M330 162 S490 154 570 138 S665 127 715 118" },
-    { historical: "M70 235 C180 226 250 217 330 204", forecast: "M330 204 S490 178 570 158 S665 145 715 136" },
-    { historical: "M70 198 C180 190 250 178 330 165", forecast: "M330 165 S490 140 570 126 S665 116 715 105" },
-    { historical: "M70 214 C180 208 250 198 330 188", forecast: "M330 188 S490 160 570 148 S665 134 715 125" }
-  ];
-  const axisUnit = metric === "production" ? "Bcfe/d" : "";
+const WIDTH = 760;
+const HEIGHT = 300;
+const LEFT = 62;
+const RIGHT = 28;
+const TOP = 40;
+const BOTTOM = 48;
+
+const metricConfig: Record<Metric, {
+  label: string;
+  unit: string;
+  value: (row: QuarterlyFinancials) => number | null;
+  comparable: boolean;
+  caveat?: string;
+}> = {
+  production: {
+    label: "Production",
+    unit: "MMcfe/d",
+    value: (row) => row.production.total.value,
+    comparable: true
+  },
+  capex: {
+    label: "Capital expenditures",
+    unit: "$MM",
+    value: (row) => row.capitalExpenditures.value,
+    comparable: true,
+    caveat: "Capital expenditure definitions vary by company. RRC and AR are accrual-adjusted total capital spending; other peers use company-reported figures."
+  },
+  debt: {
+    label: "Net debt",
+    unit: "$MM",
+    value: (row) => row.netDebt.value,
+    comparable: true
+  },
+  fcf: {
+    label: "Free cash flow",
+    unit: "$MM",
+    value: () => null,
+    comparable: false,
+    caveat: "Quarterly free cash flow has not yet been loaded into the normalized peer dataset. Unsupported values remain blank rather than being estimated."
+  },
+  valuation: {
+    label: "Valuation",
+    unit: "x",
+    value: () => null,
+    comparable: false,
+    caveat: "Historical valuation multiples have not yet been loaded into the normalized peer dataset. Unsupported values remain blank rather than being estimated."
+  }
+};
+
+type Series = {
+  ticker: Ticker;
+  values: Array<number | null>;
+};
+
+export function ChartWorkspace({
+  ticker,
+  comparisonTickers,
+  title,
+  metric
+}: {
+  ticker: Ticker;
+  comparisonTickers: Ticker[];
+  title: string;
+  metric: Metric;
+}) {
+  const config = metricConfig[metric];
+  const tickers = [ticker, ...comparisonTickers.filter((peer) => peer !== ticker)];
+  const series: Series[] = tickers.map((seriesTicker) => ({
+    ticker: seriesTicker,
+    values: getAllQuartersForTicker(seriesTicker).map(config.value)
+  }));
+  const numericValues = series.flatMap((item) => item.values.filter((value): value is number => value !== null));
+
+  if (!config.comparable || numericValues.length === 0) {
+    return (
+      <div className="chart-area chart-empty-state">
+        <div>
+          <h2>{title}</h2>
+          <p>{config.caveat}</p>
+        </div>
+        <div className="empty-chart-message" role="status">No verified peer series available</div>
+      </div>
+    );
+  }
+
+  const rawMin = Math.min(...numericValues);
+  const rawMax = Math.max(...numericValues);
+  const spread = Math.max(rawMax - rawMin, Math.abs(rawMax) * 0.08, 1);
+  const min = rawMin - spread * 0.12;
+  const max = rawMax + spread * 0.12;
+  const yTicks = Array.from({ length: 4 }, (_, index) => max - ((max - min) * index) / 3);
+
+  const xFor = (index: number) => LEFT + (index * (WIDTH - LEFT - RIGHT)) / Math.max(quarters.length - 1, 1);
+  const yFor = (value: number) => TOP + ((max - value) * (HEIGHT - TOP - BOTTOM)) / (max - min);
+
   return (
     <div className="chart-area">
-      <div><h2>{title}</h2><p>Primary company with up to six selected peer overlays · solid = historical, dashed = forecast</p></div>
-      <svg viewBox="0 0 760 300" role="img" aria-label={`${title} mock chart. Historical actuals shown solid through Q1'26, forecast shown dashed through 2027E.`}>
+      <div>
+        <h2>{title}</h2>
+        <p>Verified standalone quarterly actuals · Q1 2024 through Q1 2026 · blanks are not estimated</p>
+        {config.caveat ? <p className="muted">{config.caveat}</p> : null}
+      </div>
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${tickers.join(", ")} from Q1 2024 through Q1 2026.`}>
         <g className="grid-lines">
-          <line x1="55" y1="50" x2="730" y2="50"/>
-          <line x1="55" y1="115" x2="730" y2="115"/>
-          <line x1="55" y1="180" x2="730" y2="180"/>
-          <line x1="55" y1="245" x2="730" y2="245"/>
+          {yTicks.map((value) => {
+            const y = yFor(value);
+            return <line key={value} x1={LEFT} y1={y} x2={WIDTH - RIGHT} y2={y} />;
+          })}
         </g>
         <g className="axis-labels">
-          {axisUnit ? <text className="axis-unit" x="18" y="30">{axisUnit}</text> : null}
-          <text className="y-axis-label" x="48" y="54">2.7</text>
-          <text className="y-axis-label" x="48" y="119">2.5</text>
-          <text className="y-axis-label" x="48" y="184">2.3</text>
-          <text className="y-axis-label" x="48" y="249">2.1</text>
-          <text className="x-axis-label" x="70" y="268" textAnchor="middle">Q1&apos;25</text>
-          <text className="x-axis-label" x="330" y="268" textAnchor="middle">Q1&apos;26</text>
-          <text className="x-axis-label" x="570" y="268" textAnchor="middle">Q3&apos;26E</text>
-          <text className="x-axis-label" x="715" y="268" textAnchor="middle">2027E</text>
+          <text className="axis-unit" x="12" y="24">{config.unit}</text>
+          {yTicks.map((value) => (
+            <text key={value} className="y-axis-label" x={LEFT - 8} y={yFor(value) + 4}>{formatAxis(value)}</text>
+          ))}
+          {quarters.map((quarter, index) => (
+            index % 2 === 0 || index === quarters.length - 1
+              ? <text key={quarter} className="x-axis-label" x={xFor(index)} y={HEIGHT - 20} textAnchor="middle">{quarter.replace(" ", "'")}</text>
+              : null
+          ))}
         </g>
-        <path className="primary-line" d="M70 230 C180 220 250 210 330 195"/>
-        <path className="primary-line forecast-line" d="M330 195 C410 180 490 150 570 110 C650 70 665 78 715 62"/>
-        {comparisonTickers.map((peer, index) => (
-          <Fragment key={peer}>
-            <path className={`peer-line peer-${index + 1}`} d={peerPaths[index].historical} />
-            <path className={`peer-line peer-${index + 1} forecast-line`} d={peerPaths[index].forecast} />
+        {series.map((item, seriesIndex) => (
+          <Fragment key={item.ticker}>
+            {buildPathSegments(item.values, xFor, yFor).map((path, segmentIndex) => (
+              <path
+                key={`${item.ticker}-${segmentIndex}`}
+                className={seriesIndex === 0 ? "primary-line" : `peer-line peer-${Math.min(seriesIndex, 6)}`}
+                d={path}
+                fill="none"
+              />
+            ))}
+            {item.values.map((value, index) => value === null ? null : (
+              <circle
+                key={`${item.ticker}-${quarters[index]}`}
+                className={seriesIndex === 0 ? "primary-line-point" : `peer-line-point peer-${Math.min(seriesIndex, 6)}`}
+                cx={xFor(index)}
+                cy={yFor(value)}
+                r={seriesIndex === 0 ? 3.5 : 2.5}
+              >
+                <title>{`${item.ticker} · ${quarters[index]} · ${formatValue(value)} ${config.unit}`}</title>
+              </circle>
+            ))}
           </Fragment>
         ))}
-        <circle className="forecast-pulse-ring" cx="715" cy="62" r="6"/>
-        <circle cx="715" cy="62" r="6"/>
       </svg>
-      <div className="chart-legend"><span className="primary-legend">Primary</span>{comparisonTickers.map((peer) => <span key={peer}>{peer}</span>)}</div>
+      <div className="chart-legend">
+        <span className="primary-legend">{ticker}</span>
+        {comparisonTickers.filter((peer) => peer !== ticker).map((peer) => <span key={peer}>{peer}</span>)}
+      </div>
     </div>
   );
+}
+
+function buildPathSegments(
+  values: Array<number | null>,
+  xFor: (index: number) => number,
+  yFor: (value: number) => number
+): string[] {
+  const segments: string[] = [];
+  let current: string[] = [];
+
+  values.forEach((value, index) => {
+    if (value === null) {
+      if (current.length > 1) segments.push(current.join(" "));
+      current = [];
+      return;
+    }
+    current.push(`${current.length === 0 ? "M" : "L"}${xFor(index).toFixed(1)} ${yFor(value).toFixed(1)}`);
+  });
+
+  if (current.length > 1) segments.push(current.join(" "));
+  return segments;
+}
+
+function formatAxis(value: number): string {
+  const absolute = Math.abs(value);
+  if (absolute >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (absolute >= 100) return value.toFixed(0);
+  if (absolute >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
+function formatValue(value: number): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
