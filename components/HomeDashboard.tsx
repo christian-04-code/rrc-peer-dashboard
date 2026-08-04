@@ -34,6 +34,8 @@ export function HomeDashboard() {
   const [drawer, setDrawer] = useState<string | null>(null);
   const [financePanelTab, setFinancePanelTab] = useState<FinancePanelTab>("guidance");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const backgroundRef = useRef<HTMLDivElement>(null);
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
@@ -49,14 +51,25 @@ export function HomeDashboard() {
   }, []);
 
   useEffect(() => {
+    const backgroundNode = backgroundRef.current;
+    if (backgroundNode) backgroundNode.inert = Boolean(drawer);
     if (!drawer) return;
     closeButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setDrawer(null);
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (backgroundNode) backgroundNode.inert = false;
+      triggerRef.current?.focus();
+    };
   }, [drawer]);
+
+  function openDrawer(value: string) {
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    setDrawer(value);
+  }
 
   const insightRows = useMemo((): InsightRow[] => {
     if (ticker !== "RRC") {
@@ -93,59 +106,61 @@ export function HomeDashboard() {
 
   return (
     <main className="dashboard-shell">
-      <header className="topbar">
-        <div className="topbar-main">
-          <div className="topbar-left">
-            <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
-            <div className="brand">
-              <strong>RRC Peer Intelligence</strong>
-              <span>Interactive energy research workspace</span>
+      <div ref={backgroundRef}>
+        <header className="topbar">
+          <div className="topbar-main">
+            <div className="topbar-left">
+              <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
+              <div className="brand">
+                <strong>RRC Peer Intelligence</strong>
+                <span>Interactive energy research workspace</span>
+              </div>
             </div>
+            <nav aria-label="Primary navigation"><button className={workspace === "chart" ? "active" : ""} onClick={() => setWorkspace("chart")}>Overview</button><button>Peers</button><button className={workspace === "map" ? "active" : ""} onClick={() => setWorkspace("map")}>Map</button><button>Sources</button></nav>
           </div>
-          <nav aria-label="Primary navigation"><button className={workspace === "chart" ? "active" : ""} onClick={() => setWorkspace("chart")}>Overview</button><button>Peers</button><button className={workspace === "map" ? "active" : ""} onClick={() => setWorkspace("map")}>Map</button><button>Sources</button></nav>
-        </div>
-        <div className="status-row">
-          <button className="live-button" onClick={() => setDrawer("Data activity and source health")}>● 6 feeds active</button>
-        </div>
-      </header>
+          <div className="status-row">
+            <button className="live-button" onClick={() => openDrawer("Data activity and source health")}>● 6 feeds active</button>
+          </div>
+        </header>
 
-      <MarketRibbon onOpen={setDrawer} />
+        <MarketRibbon onOpen={openDrawer} />
 
-      <section className="content">
-        <CompanyHero company={company} activity={activity} />
+        <section className="content">
+          <CompanyHero company={company} activity={activity} />
 
-        <MetricStrip metrics={metrics} activeMetric={metric} onSelectMetric={setMetric} companyShortName={company.shortName} />
+          <MetricStrip metrics={metrics} activeMetric={metric} onSelectMetric={setMetric} companyShortName={company.shortName} />
 
-        <section className="company-selector" aria-label="Company and peer selection">
-          <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={selectPrimaryCompany} />
-          <CompanyComparisonSelector
-            companies={selectableCompanies}
-            ticker={ticker}
-            comparisonTickers={comparisonTickers}
-            maxComparisons={MAX_COMPARISONS}
-            onToggle={toggleComparison}
-            onClear={() => setComparisonTickers([])}
-          />
-        </section>
+          <section className="company-selector" aria-label="Company and peer selection">
+            <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={selectPrimaryCompany} />
+            <CompanyComparisonSelector
+              companies={selectableCompanies}
+              ticker={ticker}
+              comparisonTickers={comparisonTickers}
+              maxComparisons={MAX_COMPARISONS}
+              onToggle={toggleComparison}
+              onClear={() => setComparisonTickers([])}
+            />
+          </section>
 
-        <section className="workspace-grid">
-          <div className="workspace">
-            <div className="workspace-toolbar">
-              <div className="tabs">{(["production", "fcf", "capex", "debt", "valuation"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
+          <section className="workspace-grid">
+            <div className="workspace">
+              <div className="workspace-toolbar">
+                <div className="tabs">{(["production", "fcf", "capex", "debt", "valuation"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
+              </div>
+
+              {workspace === "chart" ? <ChartWorkspace comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
             </div>
 
-            {workspace === "chart" ? <ChartWorkspace comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={setDrawer} />}
-          </div>
+            <aside>
+              <IntelligencePanel rows={insightRows} onOpenDetail={openDrawer} />
+              <FinancePanel tab={financePanelTab} onTabChange={setFinancePanelTab} rows={financePanelRows} onOpenDetail={openDrawer} />
+              <DataActivityPanel />
+            </aside>
+          </section>
 
-          <aside>
-            <IntelligencePanel rows={insightRows} onOpenDetail={setDrawer} />
-            <FinancePanel tab={financePanelTab} onTabChange={setFinancePanelTab} rows={financePanelRows} onOpenDetail={setDrawer} />
-            <DataActivityPanel />
-          </aside>
+          <p className="fixture-note">{fixtureDisclaimer}</p>
         </section>
-
-        <p className="fixture-note">{fixtureDisclaimer}</p>
-      </section>
+      </div>
 
       <DetailDrawer content={drawer} onClose={() => setDrawer(null)} closeButtonRef={closeButtonRef} />
     </main>
