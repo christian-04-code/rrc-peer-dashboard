@@ -10,6 +10,7 @@ import {
   selectableCompanies
 } from "@/lib/dashboard/company-registry";
 import type { InsightRow, Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
+import { useMarketData } from "@/lib/market/use-market-data";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -28,6 +29,10 @@ import { DetailDrawer } from "@/components/dashboard/DetailDrawer";
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
 
+function formatMarketValue(value: number | null, digits = 2): string {
+  return value === null ? "--" : value.toFixed(digits);
+}
+
 export function HomeDashboard() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
   const [metric, setMetric] = useState<Metric>("production");
@@ -39,6 +44,7 @@ export function HomeDashboard() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
+  const market = useMarketData();
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
@@ -78,12 +84,33 @@ export function HomeDashboard() {
     if (ticker !== "RRC") {
       return [{ text: `${ticker} is selected. Detailed insights remain disabled until its normalized adapter is connected.` }];
     }
+
+    const marketById = new Map(market.data?.metrics.map((item) => [item.id, item]) ?? []);
+    const henryHub = marketById.get("henry_hub");
+    const storage = marketById.get("storage");
+    const lng = marketById.get("lng_exports");
+
     return [
-      { label: "Growth", text: "Range targets roughly 2.6 Bcfe/d by 2027." },
-      { label: "Capital", text: "Annual spending remains $650–$700MM." },
-      { label: "FCF", text: "More than $1.7B cumulative at the stated price case." }
+      {
+        label: "Daily market",
+        text: henryHub?.status === "ok"
+          ? `Henry Hub is ${formatMarketValue(henryHub.value)} ${henryHub.unit} for ${henryHub.period}; this is delayed benchmark data, not Range realized pricing.`
+          : "Henry Hub is unavailable; the dashboard is showing -- rather than a substituted value."
+      },
+      {
+        label: "Storage",
+        text: storage?.status === "ok"
+          ? `Lower 48 working gas is ${formatMarketValue(storage.value, 0)} ${storage.unit} for ${storage.period}.`
+          : "The EIA storage feed is currently unavailable."
+      },
+      {
+        label: "LNG",
+        text: lng?.status === "ok"
+          ? `U.S. LNG exports were ${formatMarketValue(lng.value, 0)} ${lng.unit} for ${lng.period}.`
+          : "The EIA LNG export feed is currently unavailable."
+      }
     ];
-  }, [ticker]);
+  }, [ticker, market.data]);
 
   const financialsRows = useMemo((): InsightRow[] => {
     return metrics
@@ -104,6 +131,8 @@ export function HomeDashboard() {
       return [...current, peer];
     });
   }
+
+  const activeFeedCount = market.data?.metrics.filter((item) => item.status === "ok").length ?? 0;
 
   return (
     <main className="dashboard-shell">
@@ -126,7 +155,7 @@ export function HomeDashboard() {
             </nav>
           </div>
           <div className="status-row">
-            <button className="live-button" onClick={() => openDrawer("Data activity and source health")}>● 6 feeds active</button>
+            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of 5 EIA feeds available`)}>● {activeFeedCount} feeds active</button>
           </div>
         </header>
 
