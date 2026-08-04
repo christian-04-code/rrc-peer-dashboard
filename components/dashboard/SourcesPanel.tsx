@@ -1,6 +1,10 @@
 import { quarters } from "@/lib/dashboard/financials-quarterly";
+import { getHistoricalCompletenessSummary } from "@/lib/dashboard/historical-completeness";
 
 export function SourcesPanel() {
+  const completeness = getHistoricalCompletenessSummary();
+  const tickerCoverage = Object.entries(completeness.byTicker);
+
   return (
     <section className="sources-panel" aria-labelledby="sources-title">
       <div className="sources-hero">
@@ -41,6 +45,17 @@ export function SourcesPanel() {
           <p>
             Every populated value carries a source tag, an actual/derived basis, and an optional preserved methodology note.
           </p>
+        </article>
+
+        <article className="source-card">
+          <span className="source-priority">Coverage audit</span>
+          <h2>{completeness.coveragePct.toFixed(1)}% populated</h2>
+          <p>{completeness.populated.toLocaleString()} of {completeness.total.toLocaleString()} official historical metric cells currently contain verified values.</p>
+          <ul>
+            {tickerCoverage.map(([ticker, summary]) => (
+              <li key={ticker}>{ticker}: {summary.coveragePct.toFixed(1)}% · {summary.missing} blank</li>
+            ))}
+          </ul>
         </article>
 
         <article className="source-card">
