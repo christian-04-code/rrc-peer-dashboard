@@ -13,11 +13,19 @@ import type { Ticker } from "@/lib/dashboard/types";
 
 type MetricGroup = "financial" | "production" | "pricing" | "costs" | "wells";
 type SortDirection = "desc" | "asc";
+type ChangeMode = "qoq" | "yoy";
 
 type MetricDefinition = {
   label: string;
   unit: string;
   value: (row: QuarterlyFinancials) => SourcedValue;
+};
+
+type ChangeResult = {
+  ticker: Ticker;
+  current: number;
+  prior: number;
+  change: number;
 };
 
 const metricGroups: Record<MetricGroup, { label: string; metrics: MetricDefinition[] }> = {
@@ -82,12 +90,41 @@ export function PeersPanel({
   const [group, setGroup] = useState<MetricGroup>("financial");
   const [sortMetric, setSortMetric] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [changeMode, setChangeMode] = useState<ChangeMode>("qoq");
+  const [analysisMetric, setAnalysisMetric] = useState("Revenue");
 
   const selectedGroup = metricGroups[group];
+  const selectedAnalysisMetric = selectedGroup.metrics.find((metric) => metric.label === analysisMetric) ?? selectedGroup.metrics[0];
   const rows = useMemo(
     () => new Map(companies.map((company) => [company.ticker, getQuarterlyFinancials(company.ticker, quarter)])),
     [companies, quarter]
   );
+
+  const priorQuarter = useMemo(() => {
+    const index = quarters.indexOf(quarter);
+    const offset = changeMode === "qoq" ? 1 : 4;
+    return index >= offset ? quarters[index - offset] : null;
+  }, [changeMode, quarter]);
+
+  const changes = useMemo((): ChangeResult[] => {
+    if (!priorQuarter) return [];
+    return companies.flatMap((company) => {
+      const current = selectedAnalysisMetric.value(getQuarterlyFinancials(company.ticker, quarter)).value;
+      const prior = selectedAnalysisMetric.value(getQuarterlyFinancials(company.ticker, priorQuarter)).value;
+      if (current === null || prior === null || (selectedAnalysisMetric.unit !== "%" && prior === 0)) return [];
+      const change = selectedAnalysisMetric.unit === "%" ? (current - prior) * 100 : ((current - prior) / Math.abs(prior)) * 100;
+      return [{ ticker: company.ticker, current, prior, change }];
+    });
+  }, [companies, priorQuarter, quarter, selectedAnalysisMetric]);
+
+  const changeSummary = useMemo(() => {
+    const sorted = [...changes].sort((left, right) => right.change - left.change);
+    return {
+      largestIncrease: sorted[0] ?? null,
+      largestDecrease: sorted[sorted.length - 1] ?? null,
+      primary: changes.find((item) => item.ticker === primaryTicker) ?? null
+    };
+  }, [changes, primaryTicker]);
 
   const orderedCompanies = useMemo(() => {
     const base = [...companies];
@@ -111,6 +148,7 @@ export function PeersPanel({
   }, [companies, primaryTicker, rows, selectedGroup.metrics, sortDirection, sortMetric]);
 
   function toggleSort(metric: MetricDefinition) {
+    setAnalysisMetric(metric.label);
     if (sortMetric === metric.label) {
       setSortDirection((current) => current === "desc" ? "asc" : "desc");
       return;
@@ -123,6 +161,7 @@ export function PeersPanel({
     setGroup(nextGroup);
     setSortMetric(null);
     setSortDirection("desc");
+    setAnalysisMetric(metricGroups[nextGroup].metrics[0].label);
   }
 
   return (
@@ -130,7 +169,7 @@ export function PeersPanel({
       <div className="peers-head">
         <div>
           <h1 id="peers-title">Quarterly peer comparison</h1>
-          <p>Click a metric to rank peers. Click a populated value to inspect its lineage and methodology.</p>
+          <p>Click a metric to rank peers and update period-change analysis. Click a populated value to inspect its lineage.</p>
         </div>
         <label className="quarter-control">
           <span>Quarter</span>
@@ -142,18 +181,31 @@ export function PeersPanel({
 
       <div className="peer-group-tabs" role="tablist" aria-label="Peer metric groups">
         {(Object.keys(metricGroups) as MetricGroup[]).map((key) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={group === key}
-            className={group === key ? "active" : ""}
-            onClick={() => changeGroup(key)}
-          >
+          <button key={key} type="button" role="tab" aria-selected={group === key} className={group === key ? "active" : ""} onClick={() => changeGroup(key)}>
             {metricGroups[key].label}
           </button>
         ))}
       </div>
+
+      <section className="change-analysis" aria-labelledby="change-analysis-title">
+        <div className="change-analysis-head">
+          <div>
+            <span className="eyebrow">Period change</span>
+            <h2 id="change-analysis-title">{selectedAnalysisMetric.label}</h2>
+            <p>{priorQuarter ? `${quarter} compared with ${priorQuarter}` : `No ${changeMode.toUpperCase()} comparison period is available for ${quarter}.`}</p>
+          </div>
+          <div className="change-mode-toggle" aria-label="Change period">
+            <button type="button" className={changeMode === "qoq" ? "active" : ""} onClick={() => setChangeMode("qoq")}>QoQ</button>
+            <button type="button" className={changeMode === "yoy" ? "active" : ""} onClick={() => setChangeMode("yoy")}>YoY</button>
+          </div>
+        </div>
+        <div className="change-card-grid">
+          <ChangeCard label="Largest increase" result={changeSummary.largestIncrease} unit={selectedAnalysisMetric.unit} />
+          <ChangeCard label="Largest decrease" result={changeSummary.largestDecrease} unit={selectedAnalysisMetric.unit} />
+          <ChangeCard label={`${primaryTicker} change`} result={changeSummary.primary} unit={selectedAnalysisMetric.unit} primary />
+        </div>
+        <p className="change-methodology">Changes use reported quarterly values only. Percentage-mix metrics are shown in percentage points; all other metrics use percentage change. Missing values and zero denominators are excluded.</p>
+      </section>
 
       {sortMetric ? (
         <div className="peer-sort-status" role="status">
@@ -179,12 +231,7 @@ export function PeersPanel({
             {selectedGroup.metrics.map((metric) => (
               <tr key={metric.label}>
                 <th scope="row">
-                  <button
-                    type="button"
-                    className={sortMetric === metric.label ? "metric-sort active" : "metric-sort"}
-                    onClick={() => toggleSort(metric)}
-                    aria-label={`Sort peers by ${metric.label}`}
-                  >
+                  <button type="button" className={sortMetric === metric.label ? "metric-sort active" : "metric-sort"} onClick={() => toggleSort(metric)} aria-label={`Sort peers by ${metric.label}`}>
                     <strong>{metric.label}</strong>
                     <span>{metric.unit} {sortMetric === metric.label ? (sortDirection === "desc" ? "↓" : "↑") : "↕"}</span>
                   </button>
@@ -192,28 +239,13 @@ export function PeersPanel({
                 {orderedCompanies.map((company) => {
                   const sourced = metric.value(rows.get(company.ticker)!);
                   const formatted = formatValue(sourced.value, metric.unit);
-                  const sourceDescription = buildSourceDescription({
-                    ticker: company.ticker,
-                    quarter,
-                    metric: metric.label,
-                    unit: metric.unit,
-                    formatted,
-                    value: sourced
-                  });
+                  const sourceDescription = buildSourceDescription({ ticker: company.ticker, quarter, metric: metric.label, unit: metric.unit, formatted, value: sourced });
                   return (
-                    <td
-                      key={company.ticker}
-                      className={company.ticker === primaryTicker ? "primary-company" : ""}
-                    >
+                    <td key={company.ticker} className={company.ticker === primaryTicker ? "primary-company" : ""}>
                       {sourced.value === null ? (
                         <span className="missing-value" title={buildSourceTitle(sourced)}>--</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="source-cell"
-                          title={buildSourceTitle(sourced)}
-                          onClick={() => onOpenSource(sourceDescription)}
-                        >
+                        <button type="button" className="source-cell" title={buildSourceTitle(sourced)} onClick={() => onOpenSource(sourceDescription)}>
                           <strong>{formatted}</strong>
                           <small>{sourced.basis}</small>
                         </button>
@@ -236,6 +268,28 @@ export function PeersPanel({
   );
 }
 
+function ChangeCard({ label, result, unit, primary = false }: { label: string; result: ChangeResult | null; unit: string; primary?: boolean }) {
+  return (
+    <article className={primary ? "change-card primary" : "change-card"}>
+      <span>{label}</span>
+      {result ? (
+        <>
+          <strong>{result.ticker}</strong>
+          <em className={result.change >= 0 ? "positive" : "negative"}>{formatChange(result.change, unit)}</em>
+          <small>{formatValue(result.prior, unit)} → {formatValue(result.current, unit)}</small>
+        </>
+      ) : (
+        <><strong>--</strong><em>Unavailable</em><small>Insufficient reported data</small></>
+      )}
+    </article>
+  );
+}
+
+function formatChange(change: number, unit: string): string {
+  const sign = change > 0 ? "+" : "";
+  return unit === "%" ? `${sign}${change.toFixed(1)} pts` : `${sign}${change.toFixed(1)}%`;
+}
+
 function formatValue(value: number | null, unit: string): string {
   if (value === null) return "--";
   if (unit === "%") return `${(value * 100).toFixed(1)}%`;
@@ -250,21 +304,7 @@ function buildSourceTitle(value: SourcedValue): string {
   return parts.join(" · ");
 }
 
-function buildSourceDescription({
-  ticker,
-  quarter,
-  metric,
-  unit,
-  formatted,
-  value
-}: {
-  ticker: Ticker;
-  quarter: Quarter;
-  metric: string;
-  unit: string;
-  formatted: string;
-  value: SourcedValue;
-}): string {
+function buildSourceDescription({ ticker, quarter, metric, unit, formatted, value }: { ticker: Ticker; quarter: Quarter; metric: string; unit: string; formatted: string; value: SourcedValue }): string {
   return [
     `${ticker} · ${quarter}`,
     `${metric}: ${formatted} ${unit}`,
