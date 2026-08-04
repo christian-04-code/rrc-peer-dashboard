@@ -89,7 +89,8 @@ h2 { font-size: 15px; }
 @media (prefers-reduced-motion: reduce) {
   .chart-area .forecast-pulse-ring { animation: none; opacity: 0; }
 }
-.peer-line { fill: none; stroke-width: 2.5; stroke-dasharray: 8 7; opacity: .82; }
+.peer-line { fill: none; stroke-width: 2.5; opacity: .82; }
+.peer-line.forecast-line { stroke-dasharray: 8 7; }
 .peer-1 { stroke: #9b8cff; }
 .peer-2 { stroke: #74c7a2; }
 .peer-3 { stroke: #e0b56f; }
