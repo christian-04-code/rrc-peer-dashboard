@@ -362,3 +362,65 @@ test("calculateDcf refuses a terminal value when growth is not below the discoun
   assert.equal(result.impliedSharePrice, null);
   assert.ok(result.warnings.some((w) => w.includes("Discount rate must exceed terminal growth rate")));
 });
+
+test("calculateMultipleValuation rejects negative forecast EBITDAX instead of producing a negative enterprise value", () => {
+  const result = valuation.calculateMultipleValuation({
+    forecastEbitdaxMillion: -50,
+    targetEvToEbitdax: 5,
+    netDebtMillion: 800,
+    dilutedSharesMillion: 250
+  });
+  assert.equal(result.enterpriseValueMillion, null);
+  assert.equal(result.impliedSharePrice, null);
+  assert.ok(result.warnings.some((w) => w.includes("EBITDAX")));
+});
+
+test("calculateMultipleValuation adds net cash (negative net debt) to equity value rather than subtracting it twice", () => {
+  const result = valuation.calculateMultipleValuation({
+    forecastEbitdaxMillion: 1000,
+    targetEvToEbitdax: 5,
+    netDebtMillion: -200,
+    dilutedSharesMillion: 250
+  });
+  assert.equal(result.enterpriseValueMillion, 5000);
+  assert.equal(result.equityValueMillion, 5200, "a net-cash position must raise equity value above enterprise value");
+  assert.equal(result.impliedSharePrice, 5200 / 250);
+});
+
+test("calculateDcf adds net cash (negative net debt) to equity value the same way the multiple method does", () => {
+  const result = valuation.calculateDcf({
+    annualFreeCashFlowMillion: [{ year: 2026, value: 100 }],
+    discountRate: 0.1,
+    terminalGrowthRate: 0.02,
+    netDebtMillion: -50,
+    dilutedSharesMillion: 100
+  });
+  assert.equal(result.equityValueMillion, result.enterpriseValueMillion + 50);
+});
+
+test("calculateDcf refuses to divide by a zero or negative share count", () => {
+  const result = valuation.calculateDcf({
+    annualFreeCashFlowMillion: [{ year: 2026, value: 100 }],
+    discountRate: 0.1,
+    terminalGrowthRate: 0.02,
+    netDebtMillion: 500,
+    dilutedSharesMillion: -1
+  });
+  assert.equal(result.enterpriseValueMillion, null);
+  assert.equal(result.impliedSharePrice, null);
+  assert.ok(result.warnings.some((w) => w.includes("Diluted shares")));
+});
+
+test("calculateMultipleValuation and calculateDcf are deterministic for identical inputs", () => {
+  const multipleInput = { forecastEbitdaxMillion: 1000, targetEvToEbitdax: 5, netDebtMillion: 800, dilutedSharesMillion: 250 };
+  assert.deepEqual(valuation.calculateMultipleValuation(multipleInput), valuation.calculateMultipleValuation(multipleInput));
+
+  const dcfInput = {
+    annualFreeCashFlowMillion: [{ year: 2026, value: 100 }, { year: 2027, value: 110 }],
+    discountRate: 0.1,
+    terminalGrowthRate: 0.02,
+    netDebtMillion: 500,
+    dilutedSharesMillion: 100
+  };
+  assert.deepEqual(valuation.calculateDcf(dcfInput), valuation.calculateDcf(dcfInput));
+});
