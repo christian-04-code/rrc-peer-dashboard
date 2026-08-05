@@ -68,10 +68,23 @@ export function calculateRrcQuarterlyHedgeSettlements(inputs: RrcHedgeMarketInpu
     )
   };
 
+  function hedgedVolume(commodity: "natural_gas" | "oil" | "ngl"): number {
+    return active
+      .filter((entry) => entry.position.commodity === commodity)
+      .reduce((sum, entry) => sum + (entry.position.volume ?? 0), 0);
+  }
+
+  const hedgedVolumeByCommodity = {
+    naturalGas: hedgedVolume("natural_gas"),
+    oil: hedgedVolume("oil"),
+    ngl: hedgedVolume("ngl")
+  };
+
   return {
     period: inputs.period,
     activePositionCount: active.length,
     byCommodity,
+    hedgedVolumeByCommodity,
     warnings: [
       ...byCommodity.naturalGas.warnings,
       ...byCommodity.oil.warnings,

@@ -58,6 +58,23 @@ export function buildRrcHedgedScenario(
       ? null
       : oilSettlement / oilVolumeBbl;
 
+    // Hedge volume is disclosed in MMBtu while production is tracked in Mcf; the
+    // comparison reuses the same MMBtu-to-Mcf approximation already used above to
+    // spread the dollar settlement across production.
+    const gasHedgedVolume = settlements.hedgedVolumeByCommodity.naturalGas;
+    const oilHedgedVolume = settlements.hedgedVolumeByCommodity.oil;
+    const gasOverhedgeNote =
+      gasVolumeMcf !== null && gasHedgedVolume > gasVolumeMcf
+        ? ` Warning: hedged gas volume (${gasHedgedVolume.toFixed(0)} MMBtu) exceeds forecast gas production (${gasVolumeMcf.toFixed(0)} Mcf) for this period.`
+        : "";
+    const oilOverhedgeNote =
+      oilVolumeBbl !== null && oilHedgedVolume > oilVolumeBbl
+        ? ` Warning: hedged oil volume (${oilHedgedVolume.toFixed(0)} bbl) exceeds forecast oil production (${oilVolumeBbl.toFixed(0)} bbl) for this period.`
+        : "";
+    const settlementWarningNote = settlements.warnings.length > 0
+      ? ` Settlement warnings: ${settlements.warnings.join(" ")}`
+      : "";
+
     return {
       ...period,
       pricing: {
@@ -66,17 +83,20 @@ export function buildRrcHedgedScenario(
           gasImpact,
           "$/Mcf",
           period.period,
-          gasImpact === null
+          (gasImpact === null
             ? "No calculable disclosed gas hedge settlement for this period."
-            : "Calculated from disclosed daily swap/collar volumes and strikes against the scenario Henry Hub benchmark; basis swaps and unexercised swaptions are excluded."
+            : "Calculated from disclosed daily swap/collar volumes and strikes against the scenario Henry Hub benchmark; basis swaps and unexercised swaptions are excluded.") +
+            gasOverhedgeNote +
+            settlementWarningNote
         ),
         oilHedgeImpactPerBbl: modeledHedgeValue(
           oilImpact,
           "$/bbl",
           period.period,
-          oilImpact === null
+          (oilImpact === null
             ? "No calculable disclosed oil hedge settlement for this period."
-            : "Calculated from disclosed oil three-way collars against the scenario WTI benchmark."
+            : "Calculated from disclosed oil three-way collars against the scenario WTI benchmark.") +
+            oilOverhedgeNote
         ),
         nglHedgeImpactPerBbl: modeledHedgeValue(
           0,
