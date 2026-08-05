@@ -116,7 +116,13 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .panel-note { font-size: 12px; margin: 0; }
 .financials-section + .financials-section { margin-top: 4px; }
 .financials-section h3 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.financials-section li { padding-top: 6px; font-size: 12px; }
+.financials-section li { padding-top: 6px; font-size: 12px; align-items: flex-start; }
+.financials-values { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.financials-panel .financials-values strong { color: var(--text); font-weight: 700; }
+.financials-values small { font-size: 11px; }
+.financials-values small.positive { color: var(--positive); }
+.financials-values small.negative { color: var(--negative); }
+.financials-values small.neutral { color: var(--muted); }
 .insight-list { display: grid; gap: 8px; margin: 10px 0 12px; }
 .insight-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
 .insight-row b { font-weight: 700; }

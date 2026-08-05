@@ -11,7 +11,7 @@ export function FinancePanel({
   return (
     <div className="panel">
       <div className="panel-head">
-        <h2>Guidance</h2>
+        <h2>Market &amp; Macro</h2>
       </div>
       <div className="insight-list">
         {rows.map((row) => (
@@ -21,7 +21,7 @@ export function FinancePanel({
           </div>
         ))}
       </div>
-      <button onClick={() => onOpenDetail(summary)}>View full guidance →</button>
+      <button onClick={() => onOpenDetail(summary)}>View full macro →</button>
     </div>
   );
 }

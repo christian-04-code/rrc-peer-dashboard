@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import comparisonPreferences from "@/config/comparison-preferences.json";
-import { activityMessages, fixtureDisclaimer, getHomepageMetrics } from "@/lib/dashboard/homepage-data";
+import { activityMessages, fixtureDisclaimer } from "@/lib/dashboard/homepage-data";
+import { getOverviewSummaryCards } from "@/lib/dashboard/overview-metrics";
 import {
   defaultTicker,
   getCompany,
@@ -47,7 +48,7 @@ export function HomeDashboard() {
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
-  const metrics = useMemo(() => getHomepageMetrics(ticker), [ticker]);
+  const metrics = useMemo(() => getOverviewSummaryCards(ticker), [ticker]);
 
   useEffect(() => {
     let index = 0;
@@ -165,7 +166,7 @@ export function HomeDashboard() {
             <>
               <CompanyHero company={company} activity={activity} />
 
-              <MetricStrip metrics={metrics} activeMetric={metric} onSelectMetric={setMetric} companyShortName={company.shortName} />
+              <MetricStrip metrics={metrics} companyShortName={company.shortName} />
 
               <section className="company-selector" aria-label="Company and peer selection">
                 <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={selectPrimaryCompany} />
