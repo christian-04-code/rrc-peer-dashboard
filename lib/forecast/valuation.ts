@@ -40,9 +40,9 @@ export function calculateMultipleValuation(input: MultipleValuationInput): Multi
   if (!finite(input.netDebtMillion)) warnings.push("Net debt is unavailable.");
   if (!finite(input.dilutedSharesMillion) || input.dilutedSharesMillion <= 0) warnings.push("Diluted shares are unavailable or invalid.");
   if (warnings.length > 0) return { enterpriseValueMillion: null, equityValueMillion: null, impliedSharePrice: null, warnings };
-  const enterpriseValueMillion = input.forecastEbitdaxMillion * input.targetEvToEbitdax;
-  const equityValueMillion = enterpriseValueMillion - input.netDebtMillion;
-  return { enterpriseValueMillion, equityValueMillion, impliedSharePrice: equityValueMillion / input.dilutedSharesMillion, warnings };
+  const enterpriseValueMillion = (input.forecastEbitdaxMillion as number) * (input.targetEvToEbitdax as number);
+  const equityValueMillion = enterpriseValueMillion - (input.netDebtMillion as number);
+  return { enterpriseValueMillion, equityValueMillion, impliedSharePrice: equityValueMillion / (input.dilutedSharesMillion as number), warnings };
 }
 
 export function calculateDcf(input: DcfInput): DcfResult {

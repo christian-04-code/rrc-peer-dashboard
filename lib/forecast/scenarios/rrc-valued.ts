@@ -36,7 +36,7 @@ export function runRrcValuedScenario(
   const endingBalanceSheet = complete.balanceSheet[complete.balanceSheet.length - 1];
   const dilutedSharesMillion = rrcQ1_2026Baseline.dilutedSharesMillion.value;
   const forecast2027EbitdaxMillion = sumYear(forecastPeriods, 2027, "ebitdaxMillion");
-  const netDebtMillion = endingBalanceSheet?.endingNetDebtMillion ?? null;
+  const netDebtMillion = endingBalanceSheet?.netDebtMillion ?? null;
 
   const multiple = calculateMultipleValuation({
     forecastEbitdaxMillion: forecast2027EbitdaxMillion,
