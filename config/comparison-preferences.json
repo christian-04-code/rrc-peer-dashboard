@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "maxComparisonPeers": 6,
+  "defaultPrimaryCompany": "RRC",
+  "defaultComparisonPeers": ["AR", "EQT", "CNX"],
+  "behavior": {
+    "excludePrimaryFromComparisons": true,
+    "preserveSelectionsWhenPrimaryChanges": true,
+    "dropNewPrimaryFromComparisons": true,
+    "showSelectedCount": true,
+    "allowClearAll": true
+  },
+  "visualDirection": {
+    "theme": "dark",
+    "brandAnchor": "Range Resources",
+    "intent": "Feel like a polished Range Resources digital product rather than a generic SaaS, spreadsheet, or terminal clone.",
+    "rules": [
+      "Use deep navy and restrained RRC-aligned blues.",
+      "Keep the surface clean and corporate, with subtle motion and low visual noise.",
+      "Use company logos and identity changes prominently when the primary company changes.",
+      "Avoid neon colors, glassmorphism overload, oversized KPI cards, and dense Excel-like tables on the homepage."
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-04",
+  "sourceHierarchy": {
+    "primary": "Range_Peer_Quarterly_Data_Input_Template_Q1_2024_to_Q1_2026.xlsx (Codex filing-derived template)",
+    "fallback": "E&P_Facset_Company_Model.xlsx (FactSet per-cell fallback only)",
+    "rule": "A FactSet value may fill a historical Codex blank only when it is an actual quarter-specific value, internally consistent, and not an estimate, error, placeholder, or ambiguous zero. Existing Codex values are never overwritten."
+  },
+  "companies": {
+    "CRK": {
+      "status": "reviewed",
+      "reviewedQuarters": [
+        "Q1 2024",
+        "Q2 2024",
+        "Q3 2024",
+        "Q4 2024",
+        "Q1 2025",
+        "Q2 2025",
+        "Q3 2025",
+        "Q4 2025",
+        "Q1 2026"
+      ],
+      "acceptedFallbacks": [
+        {
+          "metric": "freeCashFlow",
+          "quarters": "Q1 2024 through Q1 2026",
+          "source": "factset",
+          "basis": "derived",
+          "note": "Accepted because the FactSet CRK worksheet provides a continuous historical quarterly FCF row alongside operating cash flow and capital expenditures. The values are maintained in the normalized FCF registry and remain subordinate to any future filing-verified Codex series."
+        }
+      ],
+      "rejectedFallbacks": [
+        {
+          "metric": "production.ngl",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "The historical NGL production row is an unbroken series of 0 or #N/A values.",
+          "reason": "Ambiguous zero series cannot be distinguished from unavailable or non-disclosed data. Project rules prohibit treating missing historical data as zero.",
+          "result": "Remain null in the Codex historical dataset."
+        },
+        {
+          "metric": "realizedPrices.ngl",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "The historical realized NGL price row is an unbroken series of 0 values.",
+          "reason": "A continuous zero price is not economically credible as a verified realized-price series and is treated as unavailable rather than reported zero.",
+          "result": "Remain null in the Codex historical dataset."
+        },
+        {
+          "metric": "wells.drilled",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "No wells-drilled row exists in the CRK FactSet worksheet.",
+          "reason": "No fallback metric is available.",
+          "result": "Retain Codex filing-derived values where present; do not create additional values."
+        },
+        {
+          "metric": "wells.turnedInLine",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "No TIL / wells-turned-in-line row exists in the CRK FactSet worksheet.",
+          "reason": "No fallback metric is available.",
+          "result": "Retain Codex filing-derived values where present; do not create additional values."
+        },
+        {
+          "metric": "wells.ducInventory",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "No DUC inventory row exists in the CRK FactSet worksheet.",
+          "reason": "No fallback metric is available.",
+          "result": "Remain null unless a company filing or supplemental disclosure provides a comparable quarter-end well count."
+        },
+        {
+          "metric": "costs.leaseOperatingExpense / gatheringProcessingTransportation / cashGA / totalCashUnitCosts",
+          "quarters": "Q1 2024 through Q1 2026",
+          "factSetObservation": "No comparable historical unit-cost rows exist in the CRK FactSet worksheet.",
+          "reason": "No fallback metric is available; existing Codex values remain controlling.",
+          "result": "No changes."
+        }
+      ]
+    }
+  }
+}
