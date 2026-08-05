@@ -20,10 +20,9 @@ import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
 import { MapWorkspace } from "@/components/dashboard/MapWorkspace";
 import { FinancePanel } from "@/components/dashboard/FinancePanel";
 import { FinancialsPanel } from "@/components/dashboard/FinancialsPanel";
-import { DataActivityPanel } from "@/components/dashboard/DataActivityPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { PeersPanel } from "@/components/dashboard/PeersPanel";
-import { SourcesPanel } from "@/components/dashboard/SourcesPanel";
+import { ForecastPanel } from "@/components/dashboard/ForecastPanel";
 import { DetailDrawer } from "@/components/dashboard/DetailDrawer";
 
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
@@ -112,12 +111,6 @@ export function HomeDashboard() {
     ];
   }, [ticker, market.data]);
 
-  const financialsRows = useMemo((): InsightRow[] => {
-    return metrics
-      .filter((item) => item.key === "free_cash_flow" || item.key === "capital_expenditures" || item.key === "net_leverage")
-      .map((item) => ({ label: item.label, text: `${item.displayValue} — ${item.note}` }));
-  }, [metrics]);
-
   function selectPrimaryCompany(nextTicker: Ticker) {
     setTicker(nextTicker);
     setComparisonTickers((current) => current.filter((peer) => peer !== nextTicker));
@@ -148,9 +141,9 @@ export function HomeDashboard() {
             </div>
             <nav aria-label="Primary navigation">
               <button className={view === "dashboard" && workspace === "chart" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("chart"); }}>Overview</button>
-              <button className={view === "peers" ? "active" : ""} onClick={() => setView("peers")}>Peers</button>
+              <button className={view === "peers" ? "active" : ""} onClick={() => setView("peers")}>Companies</button>
               <button className={view === "dashboard" && workspace === "map" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("map"); }}>Map</button>
-              <button className={view === "sources" ? "active" : ""} onClick={() => setView("sources")}>Sources</button>
+              <button className={view === "forecast" ? "active" : ""} onClick={() => setView("forecast")}>Forecast</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
             </nav>
           </div>
@@ -164,8 +157,8 @@ export function HomeDashboard() {
         <section className="content">
           {view === "macro" ? (
             <MacroPanel />
-          ) : view === "sources" ? (
-            <SourcesPanel />
+          ) : view === "forecast" ? (
+            <ForecastPanel />
           ) : view === "peers" ? (
             <PeersPanel companies={selectableCompanies} primaryTicker={ticker} onOpenSource={openDrawer} />
           ) : (
@@ -197,8 +190,7 @@ export function HomeDashboard() {
 
                 <aside>
                   <FinancePanel rows={insightRows} onOpenDetail={openDrawer} />
-                  <FinancialsPanel rows={financialsRows} />
-                  <DataActivityPanel />
+                  <FinancialsPanel ticker={ticker} />
                 </aside>
               </section>
             </>
