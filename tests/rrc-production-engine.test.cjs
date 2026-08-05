@@ -5,7 +5,6 @@ const Module = require("node:module");
 const path = require("node:path");
 const ts = require("typescript");
 
-// Same transpile-at-test-time approach as tests/rrc-forecast-primitives.test.cjs.
 function load(relativePath) {
   const filename = path.resolve(process.cwd(), relativePath);
   const source = fs.readFileSync(filename, "utf8");
@@ -28,11 +27,11 @@ function load(relativePath) {
 const engine = load("lib/forecast/production-engine.ts");
 const calculations = load("lib/forecast/calculations.ts");
 
-function sv(value, unit = "MMcf/d", period = "2026Q1", classification = "modeled") {
+function sv(value, unit = "MMcf/d", period = "2026Q1", classification = "reported") {
   return { value, unit, source: { name: "test", period, retrievedAt: "2026-08-04", classification } };
 }
 
-function beginning(overrides = {}) {
+function latestReported(overrides = {}) {
   return {
     period: "2026Q1",
     gasMmcfPerDay: sv(1000, "MMcf/d", "2026Q1", "reported"),
@@ -42,270 +41,202 @@ function beginning(overrides = {}) {
   };
 }
 
-const BEGIN_TOTAL = 1000 + (50 + 10) * 6; // 1360 MMcfe/d
-const MIX = {
-  gasPctOfMcfe: 1000 / BEGIN_TOTAL,
-  nglPctOfMcfe: 300 / BEGIN_TOTAL,
-  oilPctOfMcfe: 60 / BEGIN_TOTAL
-};
-
-function mixFor(period) {
-  return {
-    period,
-    gasPctOfMcfe: sv(MIX.gasPctOfMcfe, "decimal", period),
-    nglPctOfMcfe: sv(MIX.nglPctOfMcfe, "decimal", period),
-    oilPctOfMcfe: sv(MIX.oilPctOfMcfe, "decimal", period)
-  };
-}
-
-function activityFor(period, tilCount, productivity, timing = "quarter-start") {
-  return {
-    period,
-    tilCount: sv(tilCount, "count", period),
-    productivityPerTilMcfePerDay: productivity === null ? sv(null, "MMcfe/d", period) : sv(productivity, "MMcfe/d", period),
-    timing
-  };
-}
-
-function baseAssumptions(overrides = {}) {
-  return {
-    beginning: beginning(),
-    decline: { annualEffectiveDeclineRate: sv(0.2, "decimal", "2026") },
-    activity: [],
-    mix: [],
-    ...overrides
-  };
-}
-
+const TOTAL = 1000 + (50 + 10) * 6; // 1360 MMcfe/d
 const days = { "2026Q1": 90, "2026Q2": 91, "2026Q3": 92, "2026Q4": 92 };
 function periodsThrough(labels) {
   return labels.map((period) => ({ period, days: days[period] }));
 }
 
-// 1. Beginning production preservation
-test("beginning production is preserved exactly with source metadata", () => {
-  const result = engine.buildQuarterlyProduction(periodsThrough(["2026Q1"]), baseAssumptions());
-  const q1 = result[0];
-  assert.equal(q1.averageRatePerDay.gasMmcfPerDay, 1000);
-  assert.equal(q1.averageRatePerDay.nglMbblPerDay, 50);
-  assert.equal(q1.averageRatePerDay.oilMbblPerDay, 10);
-  assert.equal(q1.averageRatePerDay.totalMcfePerDay, BEGIN_TOTAL);
-  assert.deepEqual(q1.exitRatePerDay, q1.averageRatePerDay);
-  assert.equal(q1.warnings.length, 0);
-  assert.equal(q1.sources.length, 3);
-  assert.equal(q1.volumes.gasMmcf, 1000 * 90);
-});
-
-// 2. Base decline (no new wells)
-test("base decline rolls forward from the prior exit rate using the explicit decline assumption", () => {
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 0, null)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const result = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions);
-  const quarterlyRate = 1 - Math.pow(0.8, 0.25);
-  const expectedExit = BEGIN_TOTAL * (1 - quarterlyRate);
-  const q2 = result[1];
-  assert.ok(Math.abs(q2.baseDeclineAppliedRate - quarterlyRate) < 1e-12);
-  assert.ok(Math.abs(q2.exitRatePerDay.totalMcfePerDay - expectedExit) < 1e-9);
-  assert.equal(q2.newWellContributionMcfePerDay, 0);
-  const expectedAvg = (BEGIN_TOTAL + expectedExit) / 2;
-  assert.ok(Math.abs(q2.averageRatePerDay.totalMcfePerDay - expectedAvg) < 1e-9);
-});
-
-// 3. Zero TIL activity resolves deterministically, even with no productivity input
-test("zero TIL activity contributes exactly zero new production without requiring a productivity input", () => {
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 0, null)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const result = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions);
-  const q2 = result[1];
-  assert.equal(q2.newWellContributionMcfePerDay, 0);
-  assert.ok(!q2.warnings.some((w) => w.includes("no supported productivity input")));
-});
-
-// 4. New production contribution
-test("TIL activity with a supported productivity input adds new production on top of base decline", () => {
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 4, 10, "quarter-start")],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const result = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions);
-  const q2 = result[1];
-  assert.equal(q2.newWellContributionMcfePerDay, 40);
-  const quarterlyRate = 1 - Math.pow(0.8, 0.25);
-  const baseEnd = BEGIN_TOTAL * (1 - quarterlyRate);
-  assert.ok(Math.abs(q2.exitRatePerDay.totalMcfePerDay - (baseEnd + 40)) < 1e-9);
-});
-
-// 5. Quarterly timing changes the average but never the exit rate
-test("timing convention changes the average contribution of new wells but not the exit rate", () => {
-  function build(timing) {
-    const assumptions = baseAssumptions({
-      activity: [activityFor("2026Q2", 4, 10, timing)],
-      mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-    });
-    return engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions)[1];
-  }
-  const start = build("quarter-start");
-  const mid = build("mid-quarter");
-  const end = build("quarter-end");
-
-  assert.ok(Math.abs(start.exitRatePerDay.totalMcfePerDay - mid.exitRatePerDay.totalMcfePerDay) < 1e-9);
-  assert.ok(Math.abs(mid.exitRatePerDay.totalMcfePerDay - end.exitRatePerDay.totalMcfePerDay) < 1e-9);
-
-  const quarterlyRate = 1 - Math.pow(0.8, 0.25);
-  const baseAvg = (BEGIN_TOTAL + BEGIN_TOTAL * (1 - quarterlyRate)) / 2;
-  assert.ok(Math.abs(start.averageRatePerDay.totalMcfePerDay - (baseAvg + 40)) < 1e-9);
-  assert.ok(Math.abs(mid.averageRatePerDay.totalMcfePerDay - (baseAvg + 20)) < 1e-9);
-  assert.ok(Math.abs(end.averageRatePerDay.totalMcfePerDay - baseAvg) < 1e-9);
-  assert.equal(start.timing, "quarter-start");
-});
-
-// 6. Commodity mix reconciliation
-test("commodity mix splits reconcile to total production, and a non-reconciling mix is rejected rather than partially applied", () => {
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 0, null)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const [, q2] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions);
-  const reconciled = q2.averageRatePerDay.gasMmcfPerDay + (q2.averageRatePerDay.nglMbblPerDay + q2.averageRatePerDay.oilMbblPerDay) * 6;
-  assert.ok(Math.abs(reconciled - q2.averageRatePerDay.totalMcfePerDay) < 1e-9);
-
-  const badMix = {
-    period: "2026Q2",
-    gasPctOfMcfe: sv(0.5, "decimal", "2026Q2"),
-    nglPctOfMcfe: sv(0.3, "decimal", "2026Q2"),
-    oilPctOfMcfe: sv(0.3, "decimal", "2026Q2")
-  };
-  const badAssumptions = baseAssumptions({ activity: [activityFor("2026Q2", 0, null)], mix: [mixFor("2026Q1"), badMix] });
-  const [, badQ2] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), badAssumptions);
-  assert.equal(badQ2.averageRatePerDay.gasMmcfPerDay, null);
-  assert.ok(badQ2.averageRatePerDay.totalMcfePerDay !== null, "total production stays known even when the split is rejected");
-  assert.ok(badQ2.warnings.some((w) => w.includes("does not reconcile")));
-});
-
-// 7. Annual-to-quarter consistency
-test("annual production equals the exact sum of its quarterly components", () => {
+// 1. Latest reported production copied across forecast periods
+test("every forecast period defaults to the latest reported production, held flat", () => {
   const labels = ["2026Q1", "2026Q2", "2026Q3", "2026Q4"];
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 2, 5), activityFor("2026Q3", 0, null), activityFor("2026Q4", 1, 8, "mid-quarter")],
-    mix: labels.map(mixFor)
-  });
-  const quarters = engine.buildQuarterlyProduction(periodsThrough(labels), assumptions);
-  const annual = engine.summarizeAnnualProduction(quarters);
+  const result = engine.buildFlatProductionForecast(latestReported(), periodsThrough(labels));
+  for (const period of result) {
+    assert.equal(period.ratePerDay.gasMmcfPerDay, 1000);
+    assert.equal(period.ratePerDay.nglMbblPerDay, 50);
+    assert.equal(period.ratePerDay.oilMbblPerDay, 10);
+    assert.equal(period.sourceClassification, "reported");
+    assert.equal(period.overriddenFields.length, 0);
+  }
+});
+
+// 2. Separate gas/NGL/oil values preserved
+test("gas, NGL, and oil are preserved as separate streams, not collapsed into a single total", () => {
+  const [q1] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1"]));
+  assert.equal(q1.ratePerDay.totalMcfePerDay, TOTAL);
+  assert.equal(q1.volumes.gasMmcf, 1000 * 90);
+  assert.equal(q1.volumes.nglMbbl, 50 * 90);
+  assert.equal(q1.volumes.oilMbbl, 10 * 90);
+  const reconciled = q1.volumes.gasMmcf + (q1.volumes.nglMbbl + q1.volumes.oilMbbl) * 6;
+  assert.equal(q1.volumes.totalMcfe, reconciled);
+});
+
+// 3. Manual override applied only to the selected period
+test("a manual override changes only its own period, leaving every other period at the reported baseline", () => {
+  const labels = ["2026Q1", "2026Q2", "2026Q3"];
+  const overrides = [{ period: "2026Q2", gasMmcfPerDay: 1200 }];
+  const result = engine.buildFlatProductionForecast(latestReported(), periodsThrough(labels), overrides);
+  const [q1, q2, q3] = result;
+  assert.equal(q1.ratePerDay.gasMmcfPerDay, 1000, "the reported period itself must never change");
+  assert.equal(q2.ratePerDay.gasMmcfPerDay, 1200);
+  assert.equal(q2.ratePerDay.nglMbblPerDay, 50, "an override to gas must not touch NGL for the same period");
+  assert.equal(q2.sourceClassification, "override");
+  assert.deepEqual(q2.overriddenFields, ["gas"]);
+  assert.equal(q3.ratePerDay.gasMmcfPerDay, 1000, "periods without an override entry stay at the reported baseline");
+  assert.equal(q3.sourceClassification, "reported");
+});
+
+test("overriding the reported period itself is rejected rather than rewriting history", () => {
+  const overrides = [{ period: "2026Q1", gasMmcfPerDay: 5000 }];
+  const [q1] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1"]), overrides);
+  assert.equal(q1.ratePerDay.gasMmcfPerDay, 1000);
+  assert.equal(q1.sourceClassification, "reported");
+  assert.ok(q1.warnings.some((w) => w.includes("ignored")));
+});
+
+// 4. Reset returns to reported baseline
+test("an empty overrides array (reset) reproduces the flat reported baseline exactly", () => {
+  const labels = ["2026Q1", "2026Q2"];
+  const withOverride = engine.buildFlatProductionForecast(latestReported(), periodsThrough(labels), [{ period: "2026Q2", gasMmcfPerDay: 1200 }]);
+  assert.notEqual(withOverride[1].ratePerDay.gasMmcfPerDay, 1000);
+  const reset = engine.buildFlatProductionForecast(latestReported(), periodsThrough(labels), []);
+  assert.equal(reset[1].ratePerDay.gasMmcfPerDay, 1000);
+  assert.equal(reset[1].sourceClassification, "reported");
+});
+
+// 5. Baseline object is not mutated
+test("building a forecast never mutates the latestReported or overrides input objects", () => {
+  const baseline = Object.freeze(latestReported());
+  const overrides = Object.freeze([Object.freeze({ period: "2026Q2", gasMmcfPerDay: 1200 })]);
+  assert.doesNotThrow(() => engine.buildFlatProductionForecast(baseline, periodsThrough(["2026Q1", "2026Q2"]), overrides));
+});
+
+// 6. Negative override rejected
+test("a negative override is rejected rather than clamped or flipped", () => {
+  const [, q2] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1", "2026Q2"]), [
+    { period: "2026Q2", oilMbblPerDay: -5 }
+  ]);
+  assert.equal(q2.ratePerDay.oilMbblPerDay, null);
+  assert.ok(q2.warnings.some((w) => w.includes("negative")));
+});
+
+// 7. NaN and Infinity rejected
+test("NaN and Infinity overrides are rejected as unavailable rather than propagated", () => {
+  const [, q2] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1", "2026Q2"]), [
+    { period: "2026Q2", gasMmcfPerDay: NaN, nglMbblPerDay: Infinity }
+  ]);
+  assert.equal(q2.ratePerDay.gasMmcfPerDay, null);
+  assert.equal(q2.ratePerDay.nglMbblPerDay, null);
+  assert.equal(q2.ratePerDay.totalMcfePerDay, null);
+  assert.ok(q2.warnings.some((w) => w.includes("finite")));
+});
+
+test("a null-vs-zero override distinction is preserved: zero is a real value, null explicitly clears", () => {
+  const [, zero] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1", "2026Q2"]), [
+    { period: "2026Q2", oilMbblPerDay: 0 }
+  ]);
+  assert.equal(zero.ratePerDay.oilMbblPerDay, 0);
+  assert.equal(zero.warnings.some((w) => w.includes("cleared")), false);
+
+  const [, cleared] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1", "2026Q2"]), [
+    { period: "2026Q2", oilMbblPerDay: null }
+  ]);
+  assert.equal(cleared.ratePerDay.oilMbblPerDay, null);
+  assert.ok(cleared.warnings.some((w) => w.includes("cleared")));
+});
+
+// 10. Deterministic output
+test("identical inputs produce identical output on repeated runs", () => {
+  const labels = ["2026Q1", "2026Q2", "2026Q3"];
+  const baseline = Object.freeze(latestReported());
+  const overrides = Object.freeze([Object.freeze({ period: "2026Q2", gasMmcfPerDay: 1200 })]);
+  const a = engine.buildFlatProductionForecast(baseline, periodsThrough(labels), overrides);
+  const b = engine.buildFlatProductionForecast(baseline, periodsThrough(labels), overrides);
+  assert.deepEqual(a, b);
+});
+
+// 11. Total Mcfe reconciles to commodity components (across a 4-period annual set too)
+test("annual production equals the exact sum of its period components and reconciles to total Mcfe", () => {
+  const labels = ["2026Q1", "2026Q2", "2026Q3", "2026Q4"];
+  const result = engine.buildFlatProductionForecast(latestReported(), periodsThrough(labels), [{ period: "2026Q3", gasMmcfPerDay: 1100 }]);
+  const annual = engine.summarizeAnnualProduction(result);
   assert.equal(annual.warnings.length, 0);
-  const manualGas = quarters.reduce((sum, q) => sum + q.volumes.gasMmcf, 0);
+  const manualGas = result.reduce((sum, p) => sum + p.volumes.gasMmcf, 0);
   assert.ok(Math.abs(annual.gasMmcf - manualGas) < 1e-9);
   const reconciled = annual.gasMmcf + (annual.nglMbbl + annual.oilMbbl) * 6;
   assert.ok(Math.abs(reconciled - annual.totalMcfe) < 1e-6);
 });
 
-// 8. Baseline scenario determinism
-test("identical inputs produce identical output on repeated runs", () => {
-  const labels = ["2026Q1", "2026Q2", "2026Q3"];
-  const assumptions = Object.freeze(
-    baseAssumptions({
-      activity: [activityFor("2026Q2", 2, 5), activityFor("2026Q3", 1, 6)],
-      mix: labels.map(mixFor)
-    })
-  );
-  const a = engine.buildQuarterlyProduction(periodsThrough(labels), assumptions);
-  const b = engine.buildQuarterlyProduction(periodsThrough(labels), assumptions);
-  assert.deepEqual(a, b);
+test("null input handling: an unavailable reported field flows through as null, not zero", () => {
+  const baseline = latestReported({ gasMmcfPerDay: sv(null, "MMcf/d", "2026Q1", "reported") });
+  const [q1] = engine.buildFlatProductionForecast(baseline, periodsThrough(["2026Q1"]));
+  assert.equal(q1.ratePerDay.gasMmcfPerDay, null);
+  assert.equal(q1.ratePerDay.totalMcfePerDay, null, "total must not silently drop the missing gas volume");
+  assert.ok(q1.warnings.some((w) => w.includes("Latest reported gas production")));
 });
 
-// 9. Scenario isolation
-test("scenario adjustment returns a new object and never mutates the shared baseline", () => {
-  const labels = ["2026Q1", "2026Q2"];
-  const baseline = baseAssumptions({ activity: [activityFor("2026Q2", 2, 5)], mix: labels.map(mixFor) });
-  const before = JSON.parse(JSON.stringify(baseline));
-
-  const high = engine.applyProductionScenarioAdjustment(baseline, { declineRateAbsoluteDelta: -0.1, productivityMultiplier: 1.5 });
-  const low = engine.applyProductionScenarioAdjustment(baseline, { declineRateAbsoluteDelta: 0.1, productivityMultiplier: 0.5 });
-
-  assert.deepEqual(baseline, before, "the baseline object must be untouched after deriving scenarios from it");
-  assert.notEqual(high, baseline);
-  assert.notEqual(low, baseline);
-
-  const baseResult = engine.buildQuarterlyProduction(periodsThrough(labels), baseline);
-  const highResult = engine.buildQuarterlyProduction(periodsThrough(labels), high);
-  const lowResult = engine.buildQuarterlyProduction(periodsThrough(labels), low);
-
-  assert.ok(highResult[1].exitRatePerDay.totalMcfePerDay > baseResult[1].exitRatePerDay.totalMcfePerDay);
-  assert.ok(lowResult[1].exitRatePerDay.totalMcfePerDay < baseResult[1].exitRatePerDay.totalMcfePerDay);
-});
-
-// 10. Null input handling
-test("a null beginning input flows through as null with a warning instead of becoming zero", () => {
-  const assumptions = baseAssumptions({ beginning: beginning({ gasMmcfPerDay: sv(null, "MMcf/d", "2026Q1", "reported") }) });
-  const [q1] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1"]), assumptions);
-  assert.equal(q1.averageRatePerDay.gasMmcfPerDay, null);
-  assert.equal(q1.averageRatePerDay.totalMcfePerDay, null, "total must not silently drop the missing gas volume");
-  assert.ok(q1.warnings.some((w) => w.includes("Beginning gas production")));
-});
-
-test("mismatched first period throws instead of silently rebasing", () => {
-  assert.throws(() => engine.buildQuarterlyProduction(periodsThrough(["2026Q2"]), baseAssumptions()));
-  assert.throws(() => engine.buildQuarterlyProduction([], baseAssumptions()));
-});
-
-// 11. Negative production rejection
-test("negative production inputs are rejected rather than clamped or flipped", () => {
-  const assumptions = baseAssumptions({ beginning: beginning({ oilMbblPerDay: sv(-5, "Mbbl/d", "2026Q1", "reported") }) });
-  const [q1] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1"]), assumptions);
-  assert.equal(q1.averageRatePerDay.oilMbblPerDay, null);
-  assert.ok(q1.warnings.some((w) => w.includes("negative")));
-});
-
-// 12. Invalid decline-rate rejection
-test("a decline rate outside the supported range is rejected rather than silently defaulted", () => {
-  const tooHigh = baseAssumptions({
-    decline: { annualEffectiveDeclineRate: sv(1.5, "decimal", "2026") },
-    activity: [activityFor("2026Q2", 0, null)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const [, q2High] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), tooHigh);
-  assert.equal(q2High.baseDeclineAppliedRate, null);
-  assert.equal(q2High.exitRatePerDay.totalMcfePerDay, null);
-  assert.ok(q2High.warnings.some((w) => w.includes("outside the supported")));
-
-  const negative = baseAssumptions({
-    decline: { annualEffectiveDeclineRate: sv(-0.05, "decimal", "2026") },
-    activity: [activityFor("2026Q2", 0, null)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const [, q2Neg] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), negative);
-  assert.equal(q2Neg.baseDeclineAppliedRate, null, "a negative decline rate must not silently default to 0% decline");
-});
-
-// 13. NaN and Infinity rejection
-test("NaN and Infinity inputs are rejected as unavailable rather than propagated", () => {
-  const nanCase = baseAssumptions({ beginning: beginning({ gasMmcfPerDay: sv(NaN, "MMcf/d", "2026Q1", "reported") }) });
-  const [q1Nan] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1"]), nanCase);
-  assert.equal(q1Nan.averageRatePerDay.gasMmcfPerDay, null);
-
-  const infinityCase = baseAssumptions({
-    activity: [activityFor("2026Q2", 2, Infinity)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const [, q2Inf] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), infinityCase);
-  assert.equal(q2Inf.newWellContributionMcfePerDay, null);
-  assert.ok(q2Inf.warnings.some((w) => w.includes("New-well productivity")));
+test("buildFlatProductionForecast requires at least one period", () => {
+  assert.throws(() => engine.buildFlatProductionForecast(latestReported(), []));
 });
 
 // Pipeline integration: engine output composes with the existing calculateProduction contract
 test("toProductionAssumptions output composes with the existing calculateProduction pipeline", () => {
-  const assumptions = baseAssumptions({
-    activity: [activityFor("2026Q2", 2, 5)],
-    mix: [mixFor("2026Q1"), mixFor("2026Q2")]
-  });
-  const [, q2] = engine.buildQuarterlyProduction(periodsThrough(["2026Q1", "2026Q2"]), assumptions);
-  const productionAssumptions = engine.toProductionAssumptions(q2, "test fixture");
+  const [, q2] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1", "2026Q2"]), [
+    { period: "2026Q2", gasMmcfPerDay: 1200 }
+  ]);
+  const productionAssumptions = engine.toProductionAssumptions(q2);
   const warnings = [];
   const result = calculations.calculateProduction({ period: "2026Q2", days: 91, production: productionAssumptions }, warnings);
   assert.equal(warnings.length, 0);
-  assert.ok(Math.abs(result.gasMmcf - q2.volumes.gasMmcf) < 1e-9);
-  assert.ok(Math.abs(result.totalMcfe - q2.volumes.totalMcfe) < 1e-6);
+  assert.equal(result.gasMmcf, q2.volumes.gasMmcf);
+  assert.equal(result.totalMcfe, q2.volumes.totalMcfe);
+});
+
+// 8/9. Current market price flows through revenue, and a missing price produces null revenue with a warning
+test("a current market price flows through the existing revenue calculation", () => {
+  const [q1] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1"]));
+  const pricing = calculations.calculatePricing(
+    {
+      commodity: { henryHubPerMmbtu: sv(3.2, "$/MMBtu", "2026Q1", "live"), wtiPerBbl: sv(70, "$/bbl", "2026Q1", "live"), nglRealizationPctOfWti: sv(0, "decimal") },
+      pricing: {
+        gasBasisPerMcf: sv(0, "$/Mcf"),
+        gasTransportMarketingPerMcf: sv(0, "$/Mcf"),
+        gasHedgeImpactPerMcf: sv(0, "$/Mcf"),
+        nglMarketingUpliftPerBbl: sv(0, "$/bbl"),
+        nglHedgeImpactPerBbl: sv(0, "$/bbl"),
+        oilDifferentialPerBbl: sv(0, "$/bbl"),
+        oilHedgeImpactPerBbl: sv(0, "$/bbl")
+      }
+    },
+    []
+  );
+  const revenue = calculations.calculateRevenue(q1.volumes, pricing);
+  assert.equal(revenue.gasMillion, (q1.volumes.gasMmcf * 3.2) / 1000);
+  assert.equal(revenue.oilMillion, (q1.volumes.oilMbbl * 70) / 1000);
+});
+
+test("an unavailable market price produces null revenue for that commodity with a warning, never a fabricated price", () => {
+  const [q1] = engine.buildFlatProductionForecast(latestReported(), periodsThrough(["2026Q1"]));
+  const warnings = [];
+  const pricing = calculations.calculatePricing(
+    {
+      commodity: { henryHubPerMmbtu: sv(null, "$/MMBtu", "2026Q1", "live"), wtiPerBbl: sv(70, "$/bbl", "2026Q1", "live"), nglRealizationPctOfWti: sv(0, "decimal") },
+      pricing: {
+        gasBasisPerMcf: sv(0, "$/Mcf"),
+        gasTransportMarketingPerMcf: sv(0, "$/Mcf"),
+        gasHedgeImpactPerMcf: sv(0, "$/Mcf"),
+        nglMarketingUpliftPerBbl: sv(0, "$/bbl"),
+        nglHedgeImpactPerBbl: sv(0, "$/bbl"),
+        oilDifferentialPerBbl: sv(0, "$/bbl"),
+        oilHedgeImpactPerBbl: sv(0, "$/bbl")
+      }
+    },
+    warnings
+  );
+  assert.equal(pricing.realizedGasPerMcf, null);
+  assert.ok(warnings.some((w) => w.includes("Henry Hub")));
+  const revenue = calculations.calculateRevenue(q1.volumes, pricing);
+  assert.equal(revenue.gasMillion, null, "no fabricated gas revenue when the market price is unavailable");
+  assert.equal(revenue.totalMillion, null);
+  assert.notEqual(revenue.oilMillion, null, "oil revenue stays calculable independently of the missing gas price");
 });
