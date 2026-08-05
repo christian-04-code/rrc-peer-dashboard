@@ -30,10 +30,12 @@ test("complete RRC scenario uses filing-backed Q1 2026 anchors", () => {
   assert.match(source, /value: 19\.419/);
 });
 
-test("forward production and pricing assumptions are explicit", () => {
-  assert.match(source, /annualTargetBcfePerDay/);
-  assert.match(source, /2\.6/);
-  assert.match(source, /2\.68/);
+test("forward production is a flat hold of the latest reported baseline, and pricing anchors are explicit", () => {
+  assert.match(source, /buildFlatProductionForecast/);
+  assert.match(source, /toProductionAssumptions/);
+  assert.doesNotMatch(source, /annualTargetBcfePerDay/);
+  assert.doesNotMatch(source, /quarterlyTotalBcfePerDay/);
+  assert.doesNotMatch(source, /scaleProductMix/);
   assert.match(source, /value: 0\.18/);
   assert.match(source, /value: -10\.68/);
 });

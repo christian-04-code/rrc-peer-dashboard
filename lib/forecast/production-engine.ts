@@ -1,62 +1,27 @@
 /**
- * Deterministic quarterly production build.
+ * Deterministic flat production forecast.
  *
- * Replaces straight-line annual interpolation with an auditable roll-forward:
- * each quarter's exit and average rate is derived from the prior quarter's
- * exit rate, an explicit base-decline assumption, and explicit new-well
- * (TIL) activity -- never from re-interpolating a year-end target.
+ * The default forecast holds the latest reported quarterly production
+ * baseline constant across future periods -- no decline curve, no TIL
+ * activity, no type curve, no annual guidance ramp. A caller may override
+ * specific periods with explicit user-entered production; anything not
+ * overridden falls back to the reported baseline. Missing or invalid values
+ * flow through as null with a warning -- never defaulted to zero, never
+ * estimated.
  *
- * This module contains no company-specific numbers. It is a general engine;
- * callers supply beginning production, decline, activity, and mix as
- * SourcedValue-backed assumptions. Any assumption left unavailable (value:
- * null) flows through as null with a warning -- it is never defaulted to
- * zero or silently estimated.
- *
- * Unit convention matches lib/forecast/calculations.ts: gas is MMcf/d, NGL
- * and oil are Mbbl/d, and "Mcfe" fields are actually on the MMcfe scale
- * (1 Mbbl x 6 Mcf/bbl = 6 MMcf-equivalent) -- consistent with the existing
- * totalMcfe = gasMmcf + (nglMbbl + oilMbbl) * 6 formula.
+ * This module contains no company-specific numbers. Unit convention matches
+ * lib/forecast/calculations.ts: gas is MMcf/d, NGL and oil are Mbbl/d, and
+ * "Mcfe" fields are on the MMcfe scale (1 Mbbl x 6 Mcf/bbl = 6
+ * MMcf-equivalent), consistent with totalMcfe = gasMmcf + (nglMbbl + oilMbbl) * 6.
  */
 
-import type { AssumptionSource, ProductionAssumptions, SourcedValue } from "@/lib/forecast/types";
-
-export type ProductionTimingConvention = "quarter-start" | "mid-quarter" | "quarter-end";
+import type { AssumptionSource, ProductionAssumptions, ProductionResult, SourcedValue } from "@/lib/forecast/types";
 
 export type ProductionBeginningState = {
   period: string;
   gasMmcfPerDay: SourcedValue;
   nglMbblPerDay: SourcedValue;
   oilMbblPerDay: SourcedValue;
-};
-
-export type BaseDeclineAssumption = {
-  /** Effective annual decline rate applied to trailing base production, as a decimal (0.12 = 12%/yr). */
-  annualEffectiveDeclineRate: SourcedValue;
-};
-
-export type NewWellActivityAssumption = {
-  period: string;
-  /** Wells turned in line during the quarter. Must not be inferred from wells drilled or completed. */
-  tilCount: SourcedValue;
-  /** Initial daily rate contributed per TIL at the moment of turn-in-line, MMcfe/d. */
-  productivityPerTilMcfePerDay: SourcedValue;
-  timing: ProductionTimingConvention;
-};
-
-export type CommodityMixAssumption = {
-  period: string;
-  gasPctOfMcfe: SourcedValue;
-  nglPctOfMcfe: SourcedValue;
-  oilPctOfMcfe: SourcedValue;
-};
-
-export type ProductionBuildAssumptions = {
-  beginning: ProductionBeginningState;
-  decline: BaseDeclineAssumption;
-  activity: NewWellActivityAssumption[];
-  mix: CommodityMixAssumption[];
-  /** Optional supported ceiling on total exit-rate production, MMcfe/d. Omit when no such limit is supported. */
-  capacityMcfePerDayLimit?: SourcedValue;
 };
 
 export type ProductionRatePerDay = {
@@ -66,20 +31,23 @@ export type ProductionRatePerDay = {
   totalMcfePerDay: number | null;
 };
 
-export type QuarterlyProductionBuild = {
+export type ProductionSourceClassification = "reported" | "override";
+
+/** A user-entered production value for one future period. Omit a field to leave it at the reported baseline; pass null to explicitly clear it. */
+export type ProductionOverrideInput = {
+  period: string;
+  gasMmcfPerDay?: number | null;
+  nglMbblPerDay?: number | null;
+  oilMbblPerDay?: number | null;
+};
+
+export type FlatProductionPeriodResult = {
   period: string;
   days: number;
-  timing: ProductionTimingConvention | "reported";
-  exitRatePerDay: ProductionRatePerDay;
-  averageRatePerDay: ProductionRatePerDay;
-  volumes: {
-    gasMmcf: number | null;
-    nglMbbl: number | null;
-    oilMbbl: number | null;
-    totalMcfe: number | null;
-  };
-  newWellContributionMcfePerDay: number | null;
-  baseDeclineAppliedRate: number | null;
+  sourceClassification: ProductionSourceClassification;
+  overriddenFields: Array<"gas" | "ngl" | "oil">;
+  ratePerDay: ProductionRatePerDay;
+  volumes: ProductionResult;
   sources: AssumptionSource[];
   warnings: string[];
 };
@@ -114,288 +82,138 @@ function rate(gas: number | null, ngl: number | null, oil: number | null): Produ
   return { gasMmcfPerDay: gas, nglMbblPerDay: ngl, oilMbblPerDay: oil, totalMcfePerDay: totalFromMcfe(gas, ngl, oil) };
 }
 
-const EPSILON = 1e-6;
+function overrideSource(period: string, notes: string): AssumptionSource {
+  return {
+    name: "User production assumption",
+    period,
+    retrievedAt: new Date(0).toISOString(),
+    classification: "modeled",
+    notes: `User production assumption. Not company guidance; a local scenario override. ${notes}`
+  };
+}
 
-function splitByMix(
-  totalMcfePerDay: number | null,
-  mix: CommodityMixAssumption | undefined,
+function reportedSource(base: AssumptionSource): AssumptionSource {
+  return { ...base, notes: `Latest reported production held constant. ${base.notes ?? ""}`.trim() };
+}
+
+type FieldLabel = "gas" | "ngl" | "oil";
+
+function resolveField(
+  label: FieldLabel,
+  displayLabel: string,
+  reportedValue: number | null,
+  reportedSourceValue: AssumptionSource,
+  overrideRaw: number | null | undefined,
   period: string,
   warnings: string[]
-): ProductionRatePerDay {
-  if (totalMcfePerDay === null) return rate(null, null, null);
-  if (!mix) {
-    warnings.push(`Commodity mix is unavailable for ${period}; total production is known but the gas/NGL/oil split is not.`);
-    return { gasMmcfPerDay: null, nglMbblPerDay: null, oilMbblPerDay: null, totalMcfePerDay };
+): { value: number | null; source: AssumptionSource; overridden: boolean } {
+  if (overrideRaw === undefined) {
+    return { value: reportedValue, source: reportedSource(reportedSourceValue), overridden: false };
   }
-
-  const gasPct = numeric(mix.gasPctOfMcfe, "Gas mix percentage", period, warnings);
-  const nglPct = numeric(mix.nglPctOfMcfe, "NGL mix percentage", period, warnings);
-  const oilPct = numeric(mix.oilPctOfMcfe, "Oil mix percentage", period, warnings);
-
-  if (gasPct === null || nglPct === null || oilPct === null) {
-    return { gasMmcfPerDay: null, nglMbblPerDay: null, oilMbblPerDay: null, totalMcfePerDay };
+  if (overrideRaw === null) {
+    warnings.push(`${displayLabel} for ${period} was explicitly cleared by a user override.`);
+    return { value: null, source: overrideSource(period, `${displayLabel} explicitly cleared.`), overridden: true };
   }
-  if ([gasPct, nglPct, oilPct].some((pct) => pct < 0 || pct > 1)) {
-    warnings.push(`Commodity mix percentage for ${period} is outside 0-1.`);
-    return { gasMmcfPerDay: null, nglMbblPerDay: null, oilMbblPerDay: null, totalMcfePerDay };
+  if (!isFiniteNumber(overrideRaw)) {
+    warnings.push(`${displayLabel} override for ${period} is not a finite number; rejected.`);
+    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: not finite.`), overridden: true };
   }
-  if (Math.abs(gasPct + nglPct + oilPct - 1) > 1e-4) {
-    warnings.push(`Commodity mix for ${period} does not reconcile to total production (sums to ${(gasPct + nglPct + oilPct).toFixed(6)}, expected 1).`);
-    return { gasMmcfPerDay: null, nglMbblPerDay: null, oilMbblPerDay: null, totalMcfePerDay };
+  if (overrideRaw < 0) {
+    warnings.push(`${displayLabel} override for ${period} is negative (${overrideRaw}); rejected rather than clamped.`);
+    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: negative.`), overridden: true };
   }
-
-  const gasMmcfPerDay = totalMcfePerDay * gasPct;
-  const nglMbblPerDay = (totalMcfePerDay * nglPct) / 6;
-  const oilMbblPerDay = (totalMcfePerDay * oilPct) / 6;
-  const reconciled = totalFromMcfe(gasMmcfPerDay, nglMbblPerDay, oilMbblPerDay);
-  if (reconciled === null || Math.abs(reconciled - totalMcfePerDay) > EPSILON * Math.max(1, Math.abs(totalMcfePerDay))) {
-    warnings.push(`Commodity components for ${period} failed to reconcile to total production.`);
-    return { gasMmcfPerDay: null, nglMbblPerDay: null, oilMbblPerDay: null, totalMcfePerDay };
-  }
-
-  return { gasMmcfPerDay, nglMbblPerDay, oilMbblPerDay, totalMcfePerDay };
+  return { value: overrideRaw, source: overrideSource(period, `${displayLabel} set to ${overrideRaw}.`), overridden: true };
 }
 
 /**
- * Builds one deterministic quarterly production record per requested period.
- * `periods[0].period` must equal `assumptions.beginning.period` -- that first
- * record simply preserves the reported baseline. Every later period rolls
- * forward from the prior period's exit rate via explicit decline and TIL
- * activity.
+ * Builds one production record per requested period. Every period defaults to
+ * `latestReported`; a period is only changed by a matching entry in
+ * `overrides`, and only for the fields that entry sets. The `latestReported`
+ * period itself is never overridden -- it is reported historical data.
  */
-export function buildQuarterlyProduction(
+export function buildFlatProductionForecast(
+  latestReported: ProductionBeginningState,
   periods: Array<{ period: string; days: number }>,
-  assumptions: ProductionBuildAssumptions
-): QuarterlyProductionBuild[] {
+  overrides: ProductionOverrideInput[] = []
+): FlatProductionPeriodResult[] {
   if (periods.length === 0) {
-    throw new Error("buildQuarterlyProduction requires at least one period.");
-  }
-  if (periods[0].period !== assumptions.beginning.period) {
-    throw new Error(
-      `The first requested period (${periods[0].period}) must equal the beginning production period (${assumptions.beginning.period}).`
-    );
+    throw new Error("buildFlatProductionForecast requires at least one period.");
   }
 
-  const results: QuarterlyProductionBuild[] = [];
-  let priorExitTotal: number | null = null;
-
-  for (let i = 0; i < periods.length; i++) {
-    const { period, days } = periods[i];
+  return periods.map(({ period, days }) => {
     const warnings: string[] = [];
 
     if (!Number.isInteger(days) || days < 1 || days > 92) {
       warnings.push(`Invalid day count for ${period}.`);
-      results.push({
+      return {
         period,
         days,
-        timing: "reported",
-        exitRatePerDay: rate(null, null, null),
-        averageRatePerDay: rate(null, null, null),
+        sourceClassification: "reported" as const,
+        overriddenFields: [],
+        ratePerDay: rate(null, null, null),
         volumes: { gasMmcf: null, nglMbbl: null, oilMbbl: null, totalMcfe: null },
-        newWellContributionMcfePerDay: null,
-        baseDeclineAppliedRate: null,
         sources: [],
         warnings
-      });
-      priorExitTotal = null;
-      continue;
-    }
-
-    if (i === 0) {
-      const gas = nonNegative(numeric(assumptions.beginning.gasMmcfPerDay, "Beginning gas production", period, warnings), "Beginning gas production", period, warnings);
-      const ngl = nonNegative(numeric(assumptions.beginning.nglMbblPerDay, "Beginning NGL production", period, warnings), "Beginning NGL production", period, warnings);
-      const oil = nonNegative(numeric(assumptions.beginning.oilMbblPerDay, "Beginning oil production", period, warnings), "Beginning oil production", period, warnings);
-      const averageRatePerDay = rate(gas, ngl, oil);
-      const volumes = {
-        gasMmcf: gas === null ? null : gas * days,
-        nglMbbl: ngl === null ? null : ngl * days,
-        oilMbbl: oil === null ? null : oil * days,
-        totalMcfe: null as number | null
       };
-      volumes.totalMcfe = totalFromMcfe(volumes.gasMmcf, volumes.nglMbbl, volumes.oilMbbl);
-
-      results.push({
-        period,
-        days,
-        timing: "reported",
-        exitRatePerDay: averageRatePerDay,
-        averageRatePerDay,
-        volumes,
-        newWellContributionMcfePerDay: null,
-        baseDeclineAppliedRate: null,
-        sources: [
-          assumptions.beginning.gasMmcfPerDay.source,
-          assumptions.beginning.nglMbblPerDay.source,
-          assumptions.beginning.oilMbblPerDay.source
-        ],
-        warnings
-      });
-      priorExitTotal = averageRatePerDay.totalMcfePerDay;
-      continue;
     }
 
-    const sources: AssumptionSource[] = [];
-    const baseBegin = priorExitTotal;
-    if (baseBegin === null) {
-      warnings.push(`${period} has no valid prior-quarter exit rate to decline from.`);
+    const reportedGas = nonNegative(numeric(latestReported.gasMmcfPerDay, "Latest reported gas production", period, warnings), "Latest reported gas production", period, warnings);
+    const reportedNgl = nonNegative(numeric(latestReported.nglMbblPerDay, "Latest reported NGL production", period, warnings), "Latest reported NGL production", period, warnings);
+    const reportedOil = nonNegative(numeric(latestReported.oilMbblPerDay, "Latest reported oil production", period, warnings), "Latest reported oil production", period, warnings);
+
+    const isReportedPeriod = period === latestReported.period;
+    let override = overrides.find((o) => o.period === period);
+    if (override && isReportedPeriod) {
+      warnings.push(`Override for ${period} was ignored: this is the reported historical period and cannot be overwritten.`);
+      override = undefined;
     }
 
-    const annualDecline = numeric(assumptions.decline.annualEffectiveDeclineRate, "Base decline rate", period, warnings);
-    let quarterlyDeclineRate: number | null = null;
-    if (annualDecline !== null) {
-      if (annualDecline < 0 || annualDecline > 0.95) {
-        warnings.push(`Base decline rate ${annualDecline} for ${period} is outside the supported 0-95% annual range.`);
-      } else {
-        quarterlyDeclineRate = 1 - Math.pow(1 - annualDecline, 0.25);
-        sources.push(assumptions.decline.annualEffectiveDeclineRate.source);
-      }
-    }
+    const gas = resolveField("gas", "Gas production", reportedGas, latestReported.gasMmcfPerDay.source, override?.gasMmcfPerDay, period, warnings);
+    const ngl = resolveField("ngl", "NGL production", reportedNgl, latestReported.nglMbblPerDay.source, override?.nglMbblPerDay, period, warnings);
+    const oil = resolveField("oil", "Oil production", reportedOil, latestReported.oilMbblPerDay.source, override?.oilMbblPerDay, period, warnings);
 
-    const baseEnd =
-      baseBegin === null || quarterlyDeclineRate === null || !isFiniteNumber(quarterlyDeclineRate)
-        ? null
-        : baseBegin * (1 - quarterlyDeclineRate);
+    const overriddenFields = ([
+      ["gas", gas.overridden],
+      ["ngl", ngl.overridden],
+      ["oil", oil.overridden]
+    ] as const)
+      .filter(([, overridden]) => overridden)
+      .map(([label]) => label);
 
-    const activity = assumptions.activity.find((a) => a.period === period);
-    let newWellAdd: number | null = null;
-    let timing: ProductionTimingConvention | "reported" = "reported";
-    if (!activity) {
-      warnings.push(`No TIL activity assumption was provided for ${period}.`);
-    } else {
-      timing = activity.timing;
-      const tilCount = nonNegative(numeric(activity.tilCount, "TIL count", period, warnings), "TIL count", period, warnings);
-      const productivity = nonNegative(
-        numeric(activity.productivityPerTilMcfePerDay, "New-well productivity per TIL", period, warnings),
-        "New-well productivity per TIL",
-        period,
-        warnings
-      );
-      if (tilCount === 0) {
-        newWellAdd = 0;
-        sources.push(activity.tilCount.source);
-      } else if (tilCount !== null && productivity === null) {
-        warnings.push(`${period} reports ${tilCount} TIL(s) but has no supported productivity input; new production withheld.`);
-      } else if (tilCount !== null && productivity !== null) {
-        newWellAdd = tilCount * productivity;
-        sources.push(activity.tilCount.source, activity.productivityPerTilMcfePerDay.source);
-      }
-    }
-
-    const capacityLimit = assumptions.capacityMcfePerDayLimit
-      ? numeric(assumptions.capacityMcfePerDayLimit, "Production capacity limit", period, warnings)
-      : null;
-
-    const exitTotal = baseEnd === null || newWellAdd === null ? null : baseEnd + newWellAdd;
-    if (exitTotal !== null && capacityLimit !== null && exitTotal > capacityLimit) {
-      warnings.push(`Exit rate for ${period} (${exitTotal.toFixed(3)} MMcfe/d) exceeds the supported capacity limit (${capacityLimit} MMcfe/d).`);
-    }
-
-    let newWellAvgContribution: number | null = newWellAdd;
-    if (newWellAdd !== null) {
-      if (timing === "mid-quarter") newWellAvgContribution = newWellAdd * 0.5;
-      else if (timing === "quarter-end") newWellAvgContribution = 0;
-    }
-    const baseAvg = baseBegin === null || baseEnd === null ? null : (baseBegin + baseEnd) / 2;
-    const averageTotal = baseAvg === null || newWellAvgContribution === null ? null : baseAvg + newWellAvgContribution;
-
-    const mixForPeriod = assumptions.mix.find((m) => m.period === period);
-    const exitRatePerDay = splitByMix(exitTotal, mixForPeriod, period, warnings);
-    const averageRatePerDay = splitByMix(averageTotal, mixForPeriod, period, warnings);
-
-    const volumes = {
-      gasMmcf: averageRatePerDay.gasMmcfPerDay === null ? null : averageRatePerDay.gasMmcfPerDay * days,
-      nglMbbl: averageRatePerDay.nglMbblPerDay === null ? null : averageRatePerDay.nglMbblPerDay * days,
-      oilMbbl: averageRatePerDay.oilMbblPerDay === null ? null : averageRatePerDay.oilMbblPerDay * days,
-      totalMcfe: null as number | null
+    const ratePerDay = rate(gas.value, ngl.value, oil.value);
+    const volumes: ProductionResult = {
+      gasMmcf: ratePerDay.gasMmcfPerDay === null ? null : ratePerDay.gasMmcfPerDay * days,
+      nglMbbl: ratePerDay.nglMbblPerDay === null ? null : ratePerDay.nglMbblPerDay * days,
+      oilMbbl: ratePerDay.oilMbblPerDay === null ? null : ratePerDay.oilMbblPerDay * days,
+      totalMcfe: null
     };
     volumes.totalMcfe = totalFromMcfe(volumes.gasMmcf, volumes.nglMbbl, volumes.oilMbbl);
 
-    results.push({
+    return {
       period,
       days,
-      timing,
-      exitRatePerDay,
-      averageRatePerDay,
+      sourceClassification: overriddenFields.length > 0 ? "override" : "reported",
+      overriddenFields,
+      ratePerDay,
       volumes,
-      newWellContributionMcfePerDay: newWellAdd,
-      baseDeclineAppliedRate: quarterlyDeclineRate,
-      sources,
+      sources: [gas.source, ngl.source, oil.source],
       warnings
-    });
-
-    priorExitTotal = exitRatePerDay.totalMcfePerDay;
-  }
-
-  return results;
+    };
+  });
 }
 
-/** Converts one quarter's average daily rate into the SourcedValue triplet the existing forecast pipeline expects. */
-export function toProductionAssumptions(build: QuarterlyProductionBuild, unavailableNote: string): ProductionAssumptions {
-  const source: AssumptionSource = build.sources[0] ?? {
-    name: "RRC Peer Dashboard production engine",
-    period: build.period,
-    retrievedAt: new Date(0).toISOString(),
-    classification: "modeled",
-    notes: unavailableNote
-  };
-
+/** Converts one period's daily rate into the SourcedValue triplet the existing forecast pipeline expects. */
+export function toProductionAssumptions(period: FlatProductionPeriodResult): ProductionAssumptions {
+  const [gasSource, nglSource, oilSource] = period.sources;
   return {
-    gasMmcfPerDay: { value: build.averageRatePerDay.gasMmcfPerDay, unit: "MMcf/d", source },
-    nglMbblPerDay: { value: build.averageRatePerDay.nglMbblPerDay, unit: "Mbbl/d", source },
-    oilMbblPerDay: { value: build.averageRatePerDay.oilMbblPerDay, unit: "Mbbl/d", source }
+    gasMmcfPerDay: { value: period.ratePerDay.gasMmcfPerDay, unit: "MMcf/d", source: gasSource },
+    nglMbblPerDay: { value: period.ratePerDay.nglMbblPerDay, unit: "Mbbl/d", source: nglSource },
+    oilMbblPerDay: { value: period.ratePerDay.oilMbblPerDay, unit: "Mbbl/d", source: oilSource }
   };
 }
 
-export type ProductionScenarioAdjustment = {
-  declineRateAbsoluteDelta?: number;
-  productivityMultiplier?: number;
-  tilCountMultiplier?: number;
-};
-
-/** Returns a new assumptions object with the adjustment applied; never mutates the input. */
-export function applyProductionScenarioAdjustment(
-  assumptions: ProductionBuildAssumptions,
-  adjustment: ProductionScenarioAdjustment
-): ProductionBuildAssumptions {
-  const decline: BaseDeclineAssumption = {
-    annualEffectiveDeclineRate: {
-      ...assumptions.decline.annualEffectiveDeclineRate,
-      value:
-        assumptions.decline.annualEffectiveDeclineRate.value === null || adjustment.declineRateAbsoluteDelta === undefined
-          ? assumptions.decline.annualEffectiveDeclineRate.value
-          : assumptions.decline.annualEffectiveDeclineRate.value + adjustment.declineRateAbsoluteDelta
-    }
-  };
-
-  const activity = assumptions.activity.map((a) => ({
-    ...a,
-    tilCount: {
-      ...a.tilCount,
-      value:
-        a.tilCount.value === null || adjustment.tilCountMultiplier === undefined
-          ? a.tilCount.value
-          : a.tilCount.value * adjustment.tilCountMultiplier
-    },
-    productivityPerTilMcfePerDay: {
-      ...a.productivityPerTilMcfePerDay,
-      value:
-        a.productivityPerTilMcfePerDay.value === null || adjustment.productivityMultiplier === undefined
-          ? a.productivityPerTilMcfePerDay.value
-          : a.productivityPerTilMcfePerDay.value * adjustment.productivityMultiplier
-    }
-  }));
-
-  return {
-    beginning: assumptions.beginning,
-    decline,
-    activity,
-    mix: assumptions.mix,
-    capacityMcfePerDayLimit: assumptions.capacityMcfePerDayLimit
-  };
-}
-
-/** Sums exactly 4 quarters of volumes into an annual total; null (with a warning) if the set is incomplete or any quarter is null. */
-export function summarizeAnnualProduction(quarters: QuarterlyProductionBuild[]): {
+/** Sums exactly 4 periods of volumes into an annual total; null (with a warning) if the set is incomplete or any period is null. */
+export function summarizeAnnualProduction(periods: Array<{ volumes: ProductionResult }>): {
   gasMmcf: number | null;
   nglMbbl: number | null;
   oilMbbl: number | null;
@@ -403,14 +221,14 @@ export function summarizeAnnualProduction(quarters: QuarterlyProductionBuild[]):
   warnings: string[];
 } {
   const warnings: string[] = [];
-  if (quarters.length !== 4) {
-    warnings.push(`Annual production requires exactly 4 quarters; received ${quarters.length}.`);
+  if (periods.length !== 4) {
+    warnings.push(`Annual production requires exactly 4 periods; received ${periods.length}.`);
     return { gasMmcf: null, nglMbbl: null, oilMbbl: null, totalMcfe: null, warnings };
   }
 
   function sum(key: "gasMmcf" | "nglMbbl" | "oilMbbl" | "totalMcfe"): number | null {
-    if (quarters.some((q) => q.volumes[key] === null)) return null;
-    return quarters.reduce((total, q) => total + (q.volumes[key] as number), 0);
+    if (periods.some((p) => p.volumes[key] === null)) return null;
+    return periods.reduce((total, p) => total + (p.volumes[key] as number), 0);
   }
 
   const gasMmcf = sum("gasMmcf");
@@ -418,8 +236,8 @@ export function summarizeAnnualProduction(quarters: QuarterlyProductionBuild[]):
   const oilMbbl = sum("oilMbbl");
   const totalMcfe = sum("totalMcfe");
   const reconciledTotal = totalFromMcfe(gasMmcf, nglMbbl, oilMbbl);
-  if (totalMcfe !== null && reconciledTotal !== null && Math.abs(totalMcfe - reconciledTotal) > EPSILON * Math.max(1, Math.abs(totalMcfe))) {
-    warnings.push("Annual total production does not reconcile with the sum of its quarterly components.");
+  if (totalMcfe !== null && reconciledTotal !== null && Math.abs(totalMcfe - reconciledTotal) > 1e-6 * Math.max(1, Math.abs(totalMcfe))) {
+    warnings.push("Annual total production does not reconcile with the sum of its period components.");
     return { gasMmcf, nglMbbl, oilMbbl, totalMcfe: null, warnings };
   }
 

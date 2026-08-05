@@ -2,6 +2,13 @@ import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
 import { rrcHedgeBookQ1_2026 } from "@/lib/forecast/data/rrc-hedges";
 import { FORECAST_ENGINE_VERSION, runForecastScenario } from "@/lib/forecast/engine";
 import { rollForwardBalanceSheet } from "@/lib/forecast/balance-sheet";
+import {
+  buildFlatProductionForecast,
+  toProductionAssumptions,
+  type FlatProductionPeriodResult,
+  type ProductionBeginningState,
+  type ProductionOverrideInput
+} from "@/lib/forecast/production-engine";
 import type {
   AssumptionClassification,
   ForecastPeriodAssumptions,
@@ -10,6 +17,25 @@ import type {
 } from "@/lib/forecast/types";
 
 export type RrcPost2027Strategy = "maintenance" | "continued-growth";
+export type { ProductionOverrideInput } from "@/lib/forecast/production-engine";
+
+export type RrcCurrentMarketPrices = {
+  henryHubPerMmbtu?: SourcedValue;
+  wtiPerBbl?: SourcedValue;
+};
+
+export type RrcCompleteScenarioOptions = {
+  productionOverrides?: ProductionOverrideInput[];
+  currentMarketPrices?: RrcCurrentMarketPrices;
+};
+
+/** The only reported production anchor this scenario uses: the latest 10-Q baseline, held flat unless overridden. */
+export const latestReportedProduction: ProductionBeginningState = {
+  period: rrcQ1_2026Baseline.period.replace("-", ""),
+  gasMmcfPerDay: rrcQ1_2026Baseline.naturalGasMmcfPerDay,
+  nglMbblPerDay: rrcQ1_2026Baseline.nglMbblPerDay,
+  oilMbblPerDay: rrcQ1_2026Baseline.oilMbblPerDay
+};
 
 export type RrcCompleteScenarioResult = {
   scenario: ForecastScenario;
@@ -65,35 +91,6 @@ function quarterDays(period: string): number {
   return quarter === 2 ? 91 : 92;
 }
 
-function annualTargetBcfePerDay(year: number, strategy: RrcPost2027Strategy): number {
-  if (year === 2026) return 2.35;
-  if (year === 2027) return 2.6;
-  return strategy === "maintenance" ? 2.6 : 2.68;
-}
-
-function quarterlyTotalBcfePerDay(period: string, strategy: RrcPost2027Strategy): number {
-  const year = Number(period.slice(0, 4));
-  const quarter = Number(period.slice(-1));
-  const start = year === 2026 ? rrcQ1_2026Baseline.totalProductionBcfePerDay.value ?? 2.21 :
-    year === 2027 ? 2.35 : 2.6;
-  const end = annualTargetBcfePerDay(year, strategy);
-  // Quarter 1 must reproduce `start` exactly (Q1 2026 is the reported baseline,
-  // and each later year's start is the prior year's Q4 target) and quarter 4 must
-  // reach `end` exactly so the ramp is continuous across year boundaries.
-  const progress = (quarter - 1) / 3;
-  return start + (end - start) * progress;
-}
-
-function scaleProductMix(totalBcfePerDay: number) {
-  const baselineTotal = rrcQ1_2026Baseline.totalProductionBcfePerDay.value!;
-  const scale = totalBcfePerDay / baselineTotal;
-  return {
-    gasMmcfPerDay: rrcQ1_2026Baseline.naturalGasMmcfPerDay.value! * scale,
-    nglMbblPerDay: rrcQ1_2026Baseline.nglMbblPerDay.value! * scale,
-    oilMbblPerDay: rrcQ1_2026Baseline.oilMbblPerDay.value! * scale
-  };
-}
-
 function quarterlyCapex(period: string, strategy: RrcPost2027Strategy): number {
   const year = Number(period.slice(0, 4));
   if (year <= 2027) return 675 / 4;
@@ -101,11 +98,11 @@ function quarterlyCapex(period: string, strategy: RrcPost2027Strategy): number {
 }
 
 function periodAssumptions(
-  period: string,
-  strategy: RrcPost2027Strategy
+  flatProduction: FlatProductionPeriodResult,
+  strategy: RrcPost2027Strategy,
+  currentMarketPrices?: RrcCurrentMarketPrices
 ): ForecastPeriodAssumptions {
-  const total = quarterlyTotalBcfePerDay(period, strategy);
-  const mix = scaleProductMix(total);
+  const period = flatProduction.period;
   const capex = quarterlyCapex(period, strategy);
   const isQ1Actual = period === "2026Q1";
 
@@ -113,23 +110,23 @@ function periodAssumptions(
     period,
     days: quarterDays(period),
     commodity: {
-      henryHubPerMmbtu: value({
+      henryHubPerMmbtu: currentMarketPrices?.henryHubPerMmbtu ?? value({
         value: 3.75,
         unit: "$/MMBtu",
         period,
         classification: "modeled",
         name: "Range Resources management sensitivity case",
         reference: "Range Resources April 2026 presentation",
-        notes: "Benchmark assumption; not a realized price."
+        notes: "Benchmark assumption; not a realized price. No current market price was supplied for this run."
       }),
-      wtiPerBbl: value({
+      wtiPerBbl: currentMarketPrices?.wtiPerBbl ?? value({
         value: 65,
         unit: "$/bbl",
         period,
         classification: "modeled",
         name: "Range Resources management sensitivity case",
         reference: "Range Resources April 2026 presentation",
-        notes: "Benchmark assumption."
+        notes: "Benchmark assumption. No current market price was supplied for this run."
       }),
       nglRealizationPctOfWti: value({
         value: 24 / 65,
@@ -206,35 +203,7 @@ function periodAssumptions(
         notes: "No separate oil hedge adjustment applied."
       })
     },
-    production: {
-      gasMmcfPerDay: value({
-        value: mix.gasMmcfPerDay,
-        unit: "MMcf/d",
-        period,
-        classification: isQ1Actual ? "reported" : "modeled",
-        name: "Range Resources / RRC Peer Dashboard",
-        reference: isQ1Actual ? "Q1 2026 Form 10-Q" : "Modeled production ramp using Q1 2026 product mix",
-        notes: "Forward periods preserve the Q1 2026 product mix and scale to the explicit total-production path."
-      }),
-      nglMbblPerDay: value({
-        value: mix.nglMbblPerDay,
-        unit: "Mbbl/d",
-        period,
-        classification: isQ1Actual ? "reported" : "modeled",
-        name: "Range Resources / RRC Peer Dashboard",
-        reference: isQ1Actual ? "Q1 2026 Form 10-Q" : "Modeled production ramp using Q1 2026 product mix",
-        notes: "Forward periods preserve the Q1 2026 product mix."
-      }),
-      oilMbblPerDay: value({
-        value: mix.oilMbblPerDay,
-        unit: "Mbbl/d",
-        period,
-        classification: isQ1Actual ? "reported" : "modeled",
-        name: "Range Resources / RRC Peer Dashboard",
-        reference: isQ1Actual ? "Q1 2026 Form 10-Q" : "Modeled production ramp using Q1 2026 product mix",
-        notes: "Forward periods preserve the Q1 2026 product mix."
-      })
-    },
+    production: toProductionAssumptions(flatProduction),
     costs: {
       loePerMcfe: value({
         value: 0.14,
@@ -330,11 +299,16 @@ function periodAssumptions(
 }
 
 export function buildRrcCompleteScenario(
-  strategy: RrcPost2027Strategy = "maintenance"
+  strategy: RrcPost2027Strategy = "maintenance",
+  options: RrcCompleteScenarioOptions = {}
 ): ForecastScenario {
-  const periods = [2026, 2027, 2028].flatMap((year) =>
-    [1, 2, 3, 4].map((quarter) => periodAssumptions(`${year}Q${quarter}`, strategy))
+  const periodLabels = [2026, 2027, 2028].flatMap((year) => [1, 2, 3, 4].map((quarter) => `${year}Q${quarter}`));
+  const flatProduction = buildFlatProductionForecast(
+    latestReportedProduction,
+    periodLabels.map((period) => ({ period, days: quarterDays(period) })),
+    options.productionOverrides ?? []
   );
+  const periods = flatProduction.map((flat) => periodAssumptions(flat, strategy, options.currentMarketPrices));
 
   return {
     id: `rrc-complete-${strategy}-2026-2028`,
@@ -353,9 +327,10 @@ export function buildRrcCompleteScenario(
 }
 
 export function runRrcCompleteScenario(
-  strategy: RrcPost2027Strategy = "maintenance"
+  strategy: RrcPost2027Strategy = "maintenance",
+  options: RrcCompleteScenarioOptions = {}
 ): RrcCompleteScenarioResult {
-  const scenario = buildRrcCompleteScenario(strategy);
+  const scenario = buildRrcCompleteScenario(strategy, options);
   const forecast = runForecastScenario(scenario);
   const balanceSheet: ReturnType<typeof rollForwardBalanceSheet>[] = [];
 
@@ -386,7 +361,7 @@ export function runRrcCompleteScenario(
     notes: [
       ...rrcHedgeBookQ1_2026.notes,
       "The model is fully calculable, but hedge impacts remain zero until contract-level derivative rows are loaded.",
-      "Forward production preserves the Q1 2026 product mix and follows an explicit modeled total-production ramp.",
+      "Forward production holds the latest reported Q1 2026 production constant by default; no decline, growth, or annual target ramp is applied unless the caller supplies an explicit per-period override.",
       "Reported G&A and interest expense are used as forecast anchors and are not presented as separately reconciled cash-only measures."
     ]
   };
