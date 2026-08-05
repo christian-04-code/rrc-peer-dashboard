@@ -77,7 +77,10 @@ function quarterlyTotalBcfePerDay(period: string, strategy: RrcPost2027Strategy)
   const start = year === 2026 ? rrcQ1_2026Baseline.totalProductionBcfePerDay.value ?? 2.21 :
     year === 2027 ? 2.35 : 2.6;
   const end = annualTargetBcfePerDay(year, strategy);
-  const progress = quarter / 4;
+  // Quarter 1 must reproduce `start` exactly (Q1 2026 is the reported baseline,
+  // and each later year's start is the prior year's Q4 target) and quarter 4 must
+  // reach `end` exactly so the ramp is continuous across year boundaries.
+  const progress = (quarter - 1) / 3;
   return start + (end - start) * progress;
 }
 
