@@ -121,7 +121,7 @@ test("fetchEiaSeries rejects malformed response data", async () => {
       seriesId: "RNGWHHD",
       frequency: "daily",
     }),
-    /none had valid period and numeric value fields/
+    /contained no usable numeric rows/
   );
 });
 

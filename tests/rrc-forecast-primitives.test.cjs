@@ -1,9 +1,31 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const Module = require("node:module");
 const path = require("node:path");
+const ts = require("typescript");
 
+// Transpiled at test time with the `typescript` package rather than required
+// natively, so this runs on the Node version CI actually pins (native `.ts`
+// require support is not available there) -- same approach as
+// tests/eia-client.test.cjs's loadClient().
 function load(relativePath) {
-  return require(path.join(process.cwd(), relativePath));
+  const filename = path.resolve(process.cwd(), relativePath);
+  const source = fs.readFileSync(filename, "utf8");
+  const output = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true,
+    },
+    fileName: filename,
+  }).outputText;
+
+  const loaded = new Module(filename, module);
+  loaded.filename = filename;
+  loaded.paths = Module._nodeModulePaths(path.dirname(filename));
+  loaded._compile(output, filename);
+  return loaded.exports;
 }
 
 const calculations = load("lib/forecast/calculations.ts");
