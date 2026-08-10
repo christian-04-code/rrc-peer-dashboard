@@ -39,6 +39,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 2px s
 .market-ribbon button:hover { border-color: var(--border); background: var(--panel-2); }
 .market-ribbon span { color: var(--muted); }
 .market-ribbon em { color: var(--positive); font-style: normal; }
+.market-ribbon small { color: var(--muted); font-size: 11px; }
 .content { width: min(1520px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 48px; }
 .company-header, .workspace-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .company-identity { display: flex; align-items: center; gap: 14px; }

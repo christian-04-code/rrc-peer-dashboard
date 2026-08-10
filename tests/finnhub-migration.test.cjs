@@ -21,11 +21,13 @@ test("HomeDashboard's forecast chart commodity prices are EIA-only again (FMP re
   assert.match(source, /buildCurrentMarketPricesFromMetrics\(market\.data\?\.metrics\)/);
 });
 
-test("MarketRibbon still sources Henry Hub/WTI/Brent from EIA (useMarketData) and labels itself delayed", () => {
+test("MarketRibbon still reads through useMarketData/EIA (not a direct Finnhub/FMP hook); Brent stays EIA-only", () => {
   const source = readComponent("components", "dashboard", "MarketRibbon.tsx");
   assert.match(source, /useMarketData/);
-  assert.match(source, /Delayed energy market data/);
   assert.doesNotMatch(source, /useFmpQuotes|useFinnhubQuotes/);
+  // Brent has no OilPriceAPI branch -- it only ever reads the EIA metric.
+  const brentBlock = source.slice(source.indexOf('eiaById.get("brent")'), source.indexOf('eiaById.get("brent")') + 400);
+  assert.doesNotMatch(brentBlock, /currentMarket/);
 });
 
 test("the forecast engine's live-commodity notes text says 'Latest official/delayed' for EIA-sourced values, not 'Current-market'", () => {
