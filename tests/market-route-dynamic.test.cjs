@@ -16,8 +16,10 @@ test("Cache-Control header still gives the intended 900s edge caching despite fo
 
 test("route/series identifiers used for live commodity data are unchanged (Henry Hub RNGWHHD, WTI PET.RWTC.D via seriesid route)", () => {
   const clientSource = fs.readFileSync(path.join(process.cwd(), "lib", "eia", "client.ts"), "utf8");
-  assert.match(clientSource, /RNGWHHD/);
-  assert.match(clientSource, /PET\.RWTC\.D/);
-  assert.match(clientSource, /NG\.N9070US2\.M/, "U.S. monthly dry-gas production series is explicit");
-  assert.match(clientSource, /PET\.W_EPLLP0C_SKB_NUS_MBBL\.W/, "U.S. weekly fractionated propane inventory series is explicit");
+  const seriesSource = fs.readFileSync(path.join(process.cwd(), "lib", "eia", "series.ts"), "utf8");
+  assert.match(clientSource, /EIA_SERIES/, "client reads identifiers from the central registry");
+  assert.match(seriesSource, /RNGWHHD/);
+  assert.match(seriesSource, /PET\.RWTC\.D/);
+  assert.match(seriesSource, /NG\.N9070US2\.M/, "U.S. monthly dry-gas production series is explicit");
+  assert.match(seriesSource, /PET\.W_EPLLP0C_SKB_NUS_MBBL\.W/, "U.S. weekly fractionated propane inventory series is explicit");
 });

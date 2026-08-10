@@ -1,27 +1,9 @@
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const Module = require("node:module");
-const path = require("node:path");
 const test = require("node:test");
-const ts = require("typescript");
+const { load } = require("./helpers/ts-loader.cjs");
 
 function loadClient() {
-  const filename = path.resolve(__dirname, "../lib/eia/client.ts");
-  const source = fs.readFileSync(filename, "utf8");
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-      esModuleInterop: true,
-    },
-    fileName: filename,
-  }).outputText;
-
-  const loaded = new Module(filename, module);
-  loaded.filename = filename;
-  loaded.paths = Module._nodeModulePaths(path.dirname(filename));
-  loaded._compile(output, filename);
-  return loaded.exports;
+  return load("lib/eia/client.ts");
 }
 
 const originalFetch = global.fetch;
@@ -142,4 +124,31 @@ test("fetchEiaSeries rejects invalid JSON", async () => {
     }),
     /returned invalid JSON/
   );
+});
+
+test("fetchEiaTable sends grouped facets in one request and preserves row dimensions", async () => {
+  const { fetchEiaTable } = loadClient();
+  process.env.EIA_API_KEY = "test-key";
+  let requestedUrl;
+  global.fetch = async (url) => {
+    requestedUrl = new URL(url.toString());
+    return new Response(JSON.stringify({
+      response: {
+        data: [{ period: "2026-07", value: "123", "area-name": "Pennsylvania", series: "example" }]
+      }
+    }), { status: 200 });
+  };
+
+  const result = await fetchEiaTable({
+    route: "natural-gas/prod/sum/data",
+    frequency: "monthly",
+    facets: { product: ["EPG0"], process: ["VGM"] },
+    length: 2500
+  });
+
+  assert.equal(requestedUrl.searchParams.get("facets[product][]"), "EPG0");
+  assert.equal(requestedUrl.searchParams.get("facets[process][]"), "VGM");
+  assert.equal(requestedUrl.searchParams.get("length"), "2500");
+  assert.equal(result.rows[0].value, 123);
+  assert.equal(result.rows[0]["area-name"], "Pennsylvania");
 });

@@ -34,6 +34,11 @@ export type SnapshotState = {
   inputs: string;
 };
 
+export type MacroSnapshotContext = {
+  eastStoragePct?: number | null;
+  paProductionYoyPct?: number | null;
+};
+
 const DAY_MS = 86_400_000;
 const CURRENT_AGE_DAYS: Record<MarketFrequency, number> = {
   daily: 5,
@@ -177,7 +182,7 @@ function toneFor(state: string): SnapshotState["tone"] {
   return "neutral";
 }
 
-export function buildMacroSnapshot(metrics: NormalizedMarketMetric[]): SnapshotState[] {
+export function buildMacroSnapshot(metrics: NormalizedMarketMetric[], context: MacroSnapshotContext = {}): SnapshotState[] {
   const byId = new Map(metrics.map((metric) => [metric.id, metric]));
   const storageMetric = byId.get("storage");
   const lngMetric = byId.get("lng_exports");
@@ -195,7 +200,13 @@ export function buildMacroSnapshot(metrics: NormalizedMarketMetric[]): SnapshotS
       ? "Loosening"
       : storageState === "Unavailable" && lngState === "Unavailable" ? "Unavailable" : "Balanced";
   const nglState = propaneFourWeek === null ? "Unavailable" : propaneFourWeek <= -5 ? "Supportive" : propaneFourWeek >= 5 ? "Weak" : "Neutral";
-  const appalachiaState = gasState === "Tightening" ? "Improving" : gasState === "Loosening" ? "Weakening" : gasState === "Unavailable" ? "Unavailable" : "Neutral";
+  const eastStoragePct = context.eastStoragePct ?? null;
+  const paProductionYoy = context.paProductionYoyPct ?? null;
+  const appalachiaState = eastStoragePct === null || lngYoY === null
+    ? "Unavailable"
+    : eastStoragePct <= -5 && lngYoY >= 5
+      ? "Improving"
+      : eastStoragePct >= 5 && lngYoY <= -5 ? "Weakening" : "Neutral";
 
   return [
     {
@@ -215,8 +226,8 @@ export function buildMacroSnapshot(metrics: NormalizedMarketMetric[]): SnapshotS
     },
     {
       label: "Appalachia", state: appalachiaState, tone: toneFor(appalachiaState),
-      rule: "Directional read-through follows the transparent U.S. gas-balance state until normalized regional series are available.",
-      inputs: `U.S. natural-gas state: ${gasState}; regional basis and takeaway: unavailable.`
+      rule: "Improving requires East storage at least 5% below normal and LNG exports growing at least 5% YoY; weakening requires the inverse.",
+      inputs: `East storage vs 5-year average: ${formatPct(eastStoragePct)}; LNG exports YoY: ${formatPct(lngYoY)}; PA marketed production YoY: ${formatPct(paProductionYoy)}.`
     },
     {
       label: "NGL", state: nglState, tone: toneFor(nglState),

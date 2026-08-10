@@ -22,11 +22,12 @@ test("Forecast is present in the primary navigation and opens the consolidated f
   assert.match(homeDashboardSource, /ForecastWorkspacePanel/);
 });
 
-test("top nav renders exactly Overview, Forecast, Map, Macro, in that order", () => {
+test("top nav renders exactly Overview, Forecast, Macro, in that order", () => {
   const navMatch = homeDashboardSource.match(/<nav aria-label="Primary navigation">([\s\S]*?)<\/nav>/);
   assert.ok(navMatch, "primary navigation block should exist");
   const labels = [...navMatch[1].matchAll(/>([A-Za-z]+)<\/button>/g)].map((match) => match[1]);
-  assert.deepEqual(labels, ["Overview", "Forecast", "Map", "Macro"]);
+  assert.deepEqual(labels, ["Overview", "Forecast", "Macro"]);
+  assert.doesNotMatch(navMatch[1], />Map</);
 });
 
 test("the old dashboard-compact ForecastPanel, FinancePanel, and FinancialsPanel component files are removed (consolidated, not duplicated)", () => {
