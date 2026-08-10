@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runRrcValuedScenario, type RrcValuationAssumptions } from "@/lib/forecast/scenarios/rrc-valued";
 import { latestReportedProduction, type RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
 import type { ProductionOverrideInput } from "@/lib/forecast/production-engine";
+import { buildCurrentMarketPrices, type LiveMarketMetric } from "@/lib/forecast/live-market-prices";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ type ScenarioRequest = {
   assumptions?: Partial<RrcValuationAssumptions>;
   productionMode?: "reported" | "override";
   productionOverrides?: ProductionOverrideInput[];
+  currentMarketPrices?: {
+    henryHub?: LiveMarketMetric;
+    wti?: LiveMarketMetric;
+  };
 };
 
 function validNumber(value: unknown): value is number {
@@ -56,11 +61,12 @@ export async function POST(request: Request) {
         : base.terminalGrowthRate
     };
     const productionOverrides = sanitizeOverrides(body.productionMode, body.productionOverrides);
+    const currentMarketPrices = buildCurrentMarketPrices(body.currentMarketPrices ?? {});
 
     return NextResponse.json({
       preset,
       latestReportedProduction: LATEST_REPORTED_PRODUCTION_SUMMARY,
-      result: runRrcValuedScenario(strategy, assumptions, { productionOverrides })
+      result: runRrcValuedScenario(strategy, assumptions, { productionOverrides, currentMarketPrices })
     });
   } catch (error) {
     return NextResponse.json(

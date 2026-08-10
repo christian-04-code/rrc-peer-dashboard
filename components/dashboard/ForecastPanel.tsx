@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMarketData } from "@/lib/market/use-market-data";
+import type { NormalizedMarketMetric } from "@/lib/market/types";
 
 type Preset = "bear" | "base" | "bull";
 
@@ -48,21 +50,43 @@ function sumYear(periods: ForecastPeriod[], year: number): number | null {
   return (values as number[]).reduce((sum, value) => sum + value, 0);
 }
 
+function liveMarketInput(metric: NormalizedMarketMetric | undefined) {
+  if (!metric || metric.status !== "ok" || typeof metric.value !== "number" || !Number.isFinite(metric.value)) return null;
+  return { value: metric.value, period: metric.period, fetchedAt: metric.fetchedAt, source: metric.source };
+}
+
+function marketAssumptionLabel(classification: string | undefined): string {
+  return classification === "live" ? "Live market" : "Model fallback";
+}
+
 export function ForecastPanel() {
   const [preset, setPreset] = useState<Preset>("base");
   const [cache, setCache] = useState<Partial<Record<Preset, ScenarioResponse>>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const market = useMarketData();
 
   useEffect(() => {
+    // Wait for the EIA market fetch to settle so the first scenario request already
+    // carries live prices when available, rather than caching a fallback-only response.
+    if (market.loading) return;
     if (cache[preset]) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
+    const henryHub = market.data?.metrics.find((metric) => metric.id === "henry_hub");
+    const wti = market.data?.metrics.find((metric) => metric.id === "wti");
     fetch("/api/rrc-scenarios", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ preset, strategy: "maintenance" })
+      body: JSON.stringify({
+        preset,
+        strategy: "maintenance",
+        currentMarketPrices: {
+          henryHub: liveMarketInput(henryHub),
+          wti: liveMarketInput(wti)
+        }
+      })
     })
       .then((response) => response.json())
       .then((data) => {
@@ -79,7 +103,7 @@ export function ForecastPanel() {
     return () => {
       cancelled = true;
     };
-  }, [preset, cache]);
+  }, [preset, cache, market.loading, market.data]);
 
   const active = cache[preset];
   const periods = active?.result.complete.forecast.periods ?? [];
@@ -122,13 +146,13 @@ export function ForecastPanel() {
             <span>Henry Hub</span>
             <strong>{commodity ? money(commodity.henryHubPerMmbtu.value, 2) : loading ? "…" : "--"}</strong>
             <em>{commodity?.henryHubPerMmbtu.unit ?? "$/MMBtu"}</em>
-            <small>{commodity?.henryHubPerMmbtu.source.classification ?? "--"}</small>
+            <small>{commodity ? marketAssumptionLabel(commodity.henryHubPerMmbtu.source.classification) : "--"}</small>
           </div>
           <div className="macro-market-card">
             <span>WTI</span>
             <strong>{commodity ? money(commodity.wtiPerBbl.value, 2) : loading ? "…" : "--"}</strong>
             <em>{commodity?.wtiPerBbl.unit ?? "$/bbl"}</em>
-            <small>{commodity?.wtiPerBbl.source.classification ?? "--"}</small>
+            <small>{commodity ? marketAssumptionLabel(commodity.wtiPerBbl.source.classification) : "--"}</small>
           </div>
           <div className="macro-market-card">
             <span>Production</span>
@@ -211,7 +235,7 @@ export function ForecastPanel() {
       </div>
 
       <p className="muted panel-note">
-        All figures come from the deterministic RRC forecast engine (production, revenue, EBITDAX, CapEx, and free cash flow per quarter; net debt is the balance-sheet roll-forward ending each quarter). Unsupported values render &quot;--&quot; and are never estimated.
+        All figures come from the deterministic RRC forecast engine (production, revenue, EBITDAX, CapEx, and free cash flow per quarter; net debt is the balance-sheet roll-forward ending each quarter). Henry Hub and WTI use the live EIA market feed when available and fall back to the modeled sensitivity case otherwise; NGL pricing remains modeled as a percentage of WTI. Unsupported values render &quot;--&quot; and are never estimated.
       </p>
     </section>
   );
