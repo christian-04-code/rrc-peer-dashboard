@@ -9,7 +9,7 @@ import type {
   StateProductionMetric,
   StorageRegionId
 } from "@/lib/market/macro-types";
-import { getStateCode, STORAGE_REGION_LABELS } from "@/lib/market/storage-regions";
+import { getStateCode, getStateName, STORAGE_REGION_LABELS } from "@/lib/market/storage-regions";
 import type { MarketObservation } from "@/lib/market/types";
 
 const STORAGE_SERIES_TO_REGION = new Map<string, StorageRegionId>(
@@ -111,9 +111,11 @@ export function normalizeStateProduction(result: EiaTableResult): Record<string,
   const grouped = new Map<string, { name: string; rows: EiaTableRow[] }>();
   for (const row of result.rows) {
     const stateName = typeof row["area-name"] === "string" ? row["area-name"] : "";
-    const stateCode = getStateCode(stateName);
+    const geography = typeof row.duoarea === "string" ? row.duoarea : "";
+    const geographyCode = geography.replace(/^S/i, "").toUpperCase();
+    const stateCode = getStateName(geographyCode) ? geographyCode : getStateCode(stateName);
     if (!stateCode) continue;
-    const current = grouped.get(stateCode) ?? { name: stateName, rows: [] };
+    const current = grouped.get(stateCode) ?? { name: getStateName(stateCode) ?? stateName, rows: [] };
     current.rows.push(row);
     grouped.set(stateCode, current);
   }

@@ -77,6 +77,18 @@ test("state production derives dynamic state metrics and preserves absent states
   assert.equal(states.TX, undefined, "missing states are not fabricated with zero values");
 });
 
+test("state production uses EIA's stable duoarea geography code when area-name is absent", () => {
+  const states = normalizeStateProduction(table([
+    row("2026-05", 777000, "N9050PA2", { duoarea: "SPA" }),
+    row("2025-05", 700000, "N9050PA2", { duoarea: "SPA" })
+  ]));
+
+  assert.equal(states.PA.stateName, "Pennsylvania");
+  assert.equal(states.PA.current, 777000);
+  assert.equal(states.PA.yearAgo, 700000);
+  assert.equal(states.PA.yearOverYearPct, 11);
+});
+
 test("demand groups the four official end-use series and exposes missing series explicitly", () => {
   const demand = normalizeDemand(table([
     row("2026-06", 800, "NG.N3045US2.M"),
