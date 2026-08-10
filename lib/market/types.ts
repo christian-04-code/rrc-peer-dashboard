@@ -25,7 +25,31 @@ export type NormalizedMarketMetric = {
   error?: string;
 };
 
+export type CurrentMarketCommodityQuote = {
+  id: "wti" | "henry_hub";
+  label: string;
+  code: string;
+  price: number | null;
+  unit: string | null;
+  currency: string | null;
+  source: "OilPriceAPI";
+  classification: "current-market";
+  asOf: string | null;
+  dataStatus: string | null;
+  stale: boolean | null;
+  synthetic: boolean | null;
+  change24hAmount: number | null;
+  change24hPercent: number | null;
+  fetchedAt: string;
+  status: "ok" | "unavailable";
+  error?: string;
+};
+
 export type MarketApiResponse = {
   generatedAt: string;
   metrics: NormalizedMarketMetric[];
+  currentMarket: {
+    wti: CurrentMarketCommodityQuote;
+    henryHub: CurrentMarketCommodityQuote;
+  };
 };

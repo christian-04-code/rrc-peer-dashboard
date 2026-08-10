@@ -9,7 +9,10 @@ import {
   fetchWtiDailySpot,
   type EiaFetchResult
 } from "@/lib/eia/client";
+import { fetchOilPriceApiQuotes, type OilPriceApiQuote, type OilPriceApiResult } from "@/lib/oilpriceapi/client";
+import { OIL_PRICE_API_CODES } from "@/lib/oilpriceapi/codes";
 import type {
+  CurrentMarketCommodityQuote,
   MarketApiResponse,
   NormalizedMarketMetric
 } from "@/lib/market/types";
@@ -129,11 +132,75 @@ function normalizeFailure(
   };
 }
 
+function unavailableCurrentMarket(
+  id: "wti" | "henry_hub",
+  label: string,
+  code: string,
+  fetchedAt: string,
+  error: string,
+  quote?: OilPriceApiQuote
+): CurrentMarketCommodityQuote {
+  return {
+    id, label, code, price: null,
+    unit: quote?.unit ?? null,
+    currency: quote?.currency ?? null,
+    source: "OilPriceAPI",
+    classification: "current-market",
+    asOf: quote?.asOf ?? null,
+    dataStatus: quote?.dataStatus ?? null,
+    stale: quote?.stale ?? null,
+    synthetic: quote?.synthetic ?? null,
+    change24hAmount: null,
+    change24hPercent: null,
+    fetchedAt,
+    status: "unavailable",
+    error
+  };
+}
+
+function currentMarketQuoteFor(
+  id: "wti" | "henry_hub",
+  label: string,
+  code: string,
+  fetchedAt: string,
+  result: OilPriceApiResult | null,
+  batchError?: string
+): CurrentMarketCommodityQuote {
+  if (!result) return unavailableCurrentMarket(id, label, code, fetchedAt, batchError ?? "OilPriceAPI request failed.");
+  const quote = result.quotesByCode.get(code);
+  if (!quote) return unavailableCurrentMarket(id, label, code, fetchedAt, "OilPriceAPI did not return this code.");
+  if (quote.stale) return unavailableCurrentMarket(id, label, code, fetchedAt, "OilPriceAPI marked this quote stale.", quote);
+  if (quote.synthetic) return unavailableCurrentMarket(id, label, code, fetchedAt, "OilPriceAPI marked this quote synthetic.", quote);
+  if (quote.price === null) return unavailableCurrentMarket(id, label, code, fetchedAt, "OilPriceAPI returned no numeric price.", quote);
+  return {
+    id, label, code, price: quote.price, unit: quote.unit, currency: quote.currency,
+    source: "OilPriceAPI", classification: "current-market", asOf: quote.asOf,
+    dataStatus: quote.dataStatus, stale: quote.stale, synthetic: quote.synthetic,
+    change24hAmount: quote.change24hAmount, change24hPercent: quote.change24hPercent,
+    fetchedAt, status: "ok"
+  };
+}
+
+async function fetchCurrentMarket(generatedAt: string): Promise<MarketApiResponse["currentMarket"]> {
+  let result: OilPriceApiResult | null = null;
+  let error: string | undefined;
+  try {
+    result = await fetchOilPriceApiQuotes([OIL_PRICE_API_CODES.wti, OIL_PRICE_API_CODES.henryHub]);
+  } catch (reason) {
+    error = reason instanceof Error ? reason.message : "OilPriceAPI request failed.";
+  }
+  return {
+    wti: currentMarketQuoteFor("wti", "WTI", OIL_PRICE_API_CODES.wti, generatedAt, result, error),
+    henryHub: currentMarketQuoteFor("henry_hub", "Henry Hub", OIL_PRICE_API_CODES.henryHub, generatedAt, result, error)
+  };
+}
+
 export async function GET() {
   const generatedAt = new Date().toISOString();
-  const settled = await Promise.allSettled(
-    definitions.map((definition) => definition.fetcher())
-  );
+  const [settled, currentMarket] = await Promise.all([
+    Promise.allSettled(definitions.map((definition) => definition.fetcher())),
+    fetchCurrentMarket(generatedAt)
+  ]);
 
   const metrics = settled.map((result, index) => {
     const definition = definitions[index];
@@ -142,7 +209,7 @@ export async function GET() {
       : normalizeFailure(definition, result.reason, generatedAt);
   });
 
-  const response: MarketApiResponse = { generatedAt, metrics };
+  const response: MarketApiResponse = { generatedAt, metrics, currentMarket };
 
   return NextResponse.json(response, {
     headers: {

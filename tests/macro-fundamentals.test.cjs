@@ -102,6 +102,7 @@ test("interactive map exposes both metrics, semantic storage labeling, and point
   assert.match(source, /states-albers-10m\.json/, "map uses a real U.S. state topology");
   assert.match(source, />Storage</);
   assert.match(source, />Production</);
+  assert.match(source, />YoY change</);
   assert.match(source, /getStorageRegionForState/);
   assert.match(source, /region—not separately/);
   assert.match(source, /onMouseEnter/);
@@ -125,5 +126,8 @@ test("Macro renders the required evidence chart datasets before the deterministi
   assert.match(source, /<DemandChart demand=/);
   assert.match(source, /<RegionalStorageTable regions=/);
   assert.match(source, /<StateProductionRanking states=/);
-  assert.ok(source.indexOf("09 · NGL INTELLIGENCE") < source.indexOf("10 · MACRO SNAPSHOT"));
+  assert.ok(source.indexOf("07 · NGL") < source.indexOf("09 · MACRO SNAPSHOT"));
+  assert.match(source, /OilPriceAPI current Henry Hub\/WTI/);
+  assert.match(source, /Week ending/);
+  assert.match(source, /OVERALL RRC MACRO SETUP/);
 });

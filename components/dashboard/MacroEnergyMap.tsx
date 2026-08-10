@@ -15,6 +15,7 @@ type StateGeometry =
   | { type: "MultiPolygon"; coordinates: Position[][][] };
 type StateFeature = { properties?: { name?: string }; geometry: StateGeometry };
 type MapMode = "storage" | "production";
+type ProductionView = "current" | "yoy";
 
 const topology = statesAtlas as unknown as Topology<{ states: GeometryCollection<{ name: string }> }>;
 const stateFeatures = (feature(topology, topology.objects.states) as unknown as { features: StateFeature[] }).features;
@@ -50,6 +51,15 @@ function productionColor(value: number | null, max: number): string {
   return "#506779";
 }
 
+function productionChangeColor(value: number | null): string {
+  if (value === null) return "#26384b";
+  if (value <= -10) return "#b94f5f";
+  if (value < -2) return "#9a6873";
+  if (value <= 2) return "#65788c";
+  if (value < 10) return "#4b9b85";
+  return "#2ab87d";
+}
+
 function formatNumber(value: number | null): string {
   return value === null ? "--" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 }
@@ -65,6 +75,7 @@ function regionFor(data: MacroFundamentalsResponse | null, stateCode: string) {
 
 export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | null }) {
   const [mode, setMode] = useState<MapMode>("storage");
+  const [productionView, setProductionView] = useState<ProductionView>("current");
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState("PA");
   const productionMax = useMemo(() => Math.max(0, ...Object.values(data?.production.states ?? {}).map((state) => state.current)), [data]);
@@ -80,10 +91,13 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
     <div className="macro-map-layout">
       <div className="macro-map-card">
         <div className="macro-card-title">
-          <div><h3>Interactive U.S. energy map</h3><span>{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : "EIA monthly marketed production · state-level"}</span></div>
-          <div className="macro-segmented" aria-label="Map metric">
-            <button className={mode === "storage" ? "active" : ""} onClick={() => setMode("storage")}>Storage</button>
-            <button className={mode === "production" ? "active" : ""} onClick={() => setMode("production")}>Production</button>
+          <div><h3>Interactive U.S. energy map</h3><span>{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`}</span></div>
+          <div className="macro-map-controls">
+            <div className="macro-segmented" aria-label="Map metric">
+              <button className={mode === "storage" ? "active" : ""} onClick={() => setMode("storage")}>Storage</button>
+              <button className={mode === "production" ? "active" : ""} onClick={() => setMode("production")}>Production</button>
+            </div>
+            {mode === "production" ? <div className="macro-segmented secondary" aria-label="Production map view"><button className={productionView === "current" ? "active" : ""} onClick={() => setProductionView("current")}>Current</button><button className={productionView === "yoy" ? "active" : ""} onClick={() => setProductionView("yoy")}>YoY change</button></div> : null}
           </div>
         </div>
         <div className="macro-us-map" onMouseLeave={() => setHovered(null)}>
@@ -91,8 +105,8 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
             {MAP_STATES.map((state) => {
               const stateRegion = regionFor(data, state.code);
               const stateProduction = data?.production.states[state.code] ?? null;
-              const value = mode === "storage" ? stateRegion?.fiveYearPct ?? null : stateProduction?.current ?? null;
-              const fill = mode === "storage" ? storageColor(value) : productionColor(value, productionMax);
+              const value = mode === "storage" ? stateRegion?.fiveYearPct ?? null : productionView === "current" ? stateProduction?.current ?? null : stateProduction?.yearOverYearPct ?? null;
+              const fill = mode === "storage" ? storageColor(value) : productionView === "current" ? productionColor(value, productionMax) : productionChangeColor(value);
               return (
                 <path
                   key={state.code}
@@ -101,7 +115,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
                   className={selected === state.code ? "macro-map-state selected" : "macro-map-state"}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${state.name}: ${value === null ? "unavailable" : mode === "storage" ? `${formatPct(value)} versus five-year regional average` : `${formatNumber(value)} MMcf per month`}`}
+                  aria-label={`${state.name}: ${value === null ? "unavailable" : mode === "storage" ? `${formatPct(value)} versus five-year regional average` : productionView === "current" ? `${formatNumber(value)} MMcf per month` : `${formatPct(value)} year over year`}`}
                   onMouseEnter={() => setHovered(state.code)}
                   onFocus={() => setHovered(state.code)}
                   onBlur={() => setHovered(null)}
@@ -121,15 +135,17 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
             {mode === "storage" ? (
               <><span>{region?.label ?? "No EIA storage region"}</span><b>{formatNumber(region?.current ?? null)} Bcf</b><small>{formatSigned(region?.weeklyChange ?? null, "Bcf")} weekly · {formatPct(region?.fiveYearPct ?? null)} vs 5Y · {region?.period ?? "--"}</small></>
             ) : (
-              <><span>Marketed gas production</span><b>{formatNumber(production?.current ?? null)} MMcf/mo</b><small>{formatPct(production?.monthOverMonthPct ?? null)} MoM · {formatPct(production?.yearOverYearPct ?? null)} YoY · {production?.period ?? "--"}</small></>
+              <><span>Marketed gas production</span><b>{productionView === "current" ? `${formatNumber(production?.current ?? null)} MMcf/mo` : `${formatPct(production?.yearOverYearPct ?? null)} YoY`}</b><small>{formatPct(production?.monthOverMonthPct ?? null)} MoM · {formatPct(production?.yearOverYearPct ?? null)} YoY · {production?.period ?? "--"}</small></>
             )}
           </div>
         </div>
         <div className="macro-map-legend">
           {mode === "storage" ? (
-            <><span><i style={{ background: storageColor(-12) }} />≤−10%</span><span><i style={{ background: storageColor(-7) }} />−10% to −5%</span><span><i style={{ background: storageColor(0) }} />Near avg</span><span><i style={{ background: storageColor(7) }} />+5% to +10%</span><span><i style={{ background: storageColor(12) }} />≥+10%</span></>
+            <><span><i style={{ background: storageColor(-12) }} />≤−10%</span><span><i style={{ background: storageColor(-7) }} />−10% to −5%</span><span><i style={{ background: storageColor(0) }} />Near avg</span><span><i style={{ background: storageColor(7) }} />+5% to +10%</span><span><i style={{ background: storageColor(12) }} />≥+10%</span><small>EIA weekly storage region—not independent state storage.</small></>
           ) : (
-            <><span><i style={{ background: "#506779" }} />Lower</span><span><i style={{ background: "#35a3cb" }} />Mid</span><span><i style={{ background: "#0079b5" }} />Highest</span><small>Relative scale; unavailable states are gray.</small></>
+            productionView === "current"
+              ? <><span><i style={{ background: "#506779" }} />Lower</span><span><i style={{ background: "#35a3cb" }} />Mid</span><span><i style={{ background: "#0079b5" }} />Highest</span><small>Relative state-volume scale; unavailable states are gray.</small></>
+              : <><span><i style={{ background: productionChangeColor(-12) }} />≤−10%</span><span><i style={{ background: productionChangeColor(-5) }} />Declining</span><span><i style={{ background: productionChangeColor(0) }} />Near flat</span><span><i style={{ background: productionChangeColor(5) }} />Growing</span><span><i style={{ background: productionChangeColor(12) }} />≥+10%</span></>
           )}
         </div>
       </div>
@@ -159,9 +175,9 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               <div><dt>Observation month</dt><dd>{selectedProduction?.period ?? "--"}</dd></div>
             </dl>
             <div className="macro-map-history"><span>State production history</span><HistoricalLineChart ariaLabel={`${selectedName} marketed production history`} unit="MMcf/month" limit={36} series={[{ id: "selected-production", label: selectedName, color: "#70c99a", history: selectedProduction?.history ?? [] }]} /></div>
-            {selected === "PA" ? <div className="macro-pa-callout"><strong>RRC relevance</strong><span>Pennsylvania production is a direct Marcellus supply indicator for Range’s operating context.</span></div> : null}
           </>
         )}
+        {selected === "PA" ? <div className="macro-pa-callout"><strong>RRC relevance</strong><span>Pennsylvania is RRC&apos;s core Marcellus operating state.</span></div> : null}
         <small>Source: U.S. EIA · retrieved {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : "--"}</small>
       </aside>
     </div>
