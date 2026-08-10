@@ -9,6 +9,7 @@
     "lint": "next lint",
     "sec:discover": "node scripts/sec/discover.mjs",
     "sec:manifest": "node scripts/sec/manifest.mjs",
+    "sec:retrieve": "node scripts/sec/retrieve.mjs",
     "test": "node --test tests/*.test.cjs",
     "typecheck": "tsc --noEmit",
     "validate:config": "node scripts/validate-config.mjs",

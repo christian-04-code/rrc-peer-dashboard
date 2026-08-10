@@ -100,6 +100,22 @@ export function buildSecFilingUrl(cik, accessionNumber, primaryDocument) {
   return `https://www.sec.gov/Archives/edgar/data/${archiveCik}/${archiveAccession}/${document}`;
 }
 
+export function buildFilingRepositoryPath({ ticker, reportDate, accessionNumber }) {
+  const filingTicker = requireText(ticker, "ticker");
+  const filingReportDate = requireText(reportDate, "reportDate");
+  const accession = requireText(accessionNumber, "accessionNumber");
+  if (!/^[A-Z][A-Z0-9.-]*$/.test(filingTicker)) {
+    throw new Error(`Cannot build repository path from invalid ticker ${filingTicker}.`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(filingReportDate)) {
+    throw new Error(`Cannot build repository path from invalid reportDate ${filingReportDate}.`);
+  }
+  if (!/^\d{10}-\d{2}-\d{6}$/.test(accession)) {
+    throw new Error(`Cannot build repository path from invalid accessionNumber ${accession}.`);
+  }
+  return path.posix.join("data", "sec", filingTicker, filingReportDate, accession, "filing.htm");
+}
+
 export function collectOriginalFilings(company, submissions, { fromReportDate, throughReportDate }) {
   verifySubmissionIdentity(company, submissions);
   requireText(fromReportDate, "fromReportDate");
@@ -119,9 +135,13 @@ export function collectOriginalFilings(company, submissions, { fromReportDate, t
     const record = recentRecord(recent, index, company, form);
     if (record.reportDate < fromReportDate || record.reportDate > throughReportDate) return;
     if (filingsByAccession.has(record.accessionNumber)) return;
-    filingsByAccession.set(record.accessionNumber, {
+    const filing = {
       ...record,
       filingUrl: buildSecFilingUrl(record.cik, record.accessionNumber, record.primaryDocument),
+    };
+    filingsByAccession.set(record.accessionNumber, {
+      ...filing,
+      repositoryPath: buildFilingRepositoryPath(filing),
     });
   });
 
