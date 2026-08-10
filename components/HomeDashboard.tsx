@@ -10,7 +10,7 @@ import {
   getCompany,
   selectableCompanies
 } from "@/lib/dashboard/company-registry";
-import type { Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
+import type { Metric, Ticker, View } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
 import { buildCurrentMarketPricesFromMarketResponse } from "@/lib/forecast/live-market-prices";
@@ -20,7 +20,6 @@ import { MetricStrip } from "@/components/dashboard/MetricStrip";
 import { CompanySelector } from "@/components/dashboard/CompanySelector";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
-import { MapWorkspace } from "@/components/dashboard/MapWorkspace";
 import { GuidancePanel } from "@/components/dashboard/GuidancePanel";
 import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
@@ -33,7 +32,6 @@ const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Tick
 export function HomeDashboard() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
   const [metric, setMetric] = useState<Metric>("production");
-  const [workspace, setWorkspace] = useState<Workspace>("chart");
   const [view, setView] = useState<View>("dashboard");
   const [comparisonTickers, setComparisonTickers] = useState<Ticker[]>(DEFAULT_COMPARISONS);
   const [activity, setActivity] = useState("Market ribbon initialized");
@@ -117,14 +115,13 @@ export function HomeDashboard() {
               </div>
             </div>
             <nav aria-label="Primary navigation">
-              <button className={view === "dashboard" && workspace === "chart" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("chart"); }}>Overview</button>
+              <button className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>Overview</button>
               <button className={view === "forecast" ? "active" : ""} onClick={() => setView("forecast")}>Forecast</button>
-              <button className={view === "dashboard" && workspace === "map" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("map"); }}>Map</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
             </nav>
           </div>
           <div className="status-row">
-            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of 5 EIA feeds available`)}>● {activeFeedCount} feeds active</button>
+            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of ${market.data?.metrics.length ?? 7} EIA feeds available`)}>● {activeFeedCount} feeds active</button>
           </div>
         </header>
 
@@ -159,7 +156,7 @@ export function HomeDashboard() {
                     <div className="tabs">{(["production", "revenue", "fcf", "capex", "debt", "ebitdax"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
                   </div>
 
-                  {workspace === "chart" ? <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
+                  <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} />
                 </div>
 
                 <aside>
@@ -170,7 +167,7 @@ export function HomeDashboard() {
             </>
           )}
 
-          <p className="fixture-note">{fixtureDisclaimer}</p>
+          {view !== "macro" ? <p className="fixture-note">{fixtureDisclaimer}</p> : null}
         </section>
       </div>
 

@@ -1,3 +1,5 @@
+import { EIA_SERIES } from "@/lib/eia/series";
+
 export function getEiaApiKey(): string {
   const key = process.env.EIA_API_KEY?.trim();
   if (!key) {
@@ -36,6 +38,18 @@ type EiaApiPayload = {
   };
 };
 
+export type EiaTableRow = Record<string, unknown> & {
+  period: string;
+  value: number;
+};
+
+export type EiaTableResult = {
+  route: string;
+  frequency: EiaFrequency;
+  rows: EiaTableRow[];
+  fetchedAt: string;
+};
+
 export type FetchEiaSeriesParams = {
   route: string;
   seriesId: string;
@@ -47,6 +61,57 @@ function validateLength(length: number): void {
   if (!Number.isInteger(length) || length < 1 || length > 5000) {
     throw new Error("EIA request length must be an integer between 1 and 5000.");
   }
+}
+
+export async function fetchEiaTable(params: {
+  route: string;
+  frequency: EiaFrequency;
+  facets?: Record<string, readonly string[]>;
+  length?: number;
+  revalidate?: number;
+}): Promise<EiaTableResult> {
+  const route = params.route.trim().replace(/^\/+|\/+$/g, "");
+  const length = params.length ?? 5000;
+  if (!route) throw new Error("EIA route is required.");
+  validateLength(length);
+
+  const url = new URL(`${EIA_BASE_URL}/${route}`);
+  url.searchParams.set("api_key", getEiaApiKey());
+  url.searchParams.set("frequency", params.frequency);
+  url.searchParams.append("data[0]", "value");
+  for (const [facet, values] of Object.entries(params.facets ?? {})) {
+    for (const value of values) url.searchParams.append(`facets[${facet}][]`, value);
+  }
+  url.searchParams.set("sort[0][column]", "period");
+  url.searchParams.set("sort[0][direction]", "desc");
+  url.searchParams.set("offset", "0");
+  url.searchParams.set("length", String(length));
+
+  let response: Response;
+  try {
+    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 } });
+  } catch (error) {
+    throw new Error(`EIA table request failed for route "${route}": ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`EIA table request failed: ${response.status} for route "${route}".${body.trim() ? ` ${body.slice(0, 300)}` : ""}`);
+  }
+
+  const payload = (await response.json()) as EiaApiPayload;
+  const data = payload.response?.data;
+  if (!Array.isArray(data)) throw new Error(`EIA table response for route "${route}" did not contain a data array.`);
+  const rows = data.flatMap((candidate): EiaTableRow[] => {
+    if (!candidate || typeof candidate !== "object") return [];
+    const row = candidate as Record<string, unknown>;
+    const period = row.period;
+    const rawValue = row.value;
+    const value = typeof rawValue === "string" ? Number.parseFloat(rawValue) : rawValue;
+    if (typeof period !== "string" || typeof value !== "number" || !Number.isFinite(value)) return [];
+    return [{ ...row, period, value }];
+  });
+  if (rows.length === 0) throw new Error(`EIA table response for route "${route}" contained no usable numeric rows.`);
+  return { route, frequency: params.frequency, rows, fetchedAt: new Date().toISOString() };
 }
 
 async function requestEia(
@@ -167,7 +232,7 @@ export async function fetchEiaSeriesById(params: {
 export function fetchHenryHubDailySpot(length = 30): Promise<EiaFetchResult> {
   return fetchEiaSeries({
     route: "natural-gas/pri/fut/data",
-    seriesId: "RNGWHHD",
+    seriesId: EIA_SERIES.henryHub,
     frequency: "daily",
     length
   });
@@ -175,18 +240,18 @@ export function fetchHenryHubDailySpot(length = 30): Promise<EiaFetchResult> {
 
 /** Cushing, Oklahoma WTI spot price, daily, $/barrel. */
 export function fetchWtiDailySpot(length = 30): Promise<EiaFetchResult> {
-  return fetchEiaSeriesById({ seriesId: "PET.RWTC.D", frequency: "daily", length });
+  return fetchEiaSeriesById({ seriesId: EIA_SERIES.wti, frequency: "daily", length });
 }
 
 /** Europe Brent spot price, daily, $/barrel. */
 export function fetchBrentDailySpot(length = 30): Promise<EiaFetchResult> {
-  return fetchEiaSeriesById({ seriesId: "PET.RBRTE.D", frequency: "daily", length });
+  return fetchEiaSeriesById({ seriesId: EIA_SERIES.brent, frequency: "daily", length });
 }
 
 /** Lower 48 working gas in underground storage, weekly, Bcf. */
 export function fetchLower48StorageWeekly(length = 12): Promise<EiaFetchResult> {
   return fetchEiaSeriesById({
-    seriesId: "NG.NW2_EPG0_SWO_R48_BCF.W",
+    seriesId: EIA_SERIES.lower48Storage,
     frequency: "weekly",
     length
   });
@@ -195,8 +260,26 @@ export function fetchLower48StorageWeekly(length = 12): Promise<EiaFetchResult> 
 /** U.S. LNG exports, monthly, million cubic feet. */
 export function fetchUsLngExportsMonthly(length = 12): Promise<EiaFetchResult> {
   return fetchEiaSeriesById({
-    seriesId: "NG.N9133US2.M",
+    seriesId: EIA_SERIES.lngExports,
     frequency: "monthly",
+    length
+  });
+}
+
+/** U.S. dry natural gas production, monthly, million cubic feet. */
+export function fetchUsDryGasProductionMonthly(length = 24): Promise<EiaFetchResult> {
+  return fetchEiaSeriesById({
+    seriesId: EIA_SERIES.usDryGasProduction,
+    frequency: "monthly",
+    length
+  });
+}
+
+/** U.S. ending stocks of fractionated propane ready for sale, weekly, thousand barrels. */
+export function fetchUsPropaneStocksWeekly(length = 104): Promise<EiaFetchResult> {
+  return fetchEiaSeriesById({
+    seriesId: EIA_SERIES.propaneStocks,
+    frequency: "weekly",
     length
   });
 }

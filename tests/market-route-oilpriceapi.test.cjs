@@ -40,7 +40,7 @@ function mockProviders({ oilPriceApi, eiaValue = 65 } = {}) {
   };
 }
 
-test("both providers succeed: currentMarket has OilPriceAPI WTI/Henry Hub, metrics still has all 5 EIA entries unchanged", async () => {
+test("both providers succeed: currentMarket has OilPriceAPI WTI/Henry Hub, metrics retain all seven EIA Macro histories", async () => {
   process.env.OIL_PRICE_API = "test-key";
   process.env.EIA_API_KEY = "test-key";
   mockProviders({
@@ -63,7 +63,8 @@ test("both providers succeed: currentMarket has OilPriceAPI WTI/Henry Hub, metri
   assert.equal(body.currentMarket.henryHub.status, "ok");
   assert.equal(body.currentMarket.henryHub.price, 3.1);
 
-  assert.equal(body.metrics.length, 5);
+  assert.equal(body.metrics.length, 7);
+  assert.ok(body.metrics.every((metric) => Array.isArray(metric.history) && metric.history.length > 0));
   const eiaWti = body.metrics.find((m) => m.id === "wti");
   assert.equal(eiaWti.value, 65);
   assert.equal(eiaWti.classification, "delayed");
@@ -137,7 +138,7 @@ test("OilPriceAPI total failure (network error) does not break /api/market -- EI
   assert.equal(body.currentMarket.wti.price, null);
   assert.match(body.currentMarket.wti.error, /network down/);
   assert.equal(body.currentMarket.henryHub.status, "unavailable");
-  assert.equal(body.metrics.length, 5);
+  assert.equal(body.metrics.length, 7);
   assert.equal(body.metrics.find((m) => m.id === "wti").status, "ok");
   assert.equal(body.metrics.find((m) => m.id === "wti").value, 65);
 });
