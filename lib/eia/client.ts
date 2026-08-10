@@ -201,6 +201,24 @@ export function fetchUsLngExportsMonthly(length = 12): Promise<EiaFetchResult> {
   });
 }
 
+/** U.S. dry natural gas production, monthly, million cubic feet. */
+export function fetchUsDryGasProductionMonthly(length = 24): Promise<EiaFetchResult> {
+  return fetchEiaSeriesById({
+    seriesId: "NG.N9070US2.M",
+    frequency: "monthly",
+    length
+  });
+}
+
+/** U.S. ending stocks of fractionated propane ready for sale, weekly, thousand barrels. */
+export function fetchUsPropaneStocksWeekly(length = 104): Promise<EiaFetchResult> {
+  return fetchEiaSeriesById({
+    seriesId: "PET.W_EPLLP0C_SKB_NUS_MBBL.W",
+    frequency: "weekly",
+    length
+  });
+}
+
 export async function getLatestHenryHubPrice(): Promise<EiaDataPoint> {
   const result = await fetchHenryHubDailySpot(5);
   return result.points[0];

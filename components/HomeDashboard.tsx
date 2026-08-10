@@ -117,7 +117,7 @@ export function HomeDashboard() {
             </nav>
           </div>
           <div className="status-row">
-            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of 5 EIA feeds available`)}>● {activeFeedCount} feeds active</button>
+            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of ${market.data?.metrics.length ?? 7} EIA feeds available`)}>● {activeFeedCount} feeds active</button>
           </div>
         </header>
 
@@ -163,7 +163,7 @@ export function HomeDashboard() {
             </>
           )}
 
-          <p className="fixture-note">{fixtureDisclaimer}</p>
+          {view !== "macro" ? <p className="fixture-note">{fixtureDisclaimer}</p> : null}
         </section>
       </div>
 

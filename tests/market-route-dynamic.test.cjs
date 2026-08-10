@@ -18,4 +18,6 @@ test("route/series identifiers used for live commodity data are unchanged (Henry
   const clientSource = fs.readFileSync(path.join(process.cwd(), "lib", "eia", "client.ts"), "utf8");
   assert.match(clientSource, /RNGWHHD/);
   assert.match(clientSource, /PET\.RWTC\.D/);
+  assert.match(clientSource, /NG\.N9070US2\.M/, "U.S. monthly dry-gas production series is explicit");
+  assert.match(clientSource, /PET\.W_EPLLP0C_SKB_NUS_MBBL\.W/, "U.S. weekly fractionated propane inventory series is explicit");
 });
