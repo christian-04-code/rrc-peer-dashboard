@@ -75,3 +75,14 @@ test("one commodity can be live while the other falls back independently", () =>
   assert.equal(result.henryHubPerMmbtu.source.classification, "live");
   assert.equal(result.wtiPerBbl, undefined);
 });
+
+test("a live SourcedValue's notes describe a flat current-market scenario, not a forward curve", () => {
+  const result = buildCurrentMarketPrices({
+    henryHub: { value: 3.4, period: "2026-08-07", fetchedAt: "2026-08-10T00:00:00.000Z", source: "U.S. EIA" },
+    wti: { value: 63.5, period: "2026-08-07", fetchedAt: "2026-08-10T00:00:00.000Z", source: "U.S. EIA" }
+  });
+  for (const sourcedValue of [result.henryHubPerMmbtu, result.wtiPerBbl]) {
+    assert.match(sourcedValue.source.notes, /flat/i);
+    assert.match(sourcedValue.source.notes, /not a futures or forward curve/i);
+  }
+});

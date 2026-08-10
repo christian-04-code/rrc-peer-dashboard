@@ -28,7 +28,7 @@ function toLiveSourcedValue(metric: LiveMarketMetric, unit: string, label: strin
       period: metric.period ?? "current",
       retrievedAt: metric.fetchedAt ?? new Date().toISOString(),
       classification: "live",
-      notes: "Live EIA spot price supplied by the dashboard Forecast tab, replacing the modeled sensitivity assumption for this run."
+      notes: `Current-market ${label} price from the EIA feed, held flat as a scenario input across every forecast period (2026Q1-2028Q4). This is a flat current-market scenario, not a futures or forward curve; it replaces the modeled Range management sensitivity assumption for this run only when a valid live value is available.`
     }
   };
 }
@@ -38,7 +38,9 @@ function toLiveSourcedValue(metric: LiveMarketMetric, unit: string, label: strin
  * scenario engine's currentMarketPrices override. A commodity is omitted
  * (undefined) whenever its live value is missing or non-numeric, so the
  * existing `?? modeled default` fallback in rrc-complete.ts applies —
- * never a fabricated or zeroed price.
+ * never a fabricated or zeroed price. The override is a flat current-market
+ * scenario (today's value held constant across every forecast period), not
+ * a forward-curve projection.
  */
 export function buildCurrentMarketPrices(input: LiveMarketPricesInput): RrcCurrentMarketPrices {
   return {

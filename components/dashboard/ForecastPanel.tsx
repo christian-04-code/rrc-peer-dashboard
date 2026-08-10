@@ -55,8 +55,8 @@ function liveMarketInput(metric: NormalizedMarketMetric | undefined) {
   return { value: metric.value, period: metric.period, fetchedAt: metric.fetchedAt, source: metric.source };
 }
 
-function marketAssumptionLabel(classification: string | undefined): string {
-  return classification === "live" ? "Live market" : "Model fallback";
+function commodityMethodologyLabel(classification: string | undefined): string {
+  return classification === "live" ? "Current market — flat scenario" : "Management sensitivity";
 }
 
 export function ForecastPanel() {
@@ -146,13 +146,13 @@ export function ForecastPanel() {
             <span>Henry Hub</span>
             <strong>{commodity ? money(commodity.henryHubPerMmbtu.value, 2) : loading ? "…" : "--"}</strong>
             <em>{commodity?.henryHubPerMmbtu.unit ?? "$/MMBtu"}</em>
-            <small>{commodity ? marketAssumptionLabel(commodity.henryHubPerMmbtu.source.classification) : "--"}</small>
+            <small>{commodity ? commodityMethodologyLabel(commodity.henryHubPerMmbtu.source.classification) : "--"}</small>
           </div>
           <div className="macro-market-card">
             <span>WTI</span>
             <strong>{commodity ? money(commodity.wtiPerBbl.value, 2) : loading ? "…" : "--"}</strong>
             <em>{commodity?.wtiPerBbl.unit ?? "$/bbl"}</em>
-            <small>{commodity ? marketAssumptionLabel(commodity.wtiPerBbl.source.classification) : "--"}</small>
+            <small>{commodity ? commodityMethodologyLabel(commodity.wtiPerBbl.source.classification) : "--"}</small>
           </div>
           <div className="macro-market-card">
             <span>Production</span>
@@ -167,6 +167,9 @@ export function ForecastPanel() {
             <small>Modeled capital case</small>
           </div>
         </div>
+        <p className="muted panel-note">
+          Current-market prices are held flat across forecast periods and are not a futures/forward curve.
+        </p>
       </div>
 
       <div className="macro-section">
@@ -235,7 +238,7 @@ export function ForecastPanel() {
       </div>
 
       <p className="muted panel-note">
-        All figures come from the deterministic RRC forecast engine (production, revenue, EBITDAX, CapEx, and free cash flow per quarter; net debt is the balance-sheet roll-forward ending each quarter). Henry Hub and WTI use the live EIA market feed when available and fall back to the modeled sensitivity case otherwise; NGL pricing remains modeled as a percentage of WTI. Unsupported values render &quot;--&quot; and are never estimated.
+        All figures come from the deterministic RRC forecast engine (production, revenue, EBITDAX, CapEx, and free cash flow per quarter; net debt is the balance-sheet roll-forward ending each quarter). Henry Hub and WTI use a current-market flat scenario (today&apos;s EIA value held constant across every period) when available, and the Range management sensitivity case ($3.75 HH / $65 WTI) otherwise; NGL pricing remains modeled as a percentage of WTI. Unsupported values render &quot;--&quot; and are never estimated.
       </p>
     </section>
   );
