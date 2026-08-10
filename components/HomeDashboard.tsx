@@ -3,14 +3,16 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import comparisonPreferences from "@/config/comparison-preferences.json";
-import { activityMessages, fixtureDisclaimer, getHomepageMetrics } from "@/lib/dashboard/homepage-data";
+import { activityMessages, fixtureDisclaimer } from "@/lib/dashboard/homepage-data";
+import { getOverviewSummaryCards } from "@/lib/dashboard/overview-metrics";
 import {
   defaultTicker,
   getCompany,
   selectableCompanies
 } from "@/lib/dashboard/company-registry";
-import type { InsightRow, Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
+import type { Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
+import { buildCurrentMarketPricesFromMetrics } from "@/lib/forecast/live-market-prices";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -18,20 +20,14 @@ import { CompanySelector } from "@/components/dashboard/CompanySelector";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
 import { MapWorkspace } from "@/components/dashboard/MapWorkspace";
-import { FinancePanel } from "@/components/dashboard/FinancePanel";
-import { FinancialsPanel } from "@/components/dashboard/FinancialsPanel";
-import { DataActivityPanel } from "@/components/dashboard/DataActivityPanel";
+import { GuidancePanel } from "@/components/dashboard/GuidancePanel";
+import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
-import { PeersPanel } from "@/components/dashboard/PeersPanel";
-import { SourcesPanel } from "@/components/dashboard/SourcesPanel";
-import { DetailDrawer } from "@/components/dashboard/DetailDrawer";
+import { ForecastWorkspacePanel } from "@/components/dashboard/ForecastWorkspacePanel";
+import { DetailDrawer, type DrawerContent } from "@/components/dashboard/DetailDrawer";
 
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
-
-function formatMarketValue(value: number | null, digits = 2): string {
-  return value === null ? "--" : value.toFixed(digits);
-}
 
 export function HomeDashboard() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
@@ -40,7 +36,7 @@ export function HomeDashboard() {
   const [view, setView] = useState<View>("dashboard");
   const [comparisonTickers, setComparisonTickers] = useState<Ticker[]>(DEFAULT_COMPARISONS);
   const [activity, setActivity] = useState("Market ribbon initialized");
-  const [drawer, setDrawer] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState<DrawerContent | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
@@ -48,7 +44,7 @@ export function HomeDashboard() {
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
-  const metrics = useMemo(() => getHomepageMetrics(ticker), [ticker]);
+  const metrics = useMemo(() => getOverviewSummaryCards(ticker), [ticker]);
 
   useEffect(() => {
     let index = 0;
@@ -75,48 +71,15 @@ export function HomeDashboard() {
     };
   }, [drawer]);
 
-  function openDrawer(value: string) {
+  function openDrawer(value: DrawerContent) {
     triggerRef.current = document.activeElement as HTMLElement | null;
     setDrawer(value);
   }
 
-  const insightRows = useMemo((): InsightRow[] => {
-    if (ticker !== "RRC") {
-      return [{ text: `${ticker} is selected. Detailed insights remain disabled until its normalized adapter is connected.` }];
-    }
-
-    const marketById = new Map(market.data?.metrics.map((item) => [item.id, item]) ?? []);
-    const henryHub = marketById.get("henry_hub");
-    const storage = marketById.get("storage");
-    const lng = marketById.get("lng_exports");
-
-    return [
-      {
-        label: "Daily market",
-        text: henryHub?.status === "ok"
-          ? `Henry Hub is ${formatMarketValue(henryHub.value)} ${henryHub.unit} for ${henryHub.period}; this is delayed benchmark data, not Range realized pricing.`
-          : "Henry Hub is unavailable; the dashboard is showing -- rather than a substituted value."
-      },
-      {
-        label: "Storage",
-        text: storage?.status === "ok"
-          ? `Lower 48 working gas is ${formatMarketValue(storage.value, 0)} ${storage.unit} for ${storage.period}.`
-          : "The EIA storage feed is currently unavailable."
-      },
-      {
-        label: "LNG",
-        text: lng?.status === "ok"
-          ? `U.S. LNG exports were ${formatMarketValue(lng.value, 0)} ${lng.unit} for ${lng.period}.`
-          : "The EIA LNG export feed is currently unavailable."
-      }
-    ];
-  }, [ticker, market.data]);
-
-  const financialsRows = useMemo((): InsightRow[] => {
-    return metrics
-      .filter((item) => item.key === "free_cash_flow" || item.key === "capital_expenditures" || item.key === "net_leverage")
-      .map((item) => ({ label: item.label, text: `${item.displayValue} — ${item.note}` }));
-  }, [metrics]);
+  const currentMarketPrices = useMemo(
+    () => buildCurrentMarketPricesFromMetrics(market.data?.metrics),
+    [market.data]
+  );
 
   function selectPrimaryCompany(nextTicker: Ticker) {
     setTicker(nextTicker);
@@ -148,9 +111,8 @@ export function HomeDashboard() {
             </div>
             <nav aria-label="Primary navigation">
               <button className={view === "dashboard" && workspace === "chart" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("chart"); }}>Overview</button>
-              <button className={view === "peers" ? "active" : ""} onClick={() => setView("peers")}>Peers</button>
+              <button className={view === "forecast" ? "active" : ""} onClick={() => setView("forecast")}>Forecast</button>
               <button className={view === "dashboard" && workspace === "map" ? "active" : ""} onClick={() => { setView("dashboard"); setWorkspace("map"); }}>Map</button>
-              <button className={view === "sources" ? "active" : ""} onClick={() => setView("sources")}>Sources</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
             </nav>
           </div>
@@ -164,15 +126,13 @@ export function HomeDashboard() {
         <section className="content">
           {view === "macro" ? (
             <MacroPanel />
-          ) : view === "sources" ? (
-            <SourcesPanel />
-          ) : view === "peers" ? (
-            <PeersPanel companies={selectableCompanies} primaryTicker={ticker} onOpenSource={openDrawer} />
+          ) : view === "forecast" ? (
+            <ForecastWorkspacePanel />
           ) : (
             <>
               <CompanyHero company={company} activity={activity} />
 
-              <MetricStrip metrics={metrics} activeMetric={metric} onSelectMetric={setMetric} companyShortName={company.shortName} />
+              <MetricStrip metrics={metrics} companyShortName={company.shortName} />
 
               <section className="company-selector" aria-label="Company and peer selection">
                 <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={selectPrimaryCompany} />
@@ -189,16 +149,15 @@ export function HomeDashboard() {
               <section className="workspace-grid">
                 <div className="workspace">
                   <div className="workspace-toolbar">
-                    <div className="tabs">{(["production", "fcf", "capex", "debt", "valuation"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
+                    <div className="tabs">{(["production", "revenue", "fcf", "capex", "debt", "ebitdax"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
                   </div>
 
-                  {workspace === "chart" ? <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
+                  {workspace === "chart" ? <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} /> : <MapWorkspace ticker={ticker} comparisonTickers={comparisonTickers} onOpen={openDrawer} />}
                 </div>
 
                 <aside>
-                  <FinancePanel rows={insightRows} onOpenDetail={openDrawer} />
-                  <FinancialsPanel rows={financialsRows} />
-                  <DataActivityPanel />
+                  <GuidancePanel ticker={ticker} onOpenDetail={openDrawer} />
+                  <ValuationsPanel ticker={ticker} />
                 </aside>
               </section>
             </>
@@ -213,4 +172,4 @@ export function HomeDashboard() {
   );
 }
 
-function labelMetric(metric: Metric) { return ({ production: "Production", fcf: "FCF", capex: "CapEx", debt: "Net debt", valuation: "Valuation" })[metric]; }
+function labelMetric(metric: Metric) { return ({ production: "Production", revenue: "Revenue", fcf: "FCF", capex: "CapEx", debt: "Net debt", ebitdax: "EBITDAX" })[metric]; }

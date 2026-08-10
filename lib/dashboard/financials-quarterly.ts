@@ -21,15 +21,22 @@
  *   suspect (EXE Q1 2024, pre-merger entity). Both were left null with source "codex"
  *   rather than silently pulled in as a fallback -- see extraction report for detail.
  *
- * EXTRACTION DATE: 2026-08-04
+ * EXTRACTION DATE: 2026-08-04 (RRC netIncome/operatingCashFlow/cashAndEquivalents/
+ * totalDebt added 2026-08-10 -- see below)
  *
  * Every leaf value is a SourcedValue: { value, source, basis, note? }.
  *   - value: the number as it appears in the source workbook, or null when the
  *     source workbook itself is blank / "#N/A" / "Not disclosed". Never 0, never
  *     interpolated.
- *   - source: "codex" | "factset" -- which workbook the cell came from. Every cell
- *     in this fixture is "codex"; the tag is kept per-cell (not file-level) so a
- *     future FactSet backfill can be merged in without silently blending series.
+ *   - source: "codex" | "factset" -- which workbook the cell came from. Almost every
+ *     cell in this fixture is "codex"; the tag is kept per-cell (not file-level) so a
+ *     future FactSet backfill can be merged in without silently blending series. The
+ *     one exception: RRC.netIncome is "factset" (E&P_Facset_Company_Model.xlsx, RRC
+ *     sheet, "Reported Net Income ($mm)" row, Q1 2024A-Q1 2026A columns) because the
+ *     Codex workbook does not carry net income as its own line -- it only appears,
+ *     unstored, inside the Normalized EBITDAX bridge methodology note. This is
+ *     FactSet's transcription of company-reported net income (an "A"/actual column,
+ *     not an estimate), not a consensus figure.
  *   - basis: "actual" | "derived" | "guidance" -- "actual" means taken directly from
  *     a company-reported or filed figure; "derived" means Codex (or this extraction)
  *     calculated the figure from other reported figures (e.g. net debt = gross debt
@@ -85,6 +92,13 @@ export type QuarterlyFinancials = {
   adjustedEbitdax: SourcedValue; // $mm
   capitalExpenditures: SourcedValue; // $mm -- definition varies by company, see header
   netDebt: SourcedValue; // $mm
+  // The four fields below are optional: only populated where a consolidated source
+  // (Codex workbook, or FactSet as a documented fallback) actually carries the metric.
+  // Not yet extracted for every ticker/quarter -- absent means unresolved, never zero.
+  netIncome?: SourcedValue; // $mm, standalone quarter (GAAP)
+  operatingCashFlow?: SourcedValue; // $mm, standalone quarter (GAAP)
+  cashAndEquivalents?: SourcedValue; // $mm, quarter-end balance-sheet point-in-time
+  totalDebt?: SourcedValue; // $mm, quarter-end face-value gross debt, balance-sheet point-in-time
   production: {
     total: SourcedValue; // MMcfe/d
     naturalGas: SourcedValue; // MMcf/d
@@ -123,6 +137,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 335.653, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 170.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1425.906, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 92.138, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 331.93, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 343.111, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1769.017, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2141.497, source: "codex", basis: "actual" },
         naturalGas: { value: 1457.695, source: "codex", basis: "actual" },
@@ -158,6 +176,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 264.281, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 175.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1470.084, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 28.704, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 148.775, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 251.052, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1721.136, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2152.946, source: "codex", basis: "actual" },
         naturalGas: { value: 1495.594, source: "codex", basis: "actual" },
@@ -193,6 +215,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 276.225, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 156.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1440.69, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 50.656, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 245.919, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 277.45, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1717.383, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note. Note: debt (1717.383) less cash (277.45) = 1439.933, which differs from this quarter's stored netDebt (1440.69) by $0.757mm; both figures come directly from the Codex workbook as currently synced and the discrepancy was not investigated further as part of this extraction." },
       production: {
         total: { value: 2204.46, source: "codex", basis: "actual" },
         naturalGas: { value: 1502.106, source: "codex", basis: "actual" },
@@ -228,6 +254,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 339.273, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 153.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1404.212, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 94.842, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 217.89, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 304.49, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1708.702, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2202.5, source: "codex", basis: "actual" },
         naturalGas: { value: 1505.14, source: "codex", basis: "actual" },
@@ -263,6 +293,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 424.123, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 147.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1361.968, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 97.052, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 330.083, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 344.574, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1706.542, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2200.276, source: "codex", basis: "actual" },
         naturalGas: { value: 1510.705, source: "codex", basis: "actual" },
@@ -298,6 +332,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 329.024, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 154.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1224.866, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 237.578, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 336.19, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 0.134, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1225.0, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2197.321, source: "codex", basis: "actual" },
         naturalGas: { value: 1497.771, source: "codex", basis: "actual" },
@@ -333,6 +371,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 301.38, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 190.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1228.825, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 144.307, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 247.545, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 0.175, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1229.0, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2227.831, source: "codex", basis: "actual" },
         naturalGas: { value: 1534.065, source: "codex", basis: "actual" },
@@ -368,6 +410,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 379.452, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 183.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 1217.796, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 179.087, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 257.506, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 0.204, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 1218.0, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2316.485, source: "codex", basis: "actual" },
         naturalGas: { value: 1603.233, source: "codex", basis: "actual" },
@@ -403,6 +449,10 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       adjustedEbitdax: { value: 569.529, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
       capitalExpenditures: { value: 139.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
       netDebt: { value: 833.753, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
+      netIncome: { value: 341.63, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
+      operatingCashFlow: { value: 619.136, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
+      cashAndEquivalents: { value: 0.247, source: "codex", basis: "actual", note: "Quarter-end cash and cash equivalents from the Consolidated Balance Sheets; the same balance-sheet line used to compute netDebt." },
+      totalDebt: { value: 834.0, source: "codex", basis: "derived", note: "Quarter-end face-value gross debt (bank debt plus senior notes face/principal total) from the debt note; the same balance-sheet figure used to compute netDebt." },
       production: {
         total: { value: 2207.436, source: "codex", basis: "actual" },
         naturalGas: { value: 1508.842, source: "codex", basis: "actual" },

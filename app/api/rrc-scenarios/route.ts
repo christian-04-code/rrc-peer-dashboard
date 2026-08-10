@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { runRrcValuedScenario, type RrcValuationAssumptions } from "@/lib/forecast/scenarios/rrc-valued";
-import type { RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
+import { latestReportedProduction, type RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
+import type { ProductionOverrideInput } from "@/lib/forecast/production-engine";
+import { buildCurrentMarketPrices, type LiveMarketMetric } from "@/lib/forecast/live-market-prices";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +16,31 @@ type ScenarioRequest = {
   preset?: keyof typeof PRESETS;
   strategy?: RrcPost2027Strategy;
   assumptions?: Partial<RrcValuationAssumptions>;
+  productionMode?: "reported" | "override";
+  productionOverrides?: ProductionOverrideInput[];
+  currentMarketPrices?: {
+    henryHub?: LiveMarketMetric;
+    wti?: LiveMarketMetric;
+  };
 };
 
 function validNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+const LATEST_REPORTED_PRODUCTION_SUMMARY = {
+  period: latestReportedProduction.period,
+  sourceLabel: `Latest reported production — Q1 2026 10-Q`,
+  gasMmcfPerDay: latestReportedProduction.gasMmcfPerDay.value,
+  nglMbblPerDay: latestReportedProduction.nglMbblPerDay.value,
+  oilMbblPerDay: latestReportedProduction.oilMbblPerDay.value
+};
+
+function sanitizeOverrides(mode: unknown, overrides: unknown): ProductionOverrideInput[] {
+  if (mode !== "override" || !Array.isArray(overrides)) return [];
+  return overrides.filter(
+    (row): row is ProductionOverrideInput => typeof row === "object" && row !== null && typeof (row as { period?: unknown }).period === "string"
+  );
 }
 
 export async function POST(request: Request) {
@@ -37,10 +60,13 @@ export async function POST(request: Request) {
         ? body.assumptions.terminalGrowthRate
         : base.terminalGrowthRate
     };
+    const productionOverrides = sanitizeOverrides(body.productionMode, body.productionOverrides);
+    const currentMarketPrices = buildCurrentMarketPrices(body.currentMarketPrices ?? {});
 
     return NextResponse.json({
       preset,
-      result: runRrcValuedScenario(strategy, assumptions)
+      latestReportedProduction: LATEST_REPORTED_PRODUCTION_SUMMARY,
+      result: runRrcValuedScenario(strategy, assumptions, { productionOverrides, currentMarketPrices })
     });
   } catch (error) {
     return NextResponse.json(
@@ -53,6 +79,7 @@ export async function POST(request: Request) {
 export async function GET() {
   return NextResponse.json({
     presets: PRESETS,
+    latestReportedProduction: LATEST_REPORTED_PRODUCTION_SUMMARY,
     maintenance: runRrcValuedScenario("maintenance", PRESETS.base),
     continuedGrowth: runRrcValuedScenario("continued-growth", PRESETS.base)
   });

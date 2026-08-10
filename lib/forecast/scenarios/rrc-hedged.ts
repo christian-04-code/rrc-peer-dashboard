@@ -1,7 +1,11 @@
 import { rollForwardBalanceSheet } from "@/lib/forecast/balance-sheet";
 import { calculateRrcQuarterlyHedgeSettlements } from "@/lib/forecast/data/rrc-hedge-settlements";
 import { runForecastScenario } from "@/lib/forecast/engine";
-import { buildRrcCompleteScenario, type RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
+import {
+  buildRrcCompleteScenario,
+  type RrcCompleteScenarioOptions,
+  type RrcPost2027Strategy
+} from "@/lib/forecast/scenarios/rrc-complete";
 import type { ForecastScenario, SourcedValue } from "@/lib/forecast/types";
 
 function quarterDates(period: string): { startDate: string; endDate: string } {
@@ -29,9 +33,10 @@ function modeledHedgeValue(value: number | null, unit: string, period: string, n
 }
 
 export function buildRrcHedgedScenario(
-  strategy: RrcPost2027Strategy = "maintenance"
+  strategy: RrcPost2027Strategy = "maintenance",
+  options: RrcCompleteScenarioOptions = {}
 ): ForecastScenario {
-  const scenario = buildRrcCompleteScenario(strategy);
+  const scenario = buildRrcCompleteScenario(strategy, options);
   const periods = scenario.periods.map((period) => {
     const { startDate, endDate } = quarterDates(period.period);
     const settlements = calculateRrcQuarterlyHedgeSettlements({
@@ -117,8 +122,11 @@ export function buildRrcHedgedScenario(
   };
 }
 
-export function runRrcHedgedScenario(strategy: RrcPost2027Strategy = "maintenance") {
-  const scenario = buildRrcHedgedScenario(strategy);
+export function runRrcHedgedScenario(
+  strategy: RrcPost2027Strategy = "maintenance",
+  options: RrcCompleteScenarioOptions = {}
+) {
+  const scenario = buildRrcHedgedScenario(strategy, options);
   const forecast = runForecastScenario(scenario);
   const balanceSheet: ReturnType<typeof rollForwardBalanceSheet>[] = [];
   let beginningCash = 0.247;
