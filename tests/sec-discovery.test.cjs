@@ -20,6 +20,39 @@ test("RRC SEC CIK remains a zero-padded 10-character string", () => {
   assert.match(rrc.sec.cik, /^\d{10}$/);
 });
 
+test("every configured peer has its verified zero-padded SEC CIK", () => {
+  const expected = {
+    RRC: "0000315852",
+    AR: "0001433270",
+    CNX: "0001070412",
+    CRK: "0000023194",
+    EQT: "0000033213",
+    EXE: "0000895126",
+    GPOR: "0000874499",
+  };
+  for (const [ticker, cik] of Object.entries(expected)) {
+    assert.equal(companies.companies[ticker].sec.cik, cik);
+    assert.match(cik, /^\d{10}$/);
+  }
+});
+
+test("configured peer identity verification requires the matching CIK", async () => {
+  const { verifySubmissionIdentity } = await loadDiscovery();
+  for (const ticker of companies.displayOrder) {
+    const company = companies.companies[ticker];
+    const submissions = {
+      cik: Number(company.sec.cik),
+      name: company.name,
+      tickers: [ticker],
+    };
+    assert.doesNotThrow(() => verifySubmissionIdentity(company, submissions));
+    assert.throws(
+      () => verifySubmissionIdentity(company, { ...submissions, cik: Number(company.sec.cik) + 1 }),
+      /does not match configured CIK/
+    );
+  }
+});
+
 test("most recent original filings exclude amended 10-Q and 10-K forms", async () => {
   const { selectMostRecentOriginalFilings } = await loadDiscovery();
   const records = selectMostRecentOriginalFilings(rrc, fixture);

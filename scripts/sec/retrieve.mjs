@@ -7,6 +7,7 @@ import {
   buildSecFilingUrl,
   loadConfiguredCompany,
 } from "./discover.mjs";
+import { getManifestCompany } from "./manifest.mjs";
 
 const ORIGINAL_FORMS = new Set(["10-Q", "10-K"]);
 
@@ -23,21 +24,21 @@ export async function loadManifest(root = process.cwd()) {
 }
 
 export function validateManifestFilings(company, manifest) {
-  if (company.ticker !== "RRC") throw new Error("SEC retrieval currently supports RRC only.");
-  if (manifest?.company?.ticker !== company.ticker || manifest?.company?.cik !== company.sec.cik) {
-    throw new Error("SEC manifest company identity does not match configured RRC identity.");
+  const manifestCompany = getManifestCompany(manifest, company.ticker);
+  if (manifestCompany?.ticker !== company.ticker || manifestCompany?.cik !== company.sec.cik) {
+    throw new Error(`SEC manifest company identity does not match configured ${company.ticker} identity.`);
   }
-  if (!Array.isArray(manifest.filings)) throw new Error("SEC manifest filings array is required.");
+  if (!Array.isArray(manifestCompany.filings)) throw new Error("SEC manifest filings array is required.");
 
   const uniqueFilings = new Map();
-  for (const filing of manifest.filings) {
+  for (const filing of manifestCompany.filings) {
     const accessionNumber = requireText(filing?.accessionNumber, "manifest accessionNumber");
     if (
       filing.companyName !== company.name ||
       filing.ticker !== company.ticker ||
       filing.cik !== company.sec.cik
     ) {
-      throw new Error(`Manifest filing ${accessionNumber} does not belong to configured RRC.`);
+      throw new Error(`Manifest filing ${accessionNumber} does not belong to configured ${company.ticker}.`);
     }
     if (!ORIGINAL_FORMS.has(filing.form)) {
       throw new Error(`Manifest filing ${accessionNumber} must use exact form 10-Q or 10-K.`);
@@ -152,7 +153,7 @@ export async function retrieveManifestFilings(
 
 async function main() {
   const ticker = process.argv[2]?.toUpperCase();
-  if (!ticker) throw new Error("Usage: npm run sec:retrieve -- RRC");
+  if (!ticker) throw new Error("Usage: npm run sec:retrieve -- <TICKER>");
   const company = await loadConfiguredCompany(ticker);
   const manifest = await loadManifest();
   const result = await retrieveManifestFilings(company, manifest, {

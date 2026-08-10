@@ -73,6 +73,52 @@ export function buildManifest(company, submissions, existingManifest) {
   };
 }
 
+export function getManifestCompany(manifest, ticker) {
+  if (manifest?.companies) return manifest.companies[ticker];
+  if (manifest?.company?.ticker === ticker) {
+    return {
+      ...manifest.company,
+      filings: manifest.filings ?? [],
+    };
+  }
+  return undefined;
+}
+
+function normalizeCompanies(manifest) {
+  if (manifest?.companies) return { ...manifest.companies };
+  if (manifest?.company?.ticker) {
+    return {
+      [manifest.company.ticker]: {
+        ...manifest.company,
+        filings: manifest.filings ?? [],
+      },
+    };
+  }
+  return {};
+}
+
+export function updateMultiCompanyManifest(company, submissions, existingManifest) {
+  const companies = normalizeCompanies(existingManifest);
+  const existingCompany = getManifestCompany(existingManifest, company.ticker);
+  const companyManifest = buildManifest(company, submissions, {
+    filings: existingCompany?.filings,
+  });
+  companies[company.ticker] = {
+    ...companyManifest.company,
+    filings: companyManifest.filings,
+  };
+
+  return {
+    schemaVersion: 1,
+    reportDateRange: {
+      from: HISTORICAL_START_REPORT_DATE,
+    },
+    companies: Object.fromEntries(
+      Object.entries(companies).sort(([left], [right]) => left.localeCompare(right))
+    ),
+  };
+}
+
 export function serializeManifest(manifest) {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
@@ -86,7 +132,7 @@ export async function writeManifest(manifest, root = process.cwd()) {
 
 async function main() {
   const ticker = process.argv[2]?.toUpperCase();
-  if (!ticker) throw new Error("Usage: npm run sec:manifest -- RRC");
+  if (!ticker) throw new Error("Usage: npm run sec:manifest -- <TICKER>");
   const company = await loadConfiguredCompany(ticker);
   const submissions = await fetchCompanySubmissions(company, {
     userAgent: process.env.SEC_USER_AGENT,
@@ -97,7 +143,7 @@ async function main() {
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-  const manifest = buildManifest(company, submissions, existingManifest);
+  const manifest = updateMultiCompanyManifest(company, submissions, existingManifest);
   const outputPath = await writeManifest(manifest);
   process.stdout.write(`${outputPath}\n${serializeManifest(manifest)}`);
 }

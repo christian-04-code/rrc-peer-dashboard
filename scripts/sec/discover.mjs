@@ -43,6 +43,12 @@ export async function loadConfiguredCompany(ticker, root = process.cwd()) {
   return validateCompanySecConfig(registry.companies?.[ticker], ticker);
 }
 
+export async function loadConfiguredSecTickers(root = process.cwd()) {
+  const configPath = path.join(root, "config", "companies.json");
+  const registry = JSON.parse(await readFile(configPath, "utf8"));
+  return (registry.displayOrder ?? []).filter((ticker) => registry.companies?.[ticker]?.sec?.cik);
+}
+
 function normalizedCompanyName(value) {
   return value
     .toUpperCase()
@@ -212,7 +218,7 @@ export async function discoverCompanyFilings(company, options = {}) {
 
 async function main() {
   const ticker = process.argv[2]?.toUpperCase();
-  if (!ticker) throw new Error("Usage: npm run sec:discover -- RRC");
+  if (!ticker) throw new Error("Usage: npm run sec:discover -- <TICKER>");
   const company = await loadConfiguredCompany(ticker);
   const records = await discoverCompanyFilings(company, { userAgent: process.env.SEC_USER_AGENT });
   process.stdout.write(`${JSON.stringify(records, null, 2)}\n`);

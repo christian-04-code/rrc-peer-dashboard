@@ -64,6 +64,9 @@
       "name": "Antero Resources Corporation",
       "shortName": "Antero Resources",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0001433270"
+      },
       "logo": {
         "path": "assets/logos/AR.png",
         "alt": "Antero Resources logo"
@@ -103,6 +106,9 @@
       "name": "CNX Resources Corporation",
       "shortName": "CNX Resources",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0001070412"
+      },
       "logo": {
         "path": "assets/logos/CNX.png",
         "alt": "CNX Resources logo"
@@ -141,6 +147,9 @@
       "name": "Comstock Resources, Inc.",
       "shortName": "Comstock Resources",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0000023194"
+      },
       "logo": {
         "path": "assets/logos/CRK.png",
         "alt": "Comstock Resources logo"
@@ -178,6 +187,9 @@
       "name": "EQT Corporation",
       "shortName": "EQT",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0000033213"
+      },
       "logo": {
         "path": "assets/logos/EQT.png",
         "alt": "EQT Corporation logo"
@@ -216,6 +228,9 @@
       "name": "Expand Energy Corporation",
       "shortName": "Expand Energy",
       "exchange": "NASDAQ",
+      "sec": {
+        "cik": "0000895126"
+      },
       "logo": {
         "path": "assets/logos/EXE.png",
         "alt": "Expand Energy logo"
@@ -252,6 +267,9 @@
       "name": "Gulfport Energy Corporation",
       "shortName": "Gulfport Energy",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0000874499"
+      },
       "logo": {
         "path": "assets/logos/GPOR.svg",
         "alt": "Gulfport Energy logo"

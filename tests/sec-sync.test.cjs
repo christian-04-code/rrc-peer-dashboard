@@ -27,7 +27,7 @@ function makeTempRoot() {
   fs.mkdirSync(path.join(root, "config"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "config", "companies.json"),
-    JSON.stringify({ companies: { RRC: rrc } })
+    JSON.stringify({ displayOrder: companies.displayOrder, companies: companies.companies })
   );
   return root;
 }
@@ -51,13 +51,27 @@ function submissionsResponse(submissions, calls) {
   };
 }
 
+function fixtureFor(company) {
+  return {
+    ...structuredClone(fixture),
+    cik: Number(company.sec.cik),
+    name: company.name,
+    tickers: [company.ticker],
+  };
+}
+
 function writeManifestAndFiles(root, manifest) {
   fs.mkdirSync(path.join(root, "data", "sec"), { recursive: true });
   fs.writeFileSync(path.join(root, "data", "sec", "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-  for (const filing of manifest.filings) {
-    const destination = path.join(root, ...filing.repositoryPath.split("/"));
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.writeFileSync(destination, "existing filing");
+  const companyEntries = manifest.companies
+    ? Object.values(manifest.companies)
+    : [{ filings: manifest.filings }];
+  for (const company of companyEntries) {
+    for (const filing of company.filings) {
+      const destination = path.join(root, ...filing.repositoryPath.split("/"));
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.writeFileSync(destination, "existing filing");
+    }
   }
 }
 
@@ -117,9 +131,9 @@ test("a temporary SEC response omission does not delete a known historical acces
 });
 
 test("unchanged stored filings cause no re-download", async () => {
-  const { buildManifest, syncRrc } = await loadModules();
+  const { updateMultiCompanyManifest, syncRrc } = await loadModules();
   const root = makeTempRoot();
-  const existing = buildManifest(rrc, fixture);
+  const existing = updateMultiCompanyManifest(rrc, fixture);
   writeManifestAndFiles(root, existing);
   const submissionCalls = { count: 0 };
 
@@ -134,14 +148,14 @@ test("unchanged stored filings cause no re-download", async () => {
   assert.equal(submissionCalls.count, 1);
   assert.equal(result.newFilingsDiscovered, 0);
   assert.equal(result.downloaded, 0);
-  assert.equal(result.existingSkipped, existing.filings.length);
+  assert.equal(result.existingSkipped, existing.companies.RRC.filings.length);
   assert.equal(result.manifestUpdated, false);
 });
 
 test("a new accession is added and retrieved exactly once across repeated syncs", async () => {
-  const { buildManifest, syncRrc } = await loadModules();
+  const { updateMultiCompanyManifest, syncRrc } = await loadModules();
   const root = makeTempRoot();
-  const existing = buildManifest(rrc, fixture);
+  const existing = updateMultiCompanyManifest(rrc, fixture);
   writeManifestAndFiles(root, existing);
   const submissions = addRecentFiling(fixture, {
     accessionNumber: "0000315852-26-000201",
@@ -176,5 +190,31 @@ test("a new accession is added and retrieved exactly once across repeated syncs"
   assert.equal(second.downloaded, 0);
   assert.equal(filingRequests, 1);
   assert.equal(submissionCalls.count, 2);
-  assert.equal(stored.filings.filter((filing) => filing.accessionNumber === "0000315852-26-000201").length, 1);
+  assert.equal(stored.companies.RRC.filings.filter((filing) => filing.accessionNumber === "0000315852-26-000201").length, 1);
+});
+
+test("multi-company manifest keeps one company sync from overwriting another", async () => {
+  const { syncCompany, updateMultiCompanyManifest } = await loadModules();
+  const root = makeTempRoot();
+  const ar = companies.companies.AR;
+  let existing = updateMultiCompanyManifest(rrc, fixture);
+  existing = updateMultiCompanyManifest(ar, fixtureFor(ar), existing);
+  const originalRrc = structuredClone(existing.companies.RRC);
+  writeManifestAndFiles(root, existing);
+  const submissionCalls = { count: 0 };
+
+  const result = await syncCompany("AR", {
+    root,
+    userAgent: "rrc-peer-dashboard test@example.com",
+    submissionsFetchImpl: submissionsResponse(fixtureFor(ar), submissionCalls),
+    filingFetchImpl: async () => { throw new Error("filing fetch should not be called"); },
+    delayMs: 0,
+  });
+  const stored = JSON.parse(fs.readFileSync(path.join(root, "data", "sec", "manifest.json"), "utf8"));
+
+  assert.deepEqual(Object.keys(stored.companies), ["AR", "RRC"]);
+  assert.deepEqual(stored.companies.RRC, originalRrc);
+  assert.equal(result.newFilingsDiscovered, 0);
+  assert.equal(result.downloaded, 0);
+  assert.equal(submissionCalls.count, 1);
 });
