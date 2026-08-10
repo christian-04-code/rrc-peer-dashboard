@@ -1,4 +1,5 @@
-import { getCompanyGuidanceHighlights, getCompanyGuidanceFullText, getGuidanceMeta } from "@/lib/dashboard/guidance";
+import { getCompanyGuidanceHighlights, getCompanyGuidanceSections, getGuidanceMeta } from "@/lib/dashboard/guidance";
+import type { DrawerContent } from "@/components/dashboard/DetailDrawer";
 import type { Ticker } from "@/lib/dashboard/types";
 
 export function GuidancePanel({
@@ -6,7 +7,7 @@ export function GuidancePanel({
   onOpenDetail
 }: {
   ticker: Ticker;
-  onOpenDetail: (summary: string) => void;
+  onOpenDetail: (content: DrawerContent) => void;
 }) {
   const highlights = getCompanyGuidanceHighlights(ticker);
   const meta = getGuidanceMeta();
@@ -32,7 +33,13 @@ export function GuidancePanel({
       )}
 
       {highlights.length > 0 ? (
-        <button onClick={() => onOpenDetail(getCompanyGuidanceFullText(ticker))}>View full guidance →</button>
+        <button
+          onClick={() =>
+            onOpenDetail({ kind: "guidance", ticker, sections: getCompanyGuidanceSections(ticker), meta })
+          }
+        >
+          View full guidance →
+        </button>
       ) : null}
 
       <p className="muted panel-note">

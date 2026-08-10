@@ -24,7 +24,7 @@ import { GuidancePanel } from "@/components/dashboard/GuidancePanel";
 import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { ForecastWorkspacePanel } from "@/components/dashboard/ForecastWorkspacePanel";
-import { DetailDrawer } from "@/components/dashboard/DetailDrawer";
+import { DetailDrawer, type DrawerContent } from "@/components/dashboard/DetailDrawer";
 
 const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
@@ -36,7 +36,7 @@ export function HomeDashboard() {
   const [view, setView] = useState<View>("dashboard");
   const [comparisonTickers, setComparisonTickers] = useState<Ticker[]>(DEFAULT_COMPARISONS);
   const [activity, setActivity] = useState("Market ribbon initialized");
-  const [drawer, setDrawer] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState<DrawerContent | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
@@ -71,7 +71,7 @@ export function HomeDashboard() {
     };
   }, [drawer]);
 
-  function openDrawer(value: string) {
+  function openDrawer(value: DrawerContent) {
     triggerRef.current = document.activeElement as HTMLElement | null;
     setDrawer(value);
   }

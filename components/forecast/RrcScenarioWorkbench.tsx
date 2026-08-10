@@ -52,6 +52,77 @@ const FUTURE_PERIODS = [2026, 2027, 2028]
   .flatMap((year) => [1, 2, 3, 4].map((quarter) => `${year}Q${quarter}`))
   .filter((period) => period !== "2026Q1");
 
+function formatPresetAssumptions(values: (typeof presetDefaults)[Preset]) {
+  const growth = values.terminalGrowthRate;
+  const growthLabel = `${growth > 0 ? "+" : ""}${(growth * 100).toFixed(0)}%`;
+  return `${values.targetEvToEbitdax.toFixed(1)}x EV/EBITDAX · ${(values.discountRate * 100).toFixed(0)}% discount rate · ${growthLabel} terminal growth`;
+}
+
+// Reusable, unobtrusive info control explaining what the Bear/Base/Bull presets actually
+// change (valuation assumptions only) so it isn't mistaken for a commodity/operating scenario.
+function PresetInfoTooltip() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      style={{ position: "relative", display: "inline-flex", verticalAlign: "middle", marginLeft: 6 }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="What do the Bear, Base, and Bull presets change?"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          border: "1px solid rgba(128,128,128,0.5)",
+          background: "transparent",
+          color: "inherit",
+          fontSize: 10,
+          fontWeight: 700,
+          lineHeight: "14px",
+          padding: 0,
+          cursor: "pointer"
+        }}
+      >
+        i
+      </button>
+      {open ? (
+        <span
+          role="tooltip"
+          style={{
+            position: "absolute",
+            top: 22,
+            left: 0,
+            zIndex: 30,
+            width: 268,
+            background: "var(--panel-2, #102035)",
+            color: "var(--text, #eef5fb)",
+            border: "1px solid rgba(128,128,128,0.35)",
+            borderRadius: 8,
+            padding: "10px 12px",
+            fontSize: 12,
+            lineHeight: 1.5,
+            fontWeight: 400,
+            boxShadow: "0 6px 18px rgba(0,0,0,0.35)"
+          }}
+        >
+          <div><strong>Bear</strong> — {formatPresetAssumptions(presetDefaults.bear)}</div>
+          <div style={{ marginTop: 4 }}><strong>Base</strong> — {formatPresetAssumptions(presetDefaults.base)}</div>
+          <div style={{ marginTop: 4 }}><strong>Bull</strong> — {formatPresetAssumptions(presetDefaults.bull)}</div>
+          <div style={{ marginTop: 8, opacity: 0.75 }}>
+            Valuation scenario presets only. They change the multiple/DCF assumptions above — not commodity prices, production, CapEx, or costs.
+          </div>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function money(value: number | null, digits = 1) {
   return value === null ? "--" : `$${value.toFixed(digits)}`;
 }
@@ -175,7 +246,11 @@ export function RrcScenarioWorkbench({ currentMarketPrices }: { currentMarketPri
       </header>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <label>Scenario preset<select value={preset} onChange={(event) => setPreset(event.target.value as Preset)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="bear">Bear</option><option value="base">Base</option><option value="bull">Bull</option></select></label>
+        <label>
+          Scenario preset
+          <PresetInfoTooltip />
+          <select value={preset} onChange={(event) => setPreset(event.target.value as Preset)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="bear">Bear</option><option value="base">Base</option><option value="bull">Bull</option></select>
+        </label>
         <label>Post-2027 strategy<select value={strategy} onChange={(event) => setStrategy(event.target.value as Strategy)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="maintenance">Maintenance</option><option value="continued-growth">Continued growth</option></select></label>
         <label>Target EV / EBITDAX<input type="number" step="0.1" value={assumptions.targetEvToEbitdax} onChange={(event) => setAssumptions({ ...assumptions, targetEvToEbitdax: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
         <label>Discount rate<input type="number" step="0.005" value={assumptions.discountRate} onChange={(event) => setAssumptions({ ...assumptions, discountRate: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>

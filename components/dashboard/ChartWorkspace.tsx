@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { getAllQuartersForTicker, quarters, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
 import {
   buildForecastChartSeries,
@@ -73,6 +73,16 @@ type Series = {
   values: Array<number | null>;
 };
 
+type HoverPoint = {
+  key: string;
+  x: number;
+  y: number;
+  ticker: Ticker;
+  period: string;
+  value: number;
+  modeled: boolean;
+};
+
 export function ChartWorkspace({
   ticker,
   comparisonTickers,
@@ -89,6 +99,12 @@ export function ChartWorkspace({
   const config = metricConfig[metric];
   const showsForecast = FORECAST_METRICS.has(metric);
   const tickers = [ticker, ...comparisonTickers.filter((peer) => peer !== ticker)];
+  const [hover, setHover] = useState<HoverPoint | null>(null);
+
+  useEffect(() => {
+    setHover(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metric, tickers.join(",")]);
 
   const series: Series[] = useMemo(() => {
     return tickers.map((seriesTicker) => {
@@ -172,26 +188,91 @@ export function ChartWorkspace({
               {modeledPaths.map((path, segmentIndex) => (
                 <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} forecast-line`} d={path} fill="none" />
               ))}
-              {item.values.map((value, index) => value === null ? null : (
-                <circle
-                  key={`${item.ticker}-${axisQuarters[index]}`}
-                  className={pointClass}
-                  cx={xFor(index)}
-                  cy={yFor(value)}
-                  r={seriesIndex === 0 ? 3.5 : 2.5}
-                >
-                  <title>{`${item.ticker} · ${axisQuarters[index]} · ${formatValue(value)} ${config.unit}${index >= splitIndex ? " (modeled)" : ""}`}</title>
-                </circle>
-              ))}
+              {item.values.map((value, index) => {
+                if (value === null) return null;
+                const modeled = index >= splitIndex;
+                const pointKey = `${item.ticker}-${axisQuarters[index]}`;
+                const point: HoverPoint = {
+                  key: pointKey,
+                  x: xFor(index),
+                  y: yFor(value),
+                  ticker: item.ticker,
+                  period: axisQuarters[index],
+                  value,
+                  modeled
+                };
+                return (
+                  <circle
+                    key={pointKey}
+                    className={pointClass}
+                    cx={point.x}
+                    cy={point.y}
+                    r={seriesIndex === 0 ? 3.5 : 2.5}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={`${item.ticker} ${axisQuarters[index]} ${formatValue(value)} ${config.unit}${modeled ? " modeled" : ""}`}
+                    onMouseEnter={() => setHover(point)}
+                    onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
+                    onFocus={() => setHover(point)}
+                    onBlur={() => setHover((current) => (current?.key === pointKey ? null : current))}
+                  />
+                );
+              })}
             </Fragment>
           );
         })}
+        {hover ? <ChartPointTooltip point={hover} unit={config.unit} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
       </svg>
       <div className="chart-legend">
         <span className="primary-legend">{ticker}</span>
         {comparisonTickers.filter((peer) => peer !== ticker).map((peer) => <span key={peer}>{peer}</span>)}
       </div>
     </div>
+  );
+}
+
+// Single reusable tooltip renderer for every chart metric/series (primary, comparison,
+// actual, and modeled points) so hover behavior isn't duplicated per metric.
+function ChartPointTooltip({
+  point,
+  unit,
+  chartWidth,
+  chartHeight
+}: {
+  point: HoverPoint;
+  unit: string;
+  chartWidth: number;
+  chartHeight: number;
+}) {
+  const lines = [`${point.ticker} · ${point.period}`, `${formatValue(point.value)} ${unit}`];
+  const boxWidth = 140;
+  const lineHeight = 15;
+  const padding = 8;
+  const boxHeight = padding * 2 + lineHeight * lines.length + (point.modeled ? lineHeight : 0);
+
+  const left = Math.min(Math.max(point.x - boxWidth / 2, 4), chartWidth - boxWidth - 4);
+  const above = point.y - boxHeight - 12;
+  const top = above >= 4 ? above : point.y + 12;
+  const clampedTop = Math.min(top, chartHeight - boxHeight - 4);
+
+  return (
+    <g className="chart-tooltip" pointerEvents="none">
+      <rect x={left} y={clampedTop} width={boxWidth} height={boxHeight} rx={6} />
+      {lines.map((line, index) => (
+        <text key={line} x={left + padding} y={clampedTop + padding + lineHeight * (index + 1) - 4}>
+          {line}
+        </text>
+      ))}
+      {point.modeled ? (
+        <text
+          className="chart-tooltip-modeled"
+          x={left + padding}
+          y={clampedTop + padding + lineHeight * (lines.length + 1) - 4}
+        >
+          Modeled
+        </text>
+      ) : null}
+    </g>
   );
 }
 

@@ -81,3 +81,52 @@ export function getCompanyGuidanceFullText(ticker: Ticker): string {
   }
   return lines.join(" · ");
 }
+
+export type GuidanceRow =
+  | { kind: "pair"; label: string; value: string }
+  | { kind: "note"; text: string };
+
+export type GuidanceSectionData = { section: string; rows: GuidanceRow[] };
+
+export type GuidanceDrawerContent = {
+  kind: "guidance";
+  ticker: string;
+  sections: GuidanceSectionData[];
+  meta: { source: string; generated: string };
+};
+
+// Same header-line/value-line pairing heuristic as extractSectionHighlights, generalized to
+// walk every item in a section (no cap) so the full drawer preserves all source content —
+// items that don't pair cleanly are kept as standalone notes rather than dropped.
+function parseGuidanceSection(items: GuidanceItem[]): GuidanceRow[] {
+  const rows: GuidanceRow[] = [];
+  let index = 0;
+  while (index < items.length) {
+    const item = items[index];
+    if (item.label && item.value) {
+      rows.push({ kind: "pair", label: item.label, value: item.value });
+      index += 1;
+      continue;
+    }
+    const next = items[index + 1];
+    const isHeaderLine = !item.label && !item.value && !looksLikeValueLine(item.text);
+    if (isHeaderLine && next && !next.label && !next.value && looksLikeValueLine(next.text)) {
+      rows.push({ kind: "pair", label: item.text, value: next.text });
+      index += 2;
+      continue;
+    }
+    rows.push({ kind: "note", text: item.text });
+    index += 1;
+  }
+  return rows;
+}
+
+/** Full normalized guidance, grouped by section, for the "View full guidance" drawer. */
+export function getCompanyGuidanceSections(ticker: Ticker): GuidanceSectionData[] {
+  const company = data.companies[ticker];
+  if (!company) return [];
+  return Object.entries(company.sections).map(([sectionName, items]) => ({
+    section: sectionName,
+    rows: parseGuidanceSection(items)
+  }));
+}
