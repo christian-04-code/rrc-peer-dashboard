@@ -12,7 +12,8 @@ import {
 } from "@/lib/dashboard/company-registry";
 import type { Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
-import { buildCurrentMarketPricesFromMetrics } from "@/lib/forecast/live-market-prices";
+import { useFmpQuotes } from "@/lib/market/use-fmp-quotes";
+import { buildCurrentMarketPricesFromFmpAndEia } from "@/lib/forecast/live-market-prices";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -41,10 +42,16 @@ export function HomeDashboard() {
   const triggerRef = useRef<HTMLElement | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
   const market = useMarketData();
+  const fmpQuotes = useFmpQuotes();
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
-  const metrics = useMemo(() => getOverviewSummaryCards(ticker), [ticker]);
+  const liveSharePrice = useMemo(() => {
+    const quote = fmpQuotes.data?.equities[ticker];
+    if (!quote || quote.status !== "ok" || quote.price === null) return null;
+    return { value: quote.price, note: `FMP · current market (${quote.symbol})` };
+  }, [fmpQuotes.data, ticker]);
+  const metrics = useMemo(() => getOverviewSummaryCards(ticker, liveSharePrice), [ticker, liveSharePrice]);
 
   useEffect(() => {
     let index = 0;
@@ -77,8 +84,8 @@ export function HomeDashboard() {
   }
 
   const currentMarketPrices = useMemo(
-    () => buildCurrentMarketPricesFromMetrics(market.data?.metrics),
-    [market.data]
+    () => buildCurrentMarketPricesFromFmpAndEia(fmpQuotes.data, market.data?.metrics),
+    [fmpQuotes.data, market.data]
   );
 
   function selectPrimaryCompany(nextTicker: Ticker) {

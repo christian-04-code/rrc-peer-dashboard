@@ -4,7 +4,8 @@ import { useState } from "react";
 import { CompanySelector } from "@/components/dashboard/CompanySelector";
 import { RrcScenarioWorkbench } from "@/components/forecast/RrcScenarioWorkbench";
 import { useMarketData } from "@/lib/market/use-market-data";
-import { extractLiveMarketMetrics } from "@/lib/forecast/live-market-prices";
+import { useFmpQuotes } from "@/lib/market/use-fmp-quotes";
+import { extractLiveMarketMetricsWithFallback } from "@/lib/forecast/live-market-prices";
 import { defaultTicker, getCompany, selectableCompanies } from "@/lib/dashboard/company-registry";
 import type { Ticker } from "@/lib/dashboard/types";
 
@@ -19,6 +20,7 @@ const FORECAST_SUPPORTED_TICKERS: ReadonlySet<Ticker> = new Set(["RRC"]);
 export function ForecastWorkspacePanel() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
   const market = useMarketData();
+  const fmpQuotes = useFmpQuotes();
   const company = getCompany(ticker);
   const isSupported = FORECAST_SUPPORTED_TICKERS.has(ticker);
 
@@ -37,7 +39,7 @@ export function ForecastWorkspacePanel() {
       </section>
 
       {isSupported ? (
-        <RrcScenarioWorkbench currentMarketPrices={extractLiveMarketMetrics(market.data?.metrics)} />
+        <RrcScenarioWorkbench currentMarketPrices={extractLiveMarketMetricsWithFallback(fmpQuotes.data, market.data?.metrics)} />
       ) : (
         <div className="panel">
           <div className="panel-head">

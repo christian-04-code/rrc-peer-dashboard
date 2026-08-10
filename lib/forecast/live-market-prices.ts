@@ -1,6 +1,7 @@
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { SourcedValue } from "@/lib/forecast/types";
 import type { NormalizedMarketMetric } from "@/lib/market/types";
+import type { FmpCommodityQuote, FmpQuotesResponse } from "@/lib/market/fmp-types";
 
 export type LiveMarketMetric = {
   value: number | null;
@@ -29,7 +30,7 @@ function toLiveSourcedValue(metric: LiveMarketMetric, unit: string, label: strin
       period: metric.period ?? "current",
       retrievedAt: metric.fetchedAt ?? new Date().toISOString(),
       classification: "live",
-      notes: `Current-market ${label} price from the EIA feed, held flat as a scenario input across every forecast period (2026Q1-2028Q4). This is a flat current-market scenario, not a futures or forward curve; it replaces the modeled Range management sensitivity assumption for this run only when a valid live value is available.`
+      notes: `Current-market ${label} price from ${metric.source ?? "the configured market-data feed"}, held flat as a scenario input across every forecast period (2026Q1-2028Q4). This is a flat current-market scenario, not a futures or forward curve; it replaces the modeled Range management sensitivity assumption for this run only when a valid live value is available.`
     }
   };
 }
@@ -66,4 +67,44 @@ export function extractLiveMarketMetrics(metrics: NormalizedMarketMetric[] | und
 /** Same extraction, already converted to the SourcedValue form the forecast engine's scenario functions accept directly (for callers that run the engine client-side instead of going through the API route). */
 export function buildCurrentMarketPricesFromMetrics(metrics: NormalizedMarketMetric[] | undefined): RrcCurrentMarketPrices {
   return buildCurrentMarketPrices(extractLiveMarketMetrics(metrics));
+}
+
+function pickFirstValid(...candidates: LiveMarketMetric[]): LiveMarketMetric {
+  for (const candidate of candidates) {
+    if (candidate && isFiniteNumber(candidate.value)) return candidate;
+  }
+  return null;
+}
+
+function toLiveMarketMetricFromFmp(quote: FmpCommodityQuote | undefined): LiveMarketMetric {
+  if (!quote || quote.status !== "ok" || !isFiniteNumber(quote.value)) return null;
+  return { value: quote.value, period: "current", fetchedAt: quote.fetchedAt, source: `FMP (${quote.symbol})` };
+}
+
+/**
+ * FMP owns the current-market commodity quote; the EIA latest-official/delayed
+ * observation is used only when FMP's quote is missing or invalid for that
+ * commodity, independently per commodity (Henry Hub and WTI never share a
+ * fallback decision). If neither source has a valid value, the field is omitted
+ * so the existing `?? modeled management-sensitivity default` in rrc-complete.ts
+ * applies -- this function never fabricates or zeros a price, and never mixes
+ * FMP and EIA values within the same commodity.
+ */
+export function extractLiveMarketMetricsWithFallback(
+  fmp: FmpQuotesResponse | null | undefined,
+  eiaMetrics: NormalizedMarketMetric[] | undefined
+): LiveMarketPricesInput {
+  const eia = extractLiveMarketMetrics(eiaMetrics);
+  return {
+    henryHub: pickFirstValid(toLiveMarketMetricFromFmp(fmp?.commodities.henryHub), eia.henryHub),
+    wti: pickFirstValid(toLiveMarketMetricFromFmp(fmp?.commodities.wti), eia.wti)
+  };
+}
+
+/** Same FMP-first/EIA-fallback resolution, already converted to the SourcedValue form the forecast engine accepts directly (for client-side engine calls, mirroring buildCurrentMarketPricesFromMetrics). */
+export function buildCurrentMarketPricesFromFmpAndEia(
+  fmp: FmpQuotesResponse | null | undefined,
+  eiaMetrics: NormalizedMarketMetric[] | undefined
+): RrcCurrentMarketPrices {
+  return buildCurrentMarketPrices(extractLiveMarketMetricsWithFallback(fmp, eiaMetrics));
 }

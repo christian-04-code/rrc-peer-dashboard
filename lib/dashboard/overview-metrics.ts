@@ -15,13 +15,23 @@ function formatProduction(value: number | null): string {
   return value === null ? "--" : `${value.toLocaleString("en-US", { maximumFractionDigits: 0 })} MMcfe/d`;
 }
 
-/** Overview summary cards: share price uses the live market-data path (currently no equity feed exists, so it renders "--"); every other card is the latest normalized reported quarter. No forecast, guidance, or mock values. */
-export function getOverviewSummaryCards(ticker: Ticker): SummaryCard[] {
+function formatSharePrice(value: number): string {
+  return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export type LiveSharePrice = { value: number | null; note: string } | null;
+
+/** Overview summary cards: share price uses the FMP current-quote path (see lib/market/use-fmp-quotes.ts) when a valid live quote is supplied, otherwise renders "--"; every other card is the latest normalized reported quarter. No forecast, guidance, or mock values. */
+export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSharePrice): SummaryCard[] {
   const financials = getQuarterlyFinancials(ticker, latestQuarter);
   const freeCashFlow = getQuarterlyFreeCashFlow(ticker, latestQuarter);
+  const sharePriceCard: SummaryCard =
+    liveSharePrice && liveSharePrice.value !== null
+      ? { key: "share_price", label: "Share price", displayValue: formatSharePrice(liveSharePrice.value), note: liveSharePrice.note }
+      : { key: "share_price", label: "Share price", displayValue: "--", note: "FMP · current market" };
 
   return [
-    { key: "share_price", label: "Share price", displayValue: "--", note: "Live market data" },
+    sharePriceCard,
     { key: "production", label: "Production", displayValue: formatProduction(financials.production.total.value), note: REPORTED_SOURCE_NOTE },
     { key: "revenue", label: "Revenue", displayValue: formatMillions(financials.revenue.value), note: REPORTED_SOURCE_NOTE },
     { key: "ebitdax", label: "EBITDAX", displayValue: formatMillions(financials.adjustedEbitdax.value), note: REPORTED_SOURCE_NOTE },
