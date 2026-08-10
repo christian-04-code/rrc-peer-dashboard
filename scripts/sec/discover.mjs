@@ -81,6 +81,58 @@ function recentRecord(recent, index, company, form) {
   return Object.fromEntries(OUTPUT_FIELDS.map((field) => [field, record[field]]));
 }
 
+export function buildSecFilingUrl(cik, accessionNumber, primaryDocument) {
+  const configuredCik = requireText(cik, "SEC CIK");
+  const accession = requireText(accessionNumber, "accessionNumber");
+  const document = requireText(primaryDocument, "primaryDocument");
+  if (!/^\d{10}$/.test(configuredCik)) {
+    throw new Error("SEC CIK must be a zero-padded 10-character string.");
+  }
+  if (!/^\d{10}-\d{2}-\d{6}$/.test(accession)) {
+    throw new Error(`Cannot build SEC filing URL from invalid accessionNumber ${accession}.`);
+  }
+  if (document.includes("/") || document.includes("\\")) {
+    throw new Error(`Cannot build SEC filing URL from invalid primaryDocument ${document}.`);
+  }
+
+  const archiveCik = configuredCik.replace(/^0+/, "") || "0";
+  const archiveAccession = accession.replaceAll("-", "");
+  return `https://www.sec.gov/Archives/edgar/data/${archiveCik}/${archiveAccession}/${document}`;
+}
+
+export function collectOriginalFilings(company, submissions, { fromReportDate, throughReportDate }) {
+  verifySubmissionIdentity(company, submissions);
+  requireText(fromReportDate, "fromReportDate");
+  requireText(throughReportDate, "throughReportDate");
+  if (fromReportDate > throughReportDate) {
+    throw new Error("fromReportDate must not be after throughReportDate.");
+  }
+
+  const recent = submissions?.filings?.recent;
+  if (!recent || !Array.isArray(recent.form)) {
+    throw new Error("SEC response is missing filings.recent form metadata.");
+  }
+
+  const filingsByAccession = new Map();
+  recent.form.forEach((form, index) => {
+    if (!REQUIRED_FORMS.includes(form)) return;
+    const record = recentRecord(recent, index, company, form);
+    if (record.reportDate < fromReportDate || record.reportDate > throughReportDate) return;
+    if (filingsByAccession.has(record.accessionNumber)) return;
+    filingsByAccession.set(record.accessionNumber, {
+      ...record,
+      filingUrl: buildSecFilingUrl(record.cik, record.accessionNumber, record.primaryDocument),
+    });
+  });
+
+  return [...filingsByAccession.values()].sort((left, right) =>
+    left.reportDate.localeCompare(right.reportDate) ||
+    left.form.localeCompare(right.form) ||
+    left.filingDate.localeCompare(right.filingDate) ||
+    left.accessionNumber.localeCompare(right.accessionNumber)
+  );
+}
+
 export function selectMostRecentOriginalFilings(company, submissions) {
   verifySubmissionIdentity(company, submissions);
   const recent = submissions?.filings?.recent;
@@ -105,7 +157,7 @@ export function selectMostRecentOriginalFilings(company, submissions) {
   });
 }
 
-export async function discoverCompanyFilings(company, { fetchImpl = fetch, userAgent } = {}) {
+export async function fetchCompanySubmissions(company, { fetchImpl = fetch, userAgent } = {}) {
   validateCompanySecConfig(company, company?.ticker ?? "requested company");
   const declaredUserAgent = requireText(userAgent, "SEC_USER_AGENT");
   const url = `${SUBMISSIONS_ORIGIN}/submissions/CIK${company.sec.cik}.json`;
@@ -126,6 +178,12 @@ export async function discoverCompanyFilings(company, { fetchImpl = fetch, userA
   } catch (cause) {
     throw new Error(`SEC submissions response was not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`);
   }
+  verifySubmissionIdentity(company, submissions);
+  return submissions;
+}
+
+export async function discoverCompanyFilings(company, options = {}) {
+  const submissions = await fetchCompanySubmissions(company, options);
   return selectMostRecentOriginalFilings(company, submissions);
 }
 

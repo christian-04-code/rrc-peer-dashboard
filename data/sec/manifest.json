@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "company": {
+    "companyName": "Range Resources Corporation",
+    "ticker": "RRC",
+    "cik": "0000315852"
+  },
+  "reportDateRange": {
+    "from": "2024-01-01",
+    "through": "2026-06-30"
+  },
+  "filings": [
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2024-03-31",
+      "filingDate": "2024-04-23",
+      "accessionNumber": "0000950170-24-046973",
+      "primaryDocument": "rrc-20240331.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017024046973/rrc-20240331.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2024-06-30",
+      "filingDate": "2024-07-23",
+      "accessionNumber": "0000950170-24-085679",
+      "primaryDocument": "rrc-20240630.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017024085679/rrc-20240630.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2024-09-30",
+      "filingDate": "2024-10-22",
+      "accessionNumber": "0000950170-24-116305",
+      "primaryDocument": "rrc-20240930.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017024116305/rrc-20240930.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-K",
+      "reportDate": "2024-12-31",
+      "filingDate": "2025-02-25",
+      "accessionNumber": "0000950170-25-026789",
+      "primaryDocument": "rrc-20241231.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017025026789/rrc-20241231.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2025-03-31",
+      "filingDate": "2025-04-22",
+      "accessionNumber": "0000950170-25-056820",
+      "primaryDocument": "rrc-20250331.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017025056820/rrc-20250331.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2025-06-30",
+      "filingDate": "2025-07-22",
+      "accessionNumber": "0000950170-25-097592",
+      "primaryDocument": "rrc-20250630.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000095017025097592/rrc-20250630.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2025-09-30",
+      "filingDate": "2025-10-28",
+      "accessionNumber": "0001193125-25-253647",
+      "primaryDocument": "rrc-20250930.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312525253647/rrc-20250930.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-K",
+      "reportDate": "2025-12-31",
+      "filingDate": "2026-02-24",
+      "accessionNumber": "0001193125-26-067292",
+      "primaryDocument": "rrc-20251231.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312526067292/rrc-20251231.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2026-03-31",
+      "filingDate": "2026-04-21",
+      "accessionNumber": "0001193125-26-167076",
+      "primaryDocument": "rrc-20260331.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312526167076/rrc-20260331.htm"
+    },
+    {
+      "companyName": "Range Resources Corporation",
+      "ticker": "RRC",
+      "cik": "0000315852",
+      "form": "10-Q",
+      "reportDate": "2026-06-30",
+      "filingDate": "2026-07-21",
+      "accessionNumber": "0001193125-26-310446",
+      "primaryDocument": "rrc-20260630.htm",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312526310446/rrc-20260630.htm"
+    }
+  ]
+}
