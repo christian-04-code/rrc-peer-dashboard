@@ -45,8 +45,8 @@ test("both providers succeed: currentMarket has OilPriceAPI WTI/Henry Hub, metri
   process.env.EIA_API_KEY = "test-key";
   mockProviders({
     oilPriceApi: [
-      { code: "WTI_USD", price: 64.2, currency: "USD", unit: "bbl", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, change_24h_amount: -0.5, change_24h_percent: -0.77 },
-      { code: "NATURAL_GAS_USD", price: 3.1, currency: "USD", unit: "MMBtu", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, change_24h_amount: 0.02, change_24h_percent: 0.65 }
+      { code: "WTI_USD", price: 64.2, currency: "USD", unit: "bbl", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, changes: { "24h": { amount: 4.82, percent: 6.25 } } },
+      { code: "NATURAL_GAS_USD", price: 3.1, currency: "USD", unit: "MMBtu", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, changes: { "24h": { amount: 0.13, percent: 4.89 } } }
     ]
   });
 
@@ -58,7 +58,8 @@ test("both providers succeed: currentMarket has OilPriceAPI WTI/Henry Hub, metri
   assert.equal(body.currentMarket.wti.price, 64.2);
   assert.equal(body.currentMarket.wti.source, "OilPriceAPI");
   assert.equal(body.currentMarket.wti.classification, "current-market");
-  assert.equal(body.currentMarket.wti.change24hPercent, -0.77);
+  assert.equal(body.currentMarket.wti.change24hAmount, 4.82);
+  assert.equal(body.currentMarket.wti.change24hPercent, 6.25);
   assert.equal(body.currentMarket.henryHub.status, "ok");
   assert.equal(body.currentMarket.henryHub.price, 3.1);
 

@@ -56,8 +56,8 @@ test("fetchOilPriceApiQuotes makes exactly one batched request with by_code=A,B 
     requestedUrl = new URL(url.toString());
     requestedHeaders = init?.headers;
     return batchResponse([
-      { code: "WTI_USD", price: 64.2, currency: "USD", unit: "bbl", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, change_24h_amount: -0.5, change_24h_percent: -0.77 },
-      { code: "NATURAL_GAS_USD", price: 3.1, currency: "USD", unit: "MMBtu", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, change_24h_amount: 0.02, change_24h_percent: 0.65 }
+      { code: "WTI_USD", price: 64.2, currency: "USD", unit: "bbl", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, changes: { "24h": { amount: 4.82, percent: 6.25 } } },
+      { code: "NATURAL_GAS_USD", price: 3.1, currency: "USD", unit: "MMBtu", data_status: "live", as_of: "2026-08-10T14:00:00Z", stale: false, synthetic: false, changes: { "24h": { amount: 0.13, percent: 4.89 } } }
     ]);
   };
 
@@ -86,26 +86,50 @@ test("results are matched by code, not array position (batch response order is n
   assert.equal(result.quotesByCode.get("NATURAL_GAS_USD").price, 3.1);
 });
 
-test("24h change is mapped from a nested change_24h: {amount, percent} shape", async () => {
+test("24h change is mapped from the confirmed price.changes['24h'].{amount,percent} path -- WTI fixture", async () => {
   const { fetchOilPriceApiQuotes } = loadClient();
   process.env.OIL_PRICE_API = "test-key";
-  global.fetch = async () => batchResponse([{ code: "WTI_USD", price: 64.2, change_24h: { amount: -0.5, percent: -0.77 } }]);
+  global.fetch = async () => batchResponse([{ code: "WTI_USD", price: 64.2, changes: { "24h": { amount: 4.82, percent: 6.25 } } }]);
 
   const result = await fetchOilPriceApiQuotes(["WTI_USD"]);
   const quote = result.quotesByCode.get("WTI_USD");
-  assert.equal(quote.change24hAmount, -0.5);
-  assert.equal(quote.change24hPercent, -0.77);
+  assert.equal(quote.change24hAmount, 4.82);
+  assert.equal(quote.change24hPercent, 6.25);
 });
 
-test("24h change is mapped from a flat change_24h_amount/change_24h_percent shape", async () => {
+test("24h change is mapped from the confirmed price.changes['24h'].{amount,percent} path -- Henry Hub fixture", async () => {
   const { fetchOilPriceApiQuotes } = loadClient();
   process.env.OIL_PRICE_API = "test-key";
-  global.fetch = async () => batchResponse([{ code: "NATURAL_GAS_USD", price: 3.1, change_24h_amount: 0.02, change_24h_percent: 0.65 }]);
+  global.fetch = async () => batchResponse([{ code: "NATURAL_GAS_USD", price: 3.1, changes: { "24h": { amount: 0.13, percent: 4.89 } } }]);
 
   const result = await fetchOilPriceApiQuotes(["NATURAL_GAS_USD"]);
   const quote = result.quotesByCode.get("NATURAL_GAS_USD");
-  assert.equal(quote.change24hAmount, 0.02);
-  assert.equal(quote.change24hPercent, 0.65);
+  assert.equal(quote.change24hAmount, 0.13);
+  assert.equal(quote.change24hPercent, 4.89);
+});
+
+test("missing changes object normalizes both fields to null, never 0", async () => {
+  const { fetchOilPriceApiQuotes } = loadClient();
+  process.env.OIL_PRICE_API = "test-key";
+  global.fetch = async () => batchResponse([{ code: "WTI_USD", price: 64.2 }]);
+
+  const result = await fetchOilPriceApiQuotes(["WTI_USD"]);
+  const quote = result.quotesByCode.get("WTI_USD");
+  assert.equal(quote.change24hAmount, null);
+  assert.equal(quote.change24hPercent, null);
+  assert.notEqual(quote.change24hAmount, 0);
+  assert.notEqual(quote.change24hPercent, 0);
+});
+
+test("changes['24h'] present but with non-numeric amount/percent normalizes to null, not fabricated", async () => {
+  const { fetchOilPriceApiQuotes } = loadClient();
+  process.env.OIL_PRICE_API = "test-key";
+  global.fetch = async () => batchResponse([{ code: "WTI_USD", price: 64.2, changes: { "24h": { amount: "n/a", percent: null } } }]);
+
+  const result = await fetchOilPriceApiQuotes(["WTI_USD"]);
+  const quote = result.quotesByCode.get("WTI_USD");
+  assert.equal(quote.change24hAmount, null);
+  assert.equal(quote.change24hPercent, null);
 });
 
 test("stale and synthetic flags are preserved as-is by the client (rejection is the route's job, not the client's)", async () => {

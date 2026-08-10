@@ -42,11 +42,7 @@ type OilPriceApiPriceRow = {
   as_of?: unknown;
   stale?: unknown;
   synthetic?: unknown;
-  change_24h?: unknown;
-  change_24h_amount?: unknown;
-  change_24h_percent?: unknown;
-  price_change_24h?: unknown;
-  percent_change_24h?: unknown;
+  changes?: unknown;
 };
 
 type OilPriceApiPayload = {
@@ -67,25 +63,16 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 /**
- * OilPriceAPI's public docs don't nail down the exact 24h-change field name (the
- * account's manually-validated single-code responses confirmed a 24h change is
- * present, but not its literal key spelling). Check plausible shapes defensively
- * rather than guess one and silently miss it; if none match, both come back null,
- * never fabricated.
+ * Confirmed exact path against the real OilPriceAPI batch payload:
+ * price.changes["24h"].amount / price.changes["24h"].percent. Missing or
+ * non-numeric values normalize to null -- never substituted with 0, never fabricated.
  */
 function extractChange24h(row: OilPriceApiPriceRow): { amount: number | null; percent: number | null } {
-  const nested = row.change_24h;
-  if (nested && typeof nested === "object") {
-    const amount = (nested as Record<string, unknown>).amount;
-    const percent = (nested as Record<string, unknown>).percent;
-    return {
-      amount: isFiniteNumber(amount) ? amount : null,
-      percent: isFiniteNumber(percent) ? percent : null
-    };
-  }
+  const changes = row.changes && typeof row.changes === "object" ? (row.changes as Record<string, unknown>) : undefined;
+  const change24h = changes?.["24h"] && typeof changes["24h"] === "object" ? (changes["24h"] as Record<string, unknown>) : undefined;
   return {
-    amount: isFiniteNumber(row.change_24h_amount) ? row.change_24h_amount : isFiniteNumber(row.price_change_24h) ? row.price_change_24h : null,
-    percent: isFiniteNumber(row.change_24h_percent) ? row.change_24h_percent : isFiniteNumber(row.percent_change_24h) ? row.percent_change_24h : null
+    amount: isFiniteNumber(change24h?.amount) ? change24h.amount : null,
+    percent: isFiniteNumber(change24h?.percent) ? change24h.percent : null
   };
 }
 
