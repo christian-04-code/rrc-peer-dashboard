@@ -63,13 +63,13 @@ export function FinancialsPanel({ ticker }: { ticker: Ticker }) {
         rows={[
           row("Revenue", financials.revenue.value, priorFinancials.revenue.value),
           row("EBITDAX", financials.adjustedEbitdax.value, priorFinancials.adjustedEbitdax.value),
-          row("Net income", null, null)
+          row("Net income", financials.netIncome?.value ?? null, priorFinancials.netIncome?.value ?? null)
         ]}
       />
       <StatementSection
         title="Cash flow statement"
         rows={[
-          row("Operating cash flow", null, null),
+          row("Operating cash flow", financials.operatingCashFlow?.value ?? null, priorFinancials.operatingCashFlow?.value ?? null),
           row("Capital expenditures", financials.capitalExpenditures.value, priorFinancials.capitalExpenditures.value),
           row("Free cash flow", freeCashFlow.value, priorFreeCashFlow.value)
         ]}
@@ -77,8 +77,8 @@ export function FinancialsPanel({ ticker }: { ticker: Ticker }) {
       <StatementSection
         title="Balance sheet"
         rows={[
-          row("Cash & equivalents", null, null),
-          row("Total debt", null, null),
+          row("Cash & equivalents", financials.cashAndEquivalents?.value ?? null, priorFinancials.cashAndEquivalents?.value ?? null),
+          row("Total debt", financials.totalDebt?.value ?? null, priorFinancials.totalDebt?.value ?? null),
           row("Net debt", financials.netDebt.value, priorFinancials.netDebt.value)
         ]}
       />
