@@ -16,6 +16,9 @@
       "name": "Range Resources Corporation",
       "shortName": "Range Resources",
       "exchange": "NYSE",
+      "sec": {
+        "cik": "0000315852"
+      },
       "logo": {
         "path": "assets/logos/RRC.png",
         "alt": "Range Resources logo"

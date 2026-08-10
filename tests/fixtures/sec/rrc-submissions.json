@@ -1,0 +1,46 @@
+{
+  "_fixture": {
+    "dataType": "synthetic",
+    "note": "Intentionally synthetic filing metadata for selection and preservation tests; not an official SEC snapshot."
+  },
+  "cik": 315852,
+  "name": "RANGE RESOURCES CORP",
+  "tickers": ["RRC"],
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "0000315852-26-000099",
+        "0000315852-26-000010",
+        "0000315852-25-000088",
+        "0000315852-25-000020",
+        "0000315852-25-000011",
+        "0000315852-25-000012"
+      ],
+      "filingDate": [
+        "2026-05-15",
+        "2026-04-24",
+        "2025-03-15",
+        "2025-02-25",
+        "2025-02-20",
+        "2025-02-21"
+      ],
+      "reportDate": [
+        "2026-03-31",
+        "2026-03-31",
+        "2024-12-31",
+        "2024-12-31",
+        "2024-12-31",
+        "2024-12-31"
+      ],
+      "form": ["10-Q/A", "10-Q", "10-K/A", "8-K", "10-K", "10-K/A"],
+      "primaryDocument": [
+        "rrc-20260331x10qa.htm",
+        "rrc-20260331.htm",
+        "rrc-20241231x10ka.htm",
+        "rrc-20250225.htm",
+        "rrc-20241231.htm",
+        "rrc-20241231x10ka2.htm"
+      ]
+    }
+  }
+}
