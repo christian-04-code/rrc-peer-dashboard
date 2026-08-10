@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { LiveMarketPricesInput } from "@/lib/forecast/live-market-prices";
 
 type Preset = "bear" | "base" | "bull";
 type Strategy = "maintenance" | "continued-growth";
@@ -59,7 +60,7 @@ function number(value: number | null, digits = 1) {
   return value === null ? "--" : value.toFixed(digits);
 }
 
-export function RrcScenarioWorkbench() {
+export function RrcScenarioWorkbench({ currentMarketPrices }: { currentMarketPrices?: LiveMarketPricesInput } = {}) {
   const [preset, setPreset] = useState<Preset>("base");
   const [strategy, setStrategy] = useState<Strategy>("maintenance");
   const [assumptions, setAssumptions] = useState(presetDefaults.base);
@@ -106,7 +107,8 @@ export function RrcScenarioWorkbench() {
           strategy: selectedStrategy,
           assumptions,
           productionMode,
-          productionOverrides: overridesPayload()
+          productionOverrides: overridesPayload(),
+          currentMarketPrices
         })
       });
       const payload = await response.json();
@@ -183,7 +185,7 @@ export function RrcScenarioWorkbench() {
       <section style={{ border: "1px solid rgba(128,128,128,0.35)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           <h2 style={{ margin: 0, fontSize: 16 }}>Production assumption</h2>
-          <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, background: productionMode === "override" ? "#fff3cd" : "#e6f4ea", color: "#111" }}>
+          <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(128,128,128,0.35)", background: productionMode === "override" ? "rgba(240,180,40,0.16)" : "rgba(40,180,120,0.16)" }}>
             {productionMode === "override" ? "User production assumption" : (latestReported ? `${latestReported.sourceLabel}` : "Latest reported production")}
           </span>
         </div>

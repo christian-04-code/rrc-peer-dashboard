@@ -26,6 +26,26 @@ export function getLtmAdjustedEbitdax(ticker: Ticker, quarter: Quarter): Sourced
   };
 }
 
+export function getLtmNetIncome(ticker: Ticker, quarter: Quarter): SourcedValue {
+  const index = quarters.indexOf(quarter);
+  if (index < 3) {
+    return unavailable("Four reported quarters are required to calculate LTM net income.");
+  }
+
+  const period = quarters.slice(index - 3, index + 1);
+  const values = period.map((item) => getQuarterlyFinancials(ticker, item).netIncome?.value ?? null);
+  if (values.some((value) => value === null)) {
+    return unavailable("LTM net income is unavailable because at least one underlying quarter is blank.");
+  }
+
+  return {
+    value: (values as number[]).reduce((sum, value) => sum + value, 0),
+    source: "factset",
+    basis: "derived",
+    note: `Calculated as the sum of reported net income for ${period.join(", ")}.`
+  };
+}
+
 export function getNetDebtToLtmAdjustedEbitdax(ticker: Ticker, quarter: Quarter): SourcedValue {
   const netDebt = getQuarterlyFinancials(ticker, quarter).netDebt;
   const ltmEbitdax = getLtmAdjustedEbitdax(ticker, quarter);

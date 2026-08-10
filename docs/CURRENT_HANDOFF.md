@@ -2,20 +2,48 @@
 
 - **Repository**: christian-04-code/rrc-peer-dashboard
 - **Active branch**: modeling/production-engine
-- **Latest commit**: "Add RRC net income, operating cash flow, cash, and total debt to Financials"
+- **Latest commit**: "Dashboard audit: Guidance/Valuations widgets, Revenue+EBITDAX chart tabs, consolidated Forecast workspace"
 - **Pushed to origin**: yes, `origin/modeling/production-engine` == local HEAD
-- Note: `7b6dbc2` ("Add RRC SEC filing discovery" — `scripts/sec/discover.mjs`, `config/companies.json` CIK, `npm run sec:discover`) landed on this branch from a separate, unrelated session in between the price-labeling and Financials work below. Not touched or built on by this Financials task.
+- Note: `7b6dbc2` ("Add RRC SEC filing discovery" — `scripts/sec/discover.mjs`, `config/companies.json` CIK, `npm run sec:discover`) landed on this branch from a separate, unrelated session. Not touched or built on by this task; `scripts/sec/`, SEC discovery tests, and SEC manifests were left alone per this task's constraints.
 
 ## Validation Results
-- `npm test`: 93/93 pass (83 from prior sessions + 5 unrelated SEC-discovery tests from `7b6dbc2` + 5 new in `tests/financials-quarterly.test.cjs`)
+- `npm test`: 127/127 pass (93 prior + 34 new across `tests/guidance-panel.test.cjs`, `tests/valuations-panel.test.cjs`, `tests/chart-forecast.test.cjs`, `tests/navigation.test.cjs`, `tests/eps-and-market-cap-quarterly.test.cjs`, `tests/forecast-workspace-panel.test.cjs`)
 - `npm run typecheck`: clean
 - `npm run build`: succeeds (all routes compile, including `/forecast` and `/api/rrc-scenarios`)
 
 ## Current Dashboard Navigation
-`components/HomeDashboard.tsx` renders tabs: **Overview**, **Companies**, **Map**, **Forecast**, **Macro**. The Live Data Engine widget (`DataActivityPanel.tsx`) and Sources tab (`SourcesPanel.tsx`) have been removed (both files deleted, `View` type no longer has a `"sources"` variant). Peers was renamed to **Companies** (`view === "peers"` still backs it — peer comparison logic in `PeersPanel.tsx` is unchanged). The new **Forecast** tab renders `components/dashboard/ForecastPanel.tsx`, which calls the existing `/api/rrc-scenarios` route (same deterministic engine as the standalone `/forecast` page) rather than duplicating forecast logic.
+`components/HomeDashboard.tsx` renders tabs: **Overview**, **Forecast**, **Map**, **Macro**. Sources and the old **Companies** (peer-ranking) tab are no longer in the nav. `lib/dashboard/types.ts`'s `View` union is now `"dashboard" | "macro" | "forecast"` (`"peers"` removed). `components/dashboard/PeersPanel.tsx` and its data are preserved on disk, unrouted, per the "don't delete underlying peer data" constraint — nothing else imports it. The **Forecast** tab now renders `components/dashboard/ForecastWorkspacePanel.tsx` (see "Forecast Workspace" below) instead of the old compact `ForecastPanel.tsx` (deleted, consolidated away).
 
-## Financials Widget
-`components/dashboard/FinancialsPanel.tsx` renders three `StatementSection`s — Income statement, Cash flow statement, Balance sheet — each sourced from `lib/dashboard/financials-quarterly.ts` / `lib/dashboard/free-cash-flow-quarterly.ts`, with YoY comparisons against the same quarter last year. As of this session, **RRC only** has all nine line items populated (Revenue, EBITDAX, Net income, Operating cash flow, CapEx, Free cash flow, Cash & equivalents, Total debt, Net debt) across Q1 2024–Q1 2026. The four fields added this session — `netIncome`, `operatingCashFlow`, `cashAndEquivalents`, `totalDebt` — are optional on `QuarterlyFinancials` and are **only set for RRC**; the other 6 peer tickers (AR, CNX, CRK, EQT, EXE, GPOR) still render `--` for these four rows exactly as before (field is `undefined`, not fabricated or copied from RRC).
+## Right-column widgets: Guidance + Valuations
+Overview's right column is now **Guidance** then **Valuations** (previously "Market & Macro" + Financials).
+
+- **Guidance** — `components/dashboard/GuidancePanel.tsx` + `lib/dashboard/guidance.ts`, reading the existing normalized `data/guidance.json` (already generated from `Peer_Comp_Site_Data/Alphasense/Peer Comp Site 1Q26 Guidance.docx`; no reparsing). Shows up to 6 highlights per company from the Production / Capital Expenditures / Operating Costs sections (the three sections common to all 7 core peers), updates when the primary company changes, and "View full guidance →" opens the existing `DetailDrawer` with the full normalized text (no new guidance page built). `getCompanyGuidanceHighlights` handles two source-document shapes: inline `{label, value}` items, and the "header line, then value line" pattern (e.g. CNX's "2026 Total Capital Budget" / "$556–$586MM") via a `looksLikeValueLine` heuristic — this is a display grouping of already-extracted text, not new data.
+- **Valuations** — `components/dashboard/ValuationsPanel.tsx` + `lib/dashboard/valuations.ts`. Current (latest reported quarter) vs. previous (same quarter prior year) for **EPS, EBITDAX, Market Cap, P/E**:
+  - EPS: new `lib/dashboard/eps-quarterly.ts`, RRC only, from `Peer_Comp_Site_Data/Facset/E&P_Facset_Company_Model.xlsx`, RRC sheet, "EPS ($/share)" row (same file/columns already used for RRC `netIncome` in `financials-quarterly.ts`). Other peers render `--`.
+  - EBITDAX: existing `financials-quarterly.ts` `adjustedEbitdax`, all 7 tickers.
+  - Market Cap: new `lib/dashboard/market-cap-quarterly.ts`, all 7 tickers, values transcribed from the already-normalized `data/historical.json` `normalization_inputs["Equity Market Capitalization"]` (Macrotrends/Yahoo Finance, already vetted) as a small standalone module rather than importing the full ~1.1MB `historical.json` into the client bundle.
+  - P/E: derived, `marketCap / LTM net income`, via a new `getLtmNetIncome` in `lib/dashboard/calculated-quarterly.ts` (mirrors the existing `getLtmAdjustedEbitdax` pattern). RRC-only (net income is RRC-only); other peers render `--`, never a fabricated multiple.
+  - `if (value === null) render "--"` throughout; no consensus/actual mixing.
+
+## Main Chart: Revenue + EBITDAX tabs, actual vs. modeled
+Chart metric tabs are now **Production | Revenue | FCF | CapEx | Net debt | EBITDAX** (`lib/dashboard/types.ts` `Metric` union; `valuation` removed, `revenue`/`ebitdax` added).
+
+`components/dashboard/ChartWorkspace.tsx` (now `"use client"`, uses `useMemo`) and new `lib/dashboard/chart-forecast.ts`:
+- Historical actual quarters (Q1 2024–Q1 2026, all 7 tickers) come from `financials-quarterly.ts` `revenue`/`adjustedEbitdax` exactly as before, unchanged.
+- For Revenue/EBITDAX only, the chart appends 11 forecast quarters (2026Q2–2028Q4, deliberately excluding 2026Q1 so the modeled series can never overwrite the reported actual) by calling `runRrcValuedScenario` **directly** (same deterministic engine used by `/api/rrc-scenarios`, no second formula, no new engine) — pure client-side call since the scenario functions are plain TS with no server-only dependencies.
+- Forecast periods are **RRC-only** (`isForecastChartSupported`) — every other ticker's modeled segment is `null`/blank, never fabricated.
+- The optional live-commodity-price override threads through: `HomeDashboard.tsx` calls `buildCurrentMarketPricesFromMetrics(market.data?.metrics)` (new helper in `lib/forecast/live-market-prices.ts`) and passes it to `ChartWorkspace` as `currentMarketPrices`.
+- Actual vs. modeled is preserved in the data layer (points carry their source quarter) and in the UI: the modeled segment renders with the pre-existing (previously unused) `.forecast-line` dashed CSS class, and point tooltips are suffixed `(modeled)`.
+
+## Forecast Workspace (replaces the old Companies/Peers nav destination)
+`components/dashboard/ForecastWorkspacePanel.tsx` is the new single-company forecasting workbench opened from the top-nav **Forecast** tab:
+- A `CompanySelector` (all 7 core tickers) picks one company at a time.
+- **RRC**: renders the existing `components/forecast/RrcScenarioWorkbench.tsx` unchanged in substance (preset/strategy controls, editable target EV/EBITDAX, discount rate, terminal growth, production-override table, quarterly production+revenue table, maintenance-vs-growth bridge — all pre-existing). Two additive changes only: (1) it now accepts an optional `currentMarketPrices` prop and forwards it into the `/api/rrc-scenarios` POST body (via `extractLiveMarketMetrics(market.data?.metrics)` from the new workspace panel), preserving the dashboard's live-EIA-pricing feature that the old compact `ForecastPanel.tsx` had; when the prop is omitted (the standalone `/forecast` route, `app/forecast/page.tsx`, still calls `<RrcScenarioWorkbench />` with no props), behavior is byte-for-byte the same as before. (2) two inline badge colors that were hardcoded for light mode were changed to theme-neutral `rgba(...)` values — no other styling changed.
+- **Any other ticker**: renders an explicit "Forecast unavailable for {company}" panel — the deterministic engine only supports RRC, so no peer forecast is fabricated; outputs are described as unavailable rather than shown as `--` numbers (no peer forecast UI to number in the first place).
+- The standalone `/forecast` route/page is untouched and unlinked from nav, exactly as before.
+
+## Financials Widget (superseded by Valuations)
+`components/dashboard/FinancialsPanel.tsx` (Income statement / Cash flow statement / Balance sheet, RRC-only net income/OCF/cash/total debt) has been **deleted** — its role in the Overview right column is now filled by `ValuationsPanel.tsx` above. The underlying data it read (`financials-quarterly.ts`, `free-cash-flow-quarterly.ts`) is untouched and still used elsewhere (Overview summary cards, main chart, Valuations' EBITDAX row).
 
 ## Forecast Engine
 `lib/forecast/` — deterministic, pure-function pipeline (`calculations.ts`, `engine.ts`). Production is now a **flat hold of the latest reported Q1 2026 10-Q baseline** (`lib/forecast/production-engine.ts::buildFlatProductionForecast`), not a decline curve or annual ramp. `lib/forecast/scenarios/rrc-complete.ts` supports an optional `currentMarketPrices` override (`{ henryHubPerMmbtu?, wtiPerBbl? }` as `SourcedValue`s) — when a field is `undefined`, `periodAssumptions` falls back to the modeled sensitivity case via `??`, unchanged. Chain: `rrc-complete.ts` → `rrc-hedged.ts` → `rrc-valued.ts` → `app/api/rrc-scenarios/route.ts`.
@@ -24,8 +52,8 @@
 
 **Methodology labeling (corrected):** Because `currentMarketPrices` is applied as the same scalar to every forecast period (2026Q1–2028Q4, per the pre-existing `rrc-complete.ts` design — not changed), it must not read as a forward curve. The commodity cards now show **"Current market — flat scenario"** (live) or **"Management sensitivity"** (fallback, $3.75 HH / $65 WTI) instead of the earlier "Live market"/"Model fallback" wording, plus a note directly under the assumptions grid: *"Current-market prices are held flat across forecast periods and are not a futures/forward curve."* The `SourcedValue.source.notes` text in `live-market-prices.ts` was also reworded to say the same thing at the data layer. Purely labeling/metadata — no calculation, classification value, or fallback behavior changed.
 
-## Forecast Page
-`app/forecast/page.tsx` renders `components/forecast/RrcScenarioWorkbench.tsx`: scenario preset/strategy controls, a compact "Production assumption" sidebar section (Latest reported / Manual override, per-period table, Copy/Reset), a quarterly production+revenue table, FCF/valuation cards, and a maintenance-vs-growth bridge table. This page is not linked from the main dashboard nav.
+## Forecast Page (standalone /forecast route)
+`app/forecast/page.tsx` renders `components/forecast/RrcScenarioWorkbench.tsx`: scenario preset/strategy controls, a compact "Production assumption" sidebar section (Latest reported / Manual override, per-period table, Copy/Reset), a quarterly production+revenue table, FCF/valuation cards, and a maintenance-vs-growth bridge table. This page is still not linked from the main dashboard nav — the top-nav **Forecast** destination is `ForecastWorkspacePanel.tsx` (see above), which wraps this same `RrcScenarioWorkbench` component with a company selector and live-pricing wiring rather than duplicating it.
 
 ## Current API Integrations
 - `app/api/market/route.ts` — live EIA data (Henry Hub, WTI, Brent, storage, LNG exports) via `lib/eia/client.ts`.
@@ -33,13 +61,16 @@
 - `app/api/geography/basins` — not reviewed this session.
 
 ## Known Risks
-- Live prices are only wired into the dashboard `ForecastPanel` tab (`/api/rrc-scenarios` POST from `HomeDashboard.tsx` → Forecast). The standalone `/forecast` workbench (`RrcScenarioWorkbench.tsx`) still always uses the modeled sensitivity case — not updated in this task, since it wasn't in scope and no shared type required it.
+- The forecast engine (chart Revenue/EBITDAX modeled periods, and the Forecast workspace) supports **RRC only**. All 6 other core peers show blank/unavailable forecast output by design — building peer-specific forecast models was explicitly out of scope for this task.
+- EPS and P/E in the Valuations widget are **RRC only** (P/E depends on RRC-only net income for the LTM calc). The other 6 peers render `--` for those two rows; Market Cap and EBITDAX still resolve for all 7.
+- Live prices are wired into: the dashboard main chart's Revenue/EBITDAX forecast segment (`HomeDashboard.tsx` → `ChartWorkspace`), and the Forecast workspace's `RrcScenarioWorkbench` (via the new `currentMarketPrices` prop, applied when the user clicks "Run scenario"/"Compare"). The standalone `/forecast` route still defaults to the modeled sensitivity case when reached directly (unchanged, no props passed there).
 - NGL has no live price feed anywhere in the repo; NGL revenue still depends on the modeled `nglRealizationPctOfWti` ratio (unchanged, out of scope by design).
 - The live price applies uniformly to every forecast period (2026Q1–2028Q4), not just the current quarter — this mirrors the pre-existing `currentMarketPrices` design in `rrc-complete.ts` (a scalar override, not a forward curve) and was not changed.
-- The standalone `/forecast` route (`RrcScenarioWorkbench`) is still a separate UI implementation from the dashboard's own `ForecastPanel` — both call the same `/api/rrc-scenarios` engine (workbench has scenario/strategy controls and manual overrides; the dashboard tab is a compact read-only summary, now with live/fallback price wiring). Not a data-integrity issue, just a UI duplication worth reconciling later if desired.
-- `netIncome`/`operatingCashFlow`/`cashAndEquivalents`/`totalDebt` are populated for **RRC only**; the other 6 peer tickers still show `--` for these four Financials rows. Backfill them the same way (Codex workbook first, `E&P_Facset_Company_Model.xlsx` fallback for net income specifically) only when actually needed — do not fabricate or copy RRC's values across.
-- RRC Q3 2024: `totalDebt` (1717.383) − `cashAndEquivalents` (277.45) = 1439.933, which is $0.757mm off the already-existing `netDebt` value (1440.69) for that quarter. Both the new fields and the pre-existing `netDebt` come directly from the Codex workbook as currently synced; the discrepancy is noted in that quarter's `totalDebt.source.note` and was not investigated further (not one of the four target metrics for this task). All other 8 quarters reconcile exactly.
-- RRC `netIncome` is FactSet-sourced (`source: "factset"`), not Codex — the only non-Codex cell in `financials-quarterly.ts`. It comes from `E&P_Facset_Company_Model.xlsx`, RRC sheet, "Reported Net Income ($mm)" row, actual (not estimate) columns.
+- `netIncome`/`operatingCashFlow`/`cashAndEquivalents`/`totalDebt` are populated for **RRC only** in `financials-quarterly.ts`; the other 6 peer tickers still show `--` for these four Financials-derived rows. Backfill them the same way (Codex workbook first, `E&P_Facset_Company_Model.xlsx` fallback for net income specifically) only when actually needed — do not fabricate or copy RRC's values across.
+- RRC Q3 2024: `totalDebt` (1717.383) − `cashAndEquivalents` (277.45) = 1439.933, which is $0.757mm off the already-existing `netDebt` value (1440.69) for that quarter. Both the new fields and the pre-existing `netDebt` come directly from the Codex workbook as currently synced; the discrepancy is noted in that quarter's `totalDebt.source.note` and was not investigated further. All other 8 quarters reconcile exactly.
+- RRC `netIncome` and the new RRC `EPS` are FactSet-sourced (`source: "factset"`), not Codex. Both come from `E&P_Facset_Company_Model.xlsx`, RRC sheet ("Reported Net Income ($mm)" row 41, "EPS ($/share)" row 40), actual (not estimate) columns.
+- Guidance highlights are limited to the Production / Capital Expenditures / Operating Costs sections (the three common to all 7 core peers) — richer sections some companies have (e.g. "Financial Targets", "Key Guidance Changes") aren't surfaced in the compact widget, only in "View full guidance."
+- The chart's FCF tab is still a pre-existing documented gap ("not yet loaded into the normalized peer dataset") — untouched, not one of the six requested changes.
 
 ## Project Rules (must hold for all future work)
 - Never fabricate historical financial data.
@@ -66,4 +97,19 @@ Added the four previously-missing Financials rows for **RRC only**, using the ex
 - **Total debt** — same workbook, row 68 "Face-Value Gross Debt" (quarter-end balance-sheet point-in-time). All 9 quarters.
 - **Net income** — absent from Codex (only appears inside the EBITDAX-bridge methodology note, never stored as its own row), so per Phase 2 fell back to `Peer_Comp_Site_Data/Facset/E&P_Facset_Company_Model.xlsx`, RRC sheet, row 41 "Reported Net Income ($mm)", the 9 "A" (actual, not estimate) quarterly columns.
 
-None of the four values were derived from other stored fields (no total debt from net debt+cash, no cash from debt−net debt, no OCF from FCF+CapEx) — each is an independently sourced figure, per task constraint. `lib/dashboard/financials-quarterly.ts`: added 4 new **optional** fields to `QuarterlyFinancials` (`netIncome?`, `operatingCashFlow?`, `cashAndEquivalents?`, `totalDebt?`) so the 6 other peer tickers are untouched and still render `--`, not required-but-null placeholders. Wired into `components/dashboard/FinancialsPanel.tsx`. See "Known Risks" above for the RRC Q3 2024 debt/cash-vs-netDebt rounding note and the FactSet net-income sourcing detail.
+None of the four values were derived from other stored fields (no total debt from net debt+cash, no cash from debt−net debt, no OCF from FCF+CapEx) — each is an independently sourced figure, per task constraint. `lib/dashboard/financials-quarterly.ts`: added 4 new **optional** fields to `QuarterlyFinancials` (`netIncome?`, `operatingCashFlow?`, `cashAndEquivalents?`, `totalDebt?`) so the 6 other peer tickers are untouched and still render `--`, not required-but-null placeholders. Wired into `FinancialsPanel.tsx` (since deleted/superseded — see "Financials Widget" above). See "Known Risks" above for the RRC Q3 2024 debt/cash-vs-netDebt rounding note and the FactSet net-income sourcing detail.
+
+## Dashboard Audit (6 changes) — Done
+Implemented the six-part dashboard audit in one pass:
+1. **Sources removed from top nav** — already done in a prior session; verified still absent, no dead wiring.
+2. **Guidance widget rebuilt** — reads `data/guidance.json` instead of market-feed-status messages; updates per company; "View full guidance" opens the existing detail drawer.
+3. **Financials → Valuations** — EPS / EBITDAX / Market Cap / P/E, current vs. prior-year quarter, `--` for unsupported.
+4. **Revenue chart tab added** — actual quarters from `financials-quarterly.ts`, forecast quarters from the existing engine (RRC only).
+5. **Chart Valuation tab → EBITDAX** — same actual/modeled split, no stock-price-derived formula; EBITDAX stays driven by operating assumptions.
+6. **Top-level Companies/Peers nav → Forecast** — single-company forecasting workbench (company selector + existing `RrcScenarioWorkbench`), `PeersPanel.tsx` and peer data preserved but unrouted.
+
+Files added: `lib/dashboard/guidance.ts`, `lib/dashboard/valuations.ts`, `lib/dashboard/market-cap-quarterly.ts`, `lib/dashboard/eps-quarterly.ts`, `lib/dashboard/chart-forecast.ts`, `components/dashboard/GuidancePanel.tsx`, `components/dashboard/ValuationsPanel.tsx`, `components/dashboard/ForecastWorkspacePanel.tsx`, `tests/helpers/ts-loader.cjs` (recursive `@/`-alias-aware TS test loader, extending the existing single-file `load()` pattern), plus 6 new test files (34 tests).
+
+Files modified: `components/HomeDashboard.tsx`, `components/dashboard/ChartWorkspace.tsx`, `components/forecast/RrcScenarioWorkbench.tsx`, `lib/dashboard/types.ts`, `lib/dashboard/calculated-quarterly.ts` (added `getLtmNetIncome`), `lib/forecast/live-market-prices.ts` (added `extractLiveMarketMetrics` / `buildCurrentMarketPricesFromMetrics`).
+
+Files deleted: `components/dashboard/FinancePanel.tsx`, `components/dashboard/FinancialsPanel.tsx`, `components/dashboard/ForecastPanel.tsx` (all consolidated into the components above; no functionality lost — see the sections above for what replaced each).

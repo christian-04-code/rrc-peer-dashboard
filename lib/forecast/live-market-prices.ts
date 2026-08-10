@@ -1,5 +1,6 @@
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { SourcedValue } from "@/lib/forecast/types";
+import type { NormalizedMarketMetric } from "@/lib/market/types";
 
 export type LiveMarketMetric = {
   value: number | null;
@@ -47,4 +48,22 @@ export function buildCurrentMarketPrices(input: LiveMarketPricesInput): RrcCurre
     henryHubPerMmbtu: toLiveSourcedValue(input.henryHub, "$/MMBtu", "Henry Hub"),
     wtiPerBbl: toLiveSourcedValue(input.wti, "$/bbl", "WTI")
   };
+}
+
+function toLiveMarketMetric(metric: NormalizedMarketMetric | undefined): LiveMarketMetric {
+  if (!metric || metric.status !== "ok" || typeof metric.value !== "number" || !Number.isFinite(metric.value)) return null;
+  return { value: metric.value, period: metric.period, fetchedAt: metric.fetchedAt, source: metric.source };
+}
+
+/** Pulls henry_hub/wti out of the /api/market metrics list into the raw shape the /api/rrc-scenarios POST body expects. */
+export function extractLiveMarketMetrics(metrics: NormalizedMarketMetric[] | undefined): LiveMarketPricesInput {
+  return {
+    henryHub: toLiveMarketMetric(metrics?.find((metric) => metric.id === "henry_hub")),
+    wti: toLiveMarketMetric(metrics?.find((metric) => metric.id === "wti"))
+  };
+}
+
+/** Same extraction, already converted to the SourcedValue form the forecast engine's scenario functions accept directly (for callers that run the engine client-side instead of going through the API route). */
+export function buildCurrentMarketPricesFromMetrics(metrics: NormalizedMarketMetric[] | undefined): RrcCurrentMarketPrices {
+  return buildCurrentMarketPrices(extractLiveMarketMetrics(metrics));
 }
