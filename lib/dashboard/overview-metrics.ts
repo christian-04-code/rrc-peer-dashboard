@@ -21,14 +21,14 @@ function formatSharePrice(value: number): string {
 
 export type LiveSharePrice = { value: number | null; note: string } | null;
 
-/** Overview summary cards: share price uses the FMP current-quote path (see lib/market/use-fmp-quotes.ts) when a valid live quote is supplied, otherwise renders "--"; every other card is the latest normalized reported quarter. No forecast, guidance, or mock values. */
+/** Overview summary cards: share price uses the Finnhub current-quote path (see lib/market/use-finnhub-quotes.ts) when a valid live quote is supplied, otherwise renders "--"; every other card is the latest normalized reported quarter. No forecast, guidance, or mock values. */
 export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSharePrice): SummaryCard[] {
   const financials = getQuarterlyFinancials(ticker, latestQuarter);
   const freeCashFlow = getQuarterlyFreeCashFlow(ticker, latestQuarter);
   const sharePriceCard: SummaryCard =
     liveSharePrice && liveSharePrice.value !== null
       ? { key: "share_price", label: "Share price", displayValue: formatSharePrice(liveSharePrice.value), note: liveSharePrice.note }
-      : { key: "share_price", label: "Share price", displayValue: "--", note: "FMP · current market" };
+      : { key: "share_price", label: "Share price", displayValue: "--", note: "Finnhub · current market" };
 
   return [
     sharePriceCard,

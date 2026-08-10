@@ -2,15 +2,33 @@
 
 - **Repository**: christian-04-code/rrc-peer-dashboard
 - **Active branch**: main (production-connected; SEC ingestion + full dashboard/model/UI/API work merged here as of `94a8c6a`)
-- **Latest commit**: "Add FMP current-market adapter: commodity quotes, share prices, forecast wiring"
+- **Latest commit**: "Switch current share prices to Finnhub; FMP commodities unsupported, EIA remains commodity source"
 - **Pushed to origin**: yes, `origin/main` == local HEAD
 
 ## Validation Results
-- `npm test`: 195/195 pass, including 25 new tests across `tests/fmp-client.test.cjs` (7), `tests/fmp-symbols.test.cjs` (2), `tests/quotes-route.test.cjs` (5), `tests/live-market-prices-fmp-fallback.test.cjs` (5), `tests/overview-share-price.test.cjs` (6)
+- `npm test`: 211/211 pass, including 16 new tests across `tests/finnhub-client.test.cjs` (5), `tests/finnhub-symbols.test.cjs` (1), `tests/share-prices-route.test.cjs` (5), `tests/finnhub-migration.test.cjs` (5), plus `tests/overview-share-price.test.cjs` updated (still 6, re-pointed at Finnhub)
 - `npm run typecheck`: clean
-- `npm run build`: succeeds; `/api/quotes` compiles as a dynamic (ƒ) route
+- `npm run build`: succeeds; `/api/share-prices` compiles as a dynamic (ƒ) route; `/api/quotes` (FMP) still compiles but is unused by any live component
 
-## FMP Current-Market Adapter — Done
+## Finnhub Provider Switch (equities) — Done
+Live-tested the existing Finnhub account before writing any code (per task constraint): `/quote?symbol=` confirmed working for RRC/AR/EQT (real `c`/`t` fields returned). Commodity coverage was checked via Finnhub's own `/search` endpoint (not guessed) for "WTI", "crude oil", "natural gas", "Henry Hub" — every result was an unrelated equity or ETP (e.g. W&T Offshore's ticker literally is `WTI`), zero legitimate futures/benchmark instruments; a `/futures/exchange` probe 404'd, consistent with Finnhub's own docs, which advertise only stock/forex/crypto/fundamentals/economic/alternative data — no commodities category. **Conclusion: Finnhub is equities-only for this account; EIA keeps sole ownership of all commodity data (Henry Hub/WTI/Brent/storage/LNG).**
+
+- **Env var**: `FINNHUB_API_KEY` (confirmed via `vercel env ls production`).
+- **Client** — `lib/finnhub/client.ts` (server-only) + `lib/finnhub/symbols.ts` (`FINNHUB_EQUITY_TICKERS`, same 7 peers). Finnhub's `/quote` has no batch param (unlike FMP), so `fetchFinnhubQuotes()` issues one request per ticker via `Promise.allSettled`, fault-isolated per symbol. Normalizes `c` (current price) → `price`; per this task's explicit rule (confirmed against the real account's behavior for an unknown symbol: `c: 0` with every other field also `0`), a non-finite **or non-positive** price normalizes to `price: null`, never a literal `$0`. `t` (quote timestamp) is preserved when positive, else `null`.
+- **Route** — `app/api/share-prices/route.ts`: `force-dynamic`, `Cache-Control: s-maxage=60, stale-while-revalidate=120`. One ticker failing (network error, or Finnhub's own `c: 0` no-data response) marks only that ticker `status: "unavailable"` / `price: null` — the other 6 are unaffected. Response: `{ generatedAt, equities: { RRC, AR, CNX, CRK, EQT, EXE, GPOR } }`, each leaf `source: "Finnhub"`, `classification: "current-market"`, `timestamp`, `status`, optional `error`.
+- **Client hook** — `lib/market/use-finnhub-quotes.ts`: same ~60s poll-and-keep-last-good pattern as the (now unused) FMP hook. No WebSockets.
+- **Wired into**:
+  - `components/HomeDashboard.tsx` — Overview's Share Price card now resolves `finnhubQuotes.data?.equities[ticker]` into `{ value, note: "Finnhub · current market (SYMBOL)" }` (was FMP); still recomputed via `useMemo` keyed on `[finnhubQuotes.data, ticker]`. The main chart's `currentMarketPrices` prop **reverted to EIA-only** — `buildCurrentMarketPricesFromMetrics(market.data?.metrics)` — since neither Finnhub nor FMP can legitimately supply commodities now.
+  - `components/dashboard/ForecastWorkspacePanel.tsx` — `RrcScenarioWorkbench currentMarketPrices` prop **reverted to EIA-only** — `extractLiveMarketMetrics(market.data?.metrics)` (was the FMP-first fallback function).
+  - `lib/dashboard/overview-metrics.ts` — default/fallback share-price note text changed from `"FMP · current market"` to `"Finnhub · current market"`. Function signature (`getOverviewSummaryCards(ticker, liveSharePrice?)`) unchanged.
+  - `lib/forecast/live-market-prices.ts` — `toLiveSourcedValue`'s `source.notes` text is now source-aware: when the source string contains "EIA" it says **"Latest official/delayed \<label\> price..."** and appends *"This is EIA's latest official observation, not a real-time quote."*; for any other source it still says "Current-market". Since EIA is now the only commodity source actually wired into the live UI, every real commodity `SourcedValue` the forecast engine receives will carry the corrected "latest official/delayed" wording, not "current-market" — fixing the mislabeling this task flagged. `classification: "live"` (the `AssumptionClassification` enum value) was **not** changed — only the human-readable text — so no forecast type/formula was touched.
+- **FMP — deactivated, not deleted**: `lib/fmp/`, `app/api/quotes/route.ts`, `lib/market/fmp-types.ts`, `lib/market/use-fmp-quotes.ts`, and the `extractLiveMarketMetricsWithFallback`/`buildCurrentMarketPricesFromFmpAndEia` functions in `live-market-prices.ts` all still exist on disk, still pass their original tests, and are preserved for a future re-entitlement — but nothing in the live UI imports `useFmpQuotes` or the FMP-fallback functions anymore (enforced by a test that scans every component). No production requests to FMP occur through normal app usage; `/api/quotes` would still work if hit directly by URL, but that's inert unless someone does so.
+- **MarketRibbon / MacroPanel**: unchanged — already EIA-only (`aria-label="Delayed energy market data"`), confirmed still true by test.
+
+Files added: `lib/finnhub/client.ts`, `lib/finnhub/symbols.ts`, `lib/market/finnhub-types.ts`, `lib/market/use-finnhub-quotes.ts`, `app/api/share-prices/route.ts`, `tests/finnhub-client.test.cjs`, `tests/finnhub-symbols.test.cjs`, `tests/share-prices-route.test.cjs`, `tests/finnhub-migration.test.cjs`.
+Files modified: `components/HomeDashboard.tsx`, `components/dashboard/ForecastWorkspacePanel.tsx`, `lib/dashboard/overview-metrics.ts`, `lib/forecast/live-market-prices.ts`, `tests/overview-share-price.test.cjs` (re-pointed at Finnhub).
+
+## FMP Current-Market Adapter — Superseded for commodities/equities (see above); code preserved
 Added FMP as the **current-market** quote source (WTI, Henry Hub/natural gas, and all 7 peers' share prices), alongside — not replacing — the existing EIA delayed/official feed.
 
 - **Env var**: `FMP_KEY` (confirmed via `vercel env ls production` against the real Vercel project — not guessed, not `FMP_API_KEY`). Server-only; read in `lib/fmp/client.ts` via `process.env.FMP_KEY`, never referenced in a `"use client"` file (enforced by a test that scans every component for that combination).

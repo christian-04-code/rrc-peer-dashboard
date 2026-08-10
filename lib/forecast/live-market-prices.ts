@@ -19,18 +19,30 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/**
+ * EIA is the only commodity source actually wired into the live UI (Finnhub has no
+ * commodities/futures coverage on the current account; FMP calls were removed from
+ * this flow after its subscription returned HTTP 402). EIA's own quote is the latest
+ * official observation, delayed -- not real-time -- so the notes text must say that
+ * plainly rather than claiming "current-market" for it. If a future source string
+ * doesn't mention EIA (e.g. a re-entitled live provider), the wording still says
+ * "current-market", which remains accurate for that case.
+ */
 function toLiveSourcedValue(metric: LiveMarketMetric, unit: string, label: string): SourcedValue | undefined {
   if (!metric || !isFiniteNumber(metric.value)) return undefined;
+  const sourceLabel = metric.source ?? "the configured market-data feed";
+  const isDelayedOfficial = /EIA/i.test(sourceLabel);
+  const qualifier = isDelayedOfficial ? "Latest official/delayed" : "Current-market";
   return {
     value: metric.value,
     unit,
     source: {
-      name: metric.source ?? "U.S. EIA",
+      name: sourceLabel,
       reference: label,
       period: metric.period ?? "current",
       retrievedAt: metric.fetchedAt ?? new Date().toISOString(),
       classification: "live",
-      notes: `Current-market ${label} price from ${metric.source ?? "the configured market-data feed"}, held flat as a scenario input across every forecast period (2026Q1-2028Q4). This is a flat current-market scenario, not a futures or forward curve; it replaces the modeled Range management sensitivity assumption for this run only when a valid live value is available.`
+      notes: `${qualifier} ${label} price from ${sourceLabel}, held flat as a scenario input across every forecast period (2026Q1-2028Q4). This is a flat scenario input, not a futures or forward curve; it replaces the modeled Range management sensitivity assumption for this run only when a valid value is available.${isDelayedOfficial ? " This is EIA's latest official observation, not a real-time quote." : ""}`
     }
   };
 }

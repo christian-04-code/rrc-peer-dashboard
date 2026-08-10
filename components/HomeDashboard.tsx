@@ -12,8 +12,8 @@ import {
 } from "@/lib/dashboard/company-registry";
 import type { Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
-import { useFmpQuotes } from "@/lib/market/use-fmp-quotes";
-import { buildCurrentMarketPricesFromFmpAndEia } from "@/lib/forecast/live-market-prices";
+import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
+import { buildCurrentMarketPricesFromMetrics } from "@/lib/forecast/live-market-prices";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -42,15 +42,15 @@ export function HomeDashboard() {
   const triggerRef = useRef<HTMLElement | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
   const market = useMarketData();
-  const fmpQuotes = useFmpQuotes();
+  const finnhubQuotes = useFinnhubQuotes();
 
   const company = getCompany(ticker);
   const brandCompany = getCompany("RRC");
   const liveSharePrice = useMemo(() => {
-    const quote = fmpQuotes.data?.equities[ticker];
+    const quote = finnhubQuotes.data?.equities[ticker];
     if (!quote || quote.status !== "ok" || quote.price === null) return null;
-    return { value: quote.price, note: `FMP · current market (${quote.symbol})` };
-  }, [fmpQuotes.data, ticker]);
+    return { value: quote.price, note: `Finnhub · current market (${quote.symbol})` };
+  }, [finnhubQuotes.data, ticker]);
   const metrics = useMemo(() => getOverviewSummaryCards(ticker, liveSharePrice), [ticker, liveSharePrice]);
 
   useEffect(() => {
@@ -84,8 +84,8 @@ export function HomeDashboard() {
   }
 
   const currentMarketPrices = useMemo(
-    () => buildCurrentMarketPricesFromFmpAndEia(fmpQuotes.data, market.data?.metrics),
-    [fmpQuotes.data, market.data]
+    () => buildCurrentMarketPricesFromMetrics(market.data?.metrics),
+    [market.data]
   );
 
   function selectPrimaryCompany(nextTicker: Ticker) {
