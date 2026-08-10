@@ -2,7 +2,7 @@ import { runRrcValuedScenario, defaultRrcValuationAssumptions } from "@/lib/fore
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { Ticker } from "./company-registry";
 
-export type ForecastChartMetric = "revenue" | "ebitdax";
+export type ForecastChartMetric = "revenue" | "ebitdax" | "fcf";
 export type ForecastChartPoint = { period: string; value: number | null };
 
 const FORECAST_SUPPORTED_TICKERS: ReadonlySet<Ticker> = new Set(["RRC"]);
@@ -24,9 +24,11 @@ export const FORECAST_CHART_PERIODS: string[] = [2026, 2027, 2028]
   .filter((period) => period !== "2026Q1");
 
 /**
- * Modeled Revenue/EBITDAX for the forecast/live portion of the main chart, driven by the
- * existing deterministic RRC forecast engine and (optionally) current commodity-price
- * inputs. Reuses runRrcValuedScenario as-is -- no second revenue/EBITDAX formula.
+ * Modeled Revenue/EBITDAX/FCF for the forecast/live portion of the main chart, driven by
+ * the existing deterministic RRC forecast engine and (optionally) current commodity-price
+ * inputs. Reuses runRrcValuedScenario as-is -- no second revenue/EBITDAX/FCF formula;
+ * freeCashFlowMillion is the same per-period quarterly value the engine already computes
+ * (lib/forecast/engine.ts), not an annual figure allocated across quarters.
  * Returns [] for any ticker the forecast engine doesn't support.
  */
 export function buildForecastChartSeries(
@@ -41,7 +43,13 @@ export function buildForecastChartSeries(
 
   return FORECAST_CHART_PERIODS.map((period) => {
     const row = byPeriod.get(period);
-    const value = !row ? null : metric === "revenue" ? row.revenue.totalMillion : row.ebitdaxMillion;
+    const value = !row
+      ? null
+      : metric === "revenue"
+        ? row.revenue.totalMillion
+        : metric === "ebitdax"
+          ? row.ebitdaxMillion
+          : row.freeCashFlowMillion;
     return { period: forecastQuarterLabel(period), value };
   });
 }

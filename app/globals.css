@@ -91,13 +91,7 @@ h2 { font-size: 15px; }
 }
 .peer-line { fill: none; stroke-width: 2.5; opacity: .82; }
 .peer-line.forecast-line { stroke-dasharray: 8 7; }
-.peer-1 { stroke: #9b8cff; }
-.peer-2 { stroke: #74c7a2; }
-.peer-3 { stroke: #e0b56f; }
-.peer-4 { stroke: #e98ca8; }
-.peer-5 { stroke: #76a9f4; }
-.peer-6 { stroke: #c2cf72; }
-.chart-area circle { fill: var(--accent); cursor: pointer; }
+.chart-area circle { cursor: pointer; }
 .chart-tooltip rect { fill: var(--panel); stroke: var(--border); stroke-width: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.28)); }
 .chart-tooltip text { fill: var(--text); font-size: 11px; }
 .chart-tooltip text.chart-tooltip-modeled { fill: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; font-size: 10px; }

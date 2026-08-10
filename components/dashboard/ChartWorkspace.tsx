@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { getAllQuartersForTicker, quarters, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
+import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
+import { getCompanyColor } from "@/lib/dashboard/company-colors";
 import {
   buildForecastChartSeries,
   FORECAST_CHART_PERIODS,
@@ -18,7 +20,7 @@ const RIGHT = 28;
 const TOP = 40;
 const BOTTOM = 48;
 
-const FORECAST_METRICS = new Set<Metric>(["revenue", "ebitdax"]);
+const FORECAST_METRICS = new Set<Metric>(["revenue", "ebitdax", "fcf"]);
 const FORECAST_AXIS_LABELS = FORECAST_CHART_PERIODS.map(forecastQuarterLabel);
 
 const metricConfig: Record<Metric, {
@@ -56,9 +58,8 @@ const metricConfig: Record<Metric, {
   fcf: {
     label: "Free cash flow",
     unit: "$MM",
-    value: () => null,
-    comparable: false,
-    caveat: "Quarterly free cash flow has not yet been loaded into the normalized peer dataset. Unsupported values remain blank rather than being estimated."
+    value: (row) => getQuarterlyFreeCashFlow(row.ticker, row.quarter).value,
+    comparable: true
   },
   ebitdax: {
     label: "EBITDAX",
@@ -174,8 +175,9 @@ export function ChartWorkspace({
           ))}
         </g>
         {series.map((item, seriesIndex) => {
-          const lineClass = seriesIndex === 0 ? "primary-line" : `peer-line peer-${Math.min(seriesIndex, 6)}`;
-          const pointClass = seriesIndex === 0 ? "primary-line-point" : `peer-line-point peer-${Math.min(seriesIndex, 6)}`;
+          const lineClass = seriesIndex === 0 ? "primary-line" : "peer-line";
+          const pointClass = seriesIndex === 0 ? "primary-line-point" : "peer-line-point";
+          const color = getCompanyColor(item.ticker);
           const actualPaths = buildPathSegments(item.values.slice(0, splitIndex), xFor, yFor);
           const modeledPaths = showsForecast
             ? buildPathSegments(item.values.slice(splitIndex), (index) => xFor(index + splitIndex), yFor)
@@ -183,10 +185,10 @@ export function ChartWorkspace({
           return (
             <Fragment key={item.ticker}>
               {actualPaths.map((path, segmentIndex) => (
-                <path key={`actual-${item.ticker}-${segmentIndex}`} className={lineClass} d={path} fill="none" />
+                <path key={`actual-${item.ticker}-${segmentIndex}`} className={lineClass} style={{ stroke: color }} d={path} fill="none" />
               ))}
               {modeledPaths.map((path, segmentIndex) => (
-                <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} forecast-line`} d={path} fill="none" />
+                <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} forecast-line`} style={{ stroke: color }} d={path} fill="none" />
               ))}
               {item.values.map((value, index) => {
                 if (value === null) return null;
@@ -205,6 +207,7 @@ export function ChartWorkspace({
                   <circle
                     key={pointKey}
                     className={pointClass}
+                    style={{ fill: color }}
                     cx={point.x}
                     cy={point.y}
                     r={seriesIndex === 0 ? 3.5 : 2.5}
@@ -224,8 +227,15 @@ export function ChartWorkspace({
         {hover ? <ChartPointTooltip point={hover} unit={config.unit} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
       </svg>
       <div className="chart-legend">
-        <span className="primary-legend">{ticker}</span>
-        {comparisonTickers.filter((peer) => peer !== ticker).map((peer) => <span key={peer}>{peer}</span>)}
+        {tickers.map((seriesTicker) => (
+          <span
+            key={seriesTicker}
+            className={seriesTicker === ticker ? "primary-legend" : undefined}
+            style={{ borderColor: getCompanyColor(seriesTicker), color: getCompanyColor(seriesTicker) }}
+          >
+            {seriesTicker}
+          </span>
+        ))}
       </div>
     </div>
   );

@@ -12,6 +12,14 @@ import type {
   NormalizedMarketMetric
 } from "@/lib/market/types";
 
+// force-dynamic (matching app/api/forecast and app/api/rrc-scenarios) so this route
+// re-reads EIA_API_KEY and calls the live EIA API on every invocation, instead of being
+// eligible for Next.js's default GET Route Handler build-time caching -- a route with no
+// dynamic functions and only `next.revalidate` fetch options is otherwise generated once
+// at build time and only revalidated per the interval below. If EIA_API_KEY was added to
+// Vercel after the last build, that would bake in a permanent "unavailable" response until
+// a redeploy. The explicit Cache-Control header still gives CDN-level 900s caching.
+export const dynamic = "force-dynamic";
 export const revalidate = 900;
 
 const definitions = [
