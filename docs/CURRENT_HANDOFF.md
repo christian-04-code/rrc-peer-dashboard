@@ -2,13 +2,29 @@
 
 - **Repository**: christian-04-code/rrc-peer-dashboard
 - **Active branch**: main (production-connected; SEC ingestion + full dashboard/model/UI/API work merged here as of `94a8c6a`)
-- **Latest commit**: "Add OilPriceAPI as current-market WTI/Henry Hub source alongside EIA"
+- **Latest commit**: "Wire OilPriceAPI current-market WTI/Henry Hub into Forecast (source-selection only)"
 - **Pushed to origin**: yes, `origin/main` == local HEAD
 
 ## Validation Results
-- `npm test`: 238/238 pass, including 27 new tests across `tests/oilpriceapi-client.test.cjs` (13), `tests/market-route-oilpriceapi.test.cjs` (8), `tests/market-ribbon-oilpriceapi.test.cjs` (6), plus `tests/finnhub-migration.test.cjs` updated (1 assertion re-pointed at the ribbon's new aria-label, no Finnhub logic touched)
+- `npm test`: 256/256 pass, including 16 new tests in `tests/forecast-oilpriceapi-fallback.test.cjs`, plus `tests/finnhub-migration.test.cjs` updated (2 assertions re-pointed at the new function names, no Finnhub logic touched)
 - `npm run typecheck`: clean
-- `npm run build`: succeeds; `/api/market` still compiles as a dynamic (ƒ) route (unchanged)
+- `npm run build`: succeeds; **no new API routes** — `/api/market`, `/api/rrc-scenarios` unchanged
+
+## Forecast Now Consumes OilPriceAPI Current-Market Prices (source-selection only) — Done
+Extended the existing `/api/market`-based commodity-price plumbing so the Forecast workspace (both the Overview chart's Revenue/EBITDAX/FCF modeled-forecast segment and the Forecast tab's `RrcScenarioWorkbench`) prefers OilPriceAPI's current-market WTI/Henry Hub over EIA's latest-official/delayed reading, with EIA and the engine's existing modeled management-sensitivity default preserved as fallback tiers. **No new upstream OilPriceAPI request path, no forecast formula changes** — this reuses the single existing `/api/market` response (`useMarketData()`), which already carries both `.metrics` (EIA) and `.currentMarket` (OilPriceAPI, added in the prior task).
+
+- **New hierarchy**: OilPriceAPI current WTI/Henry Hub → EIA latest-official/delayed → existing modeled fallback (was: EIA → modeled fallback). Resolved independently per commodity (WTI and Henry Hub never share a fallback decision).
+- **`lib/forecast/live-market-prices.ts`** gained `extractLiveMarketMetricsFromMarketResponse(data: MarketApiResponse)` and `buildCurrentMarketPricesFromMarketResponse(data)` — mirrors the existing (now-dead, preserved) FMP-priority pattern but takes the single `MarketApiResponse` object directly (no second response type needed, since OilPriceAPI and EIA already arrive together in one `/api/market` payload). A commodity is omitted (`undefined`) only when **both** OilPriceAPI and EIA are unavailable, so the existing `?? modeled default` in `rrc-complete.ts` still applies — untouched.
+- **Display/testing-only classification summary**: new `resolveCommoditySources(data)` returns `{ wti, henryHub }`, each `{ commodity, value, source, classification: "current_market" | "official_delayed" | "modeled", asOf }`. This is a separate, additive helper — it does **not** feed the forecast engine, which still receives the existing `SourcedValue` shape with `classification: "live"` (the engine's `AssumptionClassification` enum was not touched, since that's below the source-selection layer this task was scoped to).
+- **`toLiveSourcedValue`'s notes text**: unchanged sentence structure (still starts with "Latest official/delayed" or "Current-market", still contains "flat"/"not a futures or forward curve"/EIA's "not a real-time quote" — all pre-existing regexes still pass), with a parenthetical source tag added: `(EIA · Latest Official / Delayed)` or `(OilPriceAPI · Current Market)`.
+- **Wired into**: `components/HomeDashboard.tsx`'s `currentMarketPrices` (main chart) and `components/dashboard/ForecastWorkspacePanel.tsx`'s `RrcScenarioWorkbench` prop — both now call the new `...FromMarketResponse` functions instead of the EIA-only ones, passing `market.data` (the full `MarketApiResponse` already fetched by the existing `useMarketData()` hook) directly instead of `market.data?.metrics`. No new hook, no new polling, no new caching — the OilPriceAPI 60-minute Data Cache and EIA's existing caching are both untouched.
+- **No Forecast UI card added**: as established in the original FMP task, no commodity-price display card currently exists in the Forecast tab (it was dropped in an earlier consolidation when `ForecastPanel.tsx` was deleted) — adding one would violate "do not redesign Forecast cards/layout," so this task is data-layer plumbing only, verified via `resolveCommoditySources`'s classification output rather than a new visual element.
+- **Brent**: untouched — the new functions only ever read `currentMarket.wti`/`currentMarket.henryHub`, never `currentMarket.brent` (which doesn't exist; Brent stays EIA-`metrics`-only).
+- **Formulas verified identical**: a dedicated test runs `runRrcValuedScenario` twice with the same numeric commodity inputs — once built the old EIA-only way, once via the new OilPriceAPI-sourced path — and asserts byte-identical `revenue`/`ebitdax` output across all periods, proving this is source-selection only.
+
+Files added: `tests/forecast-oilpriceapi-fallback.test.cjs`.
+Files modified: `lib/forecast/live-market-prices.ts`, `components/HomeDashboard.tsx`, `components/dashboard/ForecastWorkspacePanel.tsx`, `tests/finnhub-migration.test.cjs` (2 assertions re-pointed at the new function names).
+Not touched: `lib/oilpriceapi/`, `lib/finnhub/`, `lib/fmp/`, `app/api/market/route.ts`, `app/api/rrc-scenarios/route.ts`, `app/api/share-prices/route.ts`, `MarketRibbon.tsx`, all forecast formula files (`rrc-complete.ts`, `rrc.ts`, `rrc-hedged.ts`, `rrc-valued.ts`, `calculations.ts`, `engine.ts`), Bear/Base/Bull presets, SEC ingestion.
 
 ## OilPriceAPI Current-Market Commodity Source — Done
 Added OilPriceAPI as the **current-market** source for WTI and Henry Hub, extending the existing `/api/market` route (not a parallel route) alongside EIA, which keeps sole ownership of Brent/storage/LNG/macro and remains the **latest-official/delayed** fallback for Henry Hub and WTI. Finnhub (share prices) and the FMP deactivation from the prior task are both untouched.

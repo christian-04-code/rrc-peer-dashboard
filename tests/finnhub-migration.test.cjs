@@ -8,17 +8,17 @@ function readComponent(...segments) {
   return fs.readFileSync(path.join(process.cwd(), ...segments), "utf8");
 }
 
-test("ForecastWorkspacePanel no longer polls FMP; commodity inputs are EIA-only again", () => {
+test("ForecastWorkspacePanel no longer polls FMP; commodity inputs use OilPriceAPI-first/EIA-fallback via the existing /api/market response", () => {
   const source = readComponent("components", "dashboard", "ForecastWorkspacePanel.tsx");
   assert.doesNotMatch(source, /useFmpQuotes/);
   assert.doesNotMatch(source, /extractLiveMarketMetricsWithFallback/);
-  assert.match(source, /extractLiveMarketMetrics\(market\.data\?\.metrics\)/);
+  assert.match(source, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
 });
 
-test("HomeDashboard's forecast chart commodity prices are EIA-only again (FMP removed from that flow)", () => {
+test("HomeDashboard's forecast chart commodity prices use OilPriceAPI-first/EIA-fallback (FMP removed from that flow)", () => {
   const source = readComponent("components", "HomeDashboard.tsx");
   assert.doesNotMatch(source, /buildCurrentMarketPricesFromFmpAndEia/);
-  assert.match(source, /buildCurrentMarketPricesFromMetrics\(market\.data\?\.metrics\)/);
+  assert.match(source, /buildCurrentMarketPricesFromMarketResponse\(market\.data\)/);
 });
 
 test("MarketRibbon still reads through useMarketData/EIA (not a direct Finnhub/FMP hook); Brent stays EIA-only", () => {

@@ -13,7 +13,7 @@ import {
 import type { Metric, Ticker, View, Workspace } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
-import { buildCurrentMarketPricesFromMetrics } from "@/lib/forecast/live-market-prices";
+import { buildCurrentMarketPricesFromMarketResponse } from "@/lib/forecast/live-market-prices";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -84,7 +84,7 @@ export function HomeDashboard() {
   }
 
   const currentMarketPrices = useMemo(
-    () => buildCurrentMarketPricesFromMetrics(market.data?.metrics),
+    () => buildCurrentMarketPricesFromMarketResponse(market.data),
     [market.data]
   );
 
