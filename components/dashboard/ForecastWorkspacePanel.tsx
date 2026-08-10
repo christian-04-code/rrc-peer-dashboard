@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CompanySelector } from "@/components/dashboard/CompanySelector";
 import { RrcScenarioWorkbench } from "@/components/forecast/RrcScenarioWorkbench";
 import { useMarketData } from "@/lib/market/use-market-data";
-import { extractLiveMarketMetricsFromMarketResponse } from "@/lib/forecast/live-market-prices";
+import { extractLiveMarketMetricsFromMarketResponse, resolveCommoditySources } from "@/lib/forecast/live-market-prices";
 import { defaultTicker, getCompany, selectableCompanies } from "@/lib/dashboard/company-registry";
 import type { Ticker } from "@/lib/dashboard/types";
 
@@ -37,7 +37,10 @@ export function ForecastWorkspacePanel() {
       </section>
 
       {isSupported ? (
-        <RrcScenarioWorkbench currentMarketPrices={extractLiveMarketMetricsFromMarketResponse(market.data)} />
+        <RrcScenarioWorkbench
+          currentMarketPrices={extractLiveMarketMetricsFromMarketResponse(market.data)}
+          commoditySources={resolveCommoditySources(market.data)}
+        />
       ) : (
         <div className="panel">
           <div className="panel-head">

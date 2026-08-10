@@ -156,9 +156,12 @@ export type ResolvedCommodityClassification = "current_market" | "official_delay
 export type ResolvedCommodityPrice = {
   commodity: "wti" | "henry_hub";
   value: number | null;
+  unit: string | null;
   source: string;
   classification: ResolvedCommodityClassification;
   asOf: string | null;
+  change24hAmount: number | null;
+  change24hPercent: number | null;
 };
 
 /**
@@ -168,26 +171,53 @@ export type ResolvedCommodityPrice = {
  * "modeled" here just means neither live source had a valid value for that commodity;
  * the engine's own modeled-fallback SourcedValue (defined in rrc-complete.ts, e.g.
  * "Range Resources management sensitivity case") is what actually applies in that
- * case and is untouched by this function.
+ * case and is untouched by this function -- its exact numeric default (e.g. $3.75
+ * Henry Hub / $65 WTI) is intentionally NOT duplicated here to avoid a second,
+ * drift-prone copy of that constant; value stays null (never fabricated) for the
+ * modeled case, same as every other "unsupported" value in this app.
+ * unit/change24h are pulled from the raw OilPriceAPI quote only when it's the one
+ * that actually won for that commodity -- an EIA or modeled result never carries a
+ * 24h change (OilPriceAPI doesn't describe those sources' movement).
  */
 export function resolveCommoditySources(data: MarketApiResponse | null | undefined): {
   wti: ResolvedCommodityPrice;
   henryHub: ResolvedCommodityPrice;
 } {
   const picked = extractLiveMarketMetricsFromMarketResponse(data);
+  const eiaUnit = (id: "wti" | "henry_hub") => data?.metrics?.find((metric) => metric.id === id)?.unit ?? null;
 
-  function resolve(commodity: "wti" | "henry_hub", metric: LiveMarketMetric): ResolvedCommodityPrice {
+  function resolve(
+    commodity: "wti" | "henry_hub",
+    metric: LiveMarketMetric,
+    rawQuote: CurrentMarketCommodityQuote | undefined
+  ): ResolvedCommodityPrice {
     if (!metric || !isFiniteNumber(metric.value)) {
-      return { commodity, value: null, source: "Range Resources management sensitivity case", classification: "modeled", asOf: null };
+      return {
+        commodity,
+        value: null,
+        unit: eiaUnit(commodity),
+        source: "Range Resources management sensitivity case",
+        classification: "modeled",
+        asOf: null,
+        change24hAmount: null,
+        change24hPercent: null
+      };
     }
-    const classification: ResolvedCommodityClassification = /OilPriceAPI/i.test(metric.source ?? "")
-      ? "current_market"
-      : "official_delayed";
-    return { commodity, value: metric.value, source: metric.source ?? "unknown", classification, asOf: metric.period ?? null };
+    const usingOilPriceApi = /OilPriceAPI/i.test(metric.source ?? "") && rawQuote?.status === "ok";
+    return {
+      commodity,
+      value: metric.value,
+      unit: usingOilPriceApi ? rawQuote?.unit ?? eiaUnit(commodity) : eiaUnit(commodity),
+      source: metric.source ?? "unknown",
+      classification: usingOilPriceApi ? "current_market" : "official_delayed",
+      asOf: metric.period ?? null,
+      change24hAmount: usingOilPriceApi ? rawQuote?.change24hAmount ?? null : null,
+      change24hPercent: usingOilPriceApi ? rawQuote?.change24hPercent ?? null : null
+    };
   }
 
   return {
-    wti: resolve("wti", picked.wti),
-    henryHub: resolve("henry_hub", picked.henryHub)
+    wti: resolve("wti", picked.wti, data?.currentMarket?.wti),
+    henryHub: resolve("henry_hub", picked.henryHub, data?.currentMarket?.henryHub)
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { LiveMarketPricesInput } from "@/lib/forecast/live-market-prices";
+import type { LiveMarketPricesInput, ResolvedCommodityClassification, ResolvedCommodityPrice } from "@/lib/forecast/live-market-prices";
 
 type Preset = "bear" | "base" | "bull";
 type Strategy = "maintenance" | "continued-growth";
@@ -131,7 +131,91 @@ function number(value: number | null, digits = 1) {
   return value === null ? "--" : value.toFixed(digits);
 }
 
-export function RrcScenarioWorkbench({ currentMarketPrices }: { currentMarketPrices?: LiveMarketPricesInput } = {}) {
+const COMMODITY_CLASSIFICATION_LABEL: Record<ResolvedCommodityClassification, string> = {
+  current_market: "OilPriceAPI · Current Market",
+  official_delayed: "EIA · Latest Official / Delayed",
+  modeled: "Management Sensitivity"
+};
+
+const COMMODITY_CLASSIFICATION_BACKGROUND: Record<ResolvedCommodityClassification, string> = {
+  current_market: "rgba(40,180,120,0.16)",
+  official_delayed: "rgba(64,140,220,0.16)",
+  modeled: "rgba(240,180,40,0.16)"
+};
+
+function formatCommodityPrice(value: number | null, unit: string | null) {
+  if (value === null) return "--";
+  const cleanUnit = unit?.replace(/^\$\//, "") ?? null;
+  return cleanUnit ? `$${value.toFixed(2)} / ${cleanUnit}` : `$${value.toFixed(2)}`;
+}
+
+function formatChange24h(percent: number | null) {
+  if (percent === null) return null;
+  const sign = percent >= 0 ? "+" : "";
+  return `${sign}${percent.toFixed(2)}% 24h`;
+}
+
+// Compact, read-only display of the exact commodity input feeding this scenario run --
+// not a new pricing feature. Renders nothing when the parent doesn't supply
+// commoditySources (e.g. the standalone /forecast route), matching the existing
+// currentMarketPrices prop's no-prop-means-unchanged-behavior convention.
+function CommodityPriceAssumptions({ henryHub, wti }: { henryHub: ResolvedCommodityPrice; wti: ResolvedCommodityPrice }) {
+  const rows: Array<{ label: string; data: ResolvedCommodityPrice }> = [
+    { label: "Henry Hub", data: henryHub },
+    { label: "WTI", data: wti }
+  ];
+
+  return (
+    <section style={{ border: "1px solid rgba(128,128,128,0.35)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        <h2 style={{ margin: 0, fontSize: 16 }}>Commodity price assumptions</h2>
+        <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(128,128,128,0.35)", background: "rgba(128,128,128,0.14)" }}>
+          Price mode: Current market (read-only)
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+        {rows.map(({ label, data }) => {
+          const change = formatChange24h(data.change24hPercent);
+          return (
+            <div key={label} style={{ border: "1px solid rgba(128,128,128,0.25)", borderRadius: 8, padding: 12, display: "grid", gap: 6 }}>
+              <strong style={{ fontSize: 14 }}>{label}</strong>
+              <span style={{ fontSize: 20, fontWeight: 700 }}>{formatCommodityPrice(data.value, data.unit)}</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(128,128,128,0.35)",
+                  background: COMMODITY_CLASSIFICATION_BACKGROUND[data.classification],
+                  width: "fit-content"
+                }}
+              >
+                {COMMODITY_CLASSIFICATION_LABEL[data.classification]}
+              </span>
+              {change ? <span style={{ fontSize: 12, opacity: 0.75 }}>{change}</span> : null}
+              <span style={{ fontSize: 11, opacity: 0.6 }}>
+                {data.asOf ? `As of ${data.asOf}` : "As of --"} · Model input for this scenario run
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p style={{ margin: 0, fontSize: 11, opacity: 0.6 }}>
+        Values shown are exactly what this run sends to the forecast engine as commodity price inputs. Custom price entry is not available yet -- it requires a separate modeling change.
+      </p>
+    </section>
+  );
+}
+
+export function RrcScenarioWorkbench({
+  currentMarketPrices,
+  commoditySources
+}: {
+  currentMarketPrices?: LiveMarketPricesInput;
+  commoditySources?: { wti: ResolvedCommodityPrice; henryHub: ResolvedCommodityPrice };
+} = {}) {
   const [preset, setPreset] = useState<Preset>("base");
   const [strategy, setStrategy] = useState<Strategy>("maintenance");
   const [assumptions, setAssumptions] = useState(presetDefaults.base);
@@ -318,6 +402,8 @@ export function RrcScenarioWorkbench({ currentMarketPrices }: { currentMarketPri
           </>
         ) : null}
       </section>
+
+      {commoditySources ? <CommodityPriceAssumptions henryHub={commoditySources.henryHub} wti={commoditySources.wti} /> : null}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button onClick={() => void run()} disabled={loading} style={{ padding: "10px 16px" }}>{loading ? "Calculating…" : "Run scenario"}</button>

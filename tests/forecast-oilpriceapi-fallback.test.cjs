@@ -235,10 +235,16 @@ test("13. Bear/Base/Bull presets are unchanged", () => {
 });
 
 test("14. No Forecast client code directly calls OilPriceAPI -- only /api/market's existing server-side integration does", () => {
+  // components/forecast/RrcScenarioWorkbench.tsx legitimately displays the source label
+  // string "OilPriceAPI · Current Market" (added in a later task, see
+  // tests/forecast-commodity-assumptions.test.cjs) -- that's a display label, not a
+  // provider call, so this check is scoped to actual import/env-var/upstream-call
+  // patterns rather than the bare word "oilpriceapi" anywhere in the file.
   for (const file of ["components/HomeDashboard.tsx", "components/dashboard/ForecastWorkspacePanel.tsx", "components/forecast/RrcScenarioWorkbench.tsx"]) {
     const source = fs.readFileSync(path.join(process.cwd(), file), "utf8");
-    assert.doesNotMatch(source, /oilpriceapi/i, `${file} must not reference OilPriceAPI directly`);
+    assert.doesNotMatch(source, /lib\/oilpriceapi\/client/, `${file} must not import the OilPriceAPI client`);
     assert.doesNotMatch(source, /OIL_PRICE_API/, `${file} must not reference the OilPriceAPI env var`);
+    assert.doesNotMatch(source, /api\.oilpriceapi\.com/, `${file} must not call OilPriceAPI directly`);
   }
   const liveMarketPricesSource = fs.readFileSync(path.join(process.cwd(), "lib", "forecast", "live-market-prices.ts"), "utf8");
   assert.doesNotMatch(liveMarketPricesSource, /lib\/oilpriceapi\/client/, "must only consume the normalized /api/market types, never the provider client");
