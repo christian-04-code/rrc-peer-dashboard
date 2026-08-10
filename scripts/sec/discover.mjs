@@ -116,11 +116,11 @@ export function buildFilingRepositoryPath({ ticker, reportDate, accessionNumber 
   return path.posix.join("data", "sec", filingTicker, filingReportDate, accession, "filing.htm");
 }
 
-export function collectOriginalFilings(company, submissions, { fromReportDate, throughReportDate }) {
+export function collectOriginalFilings(company, submissions, { fromReportDate, throughReportDate } = {}) {
   verifySubmissionIdentity(company, submissions);
   requireText(fromReportDate, "fromReportDate");
-  requireText(throughReportDate, "throughReportDate");
-  if (fromReportDate > throughReportDate) {
+  if (throughReportDate !== undefined) requireText(throughReportDate, "throughReportDate");
+  if (throughReportDate !== undefined && fromReportDate > throughReportDate) {
     throw new Error("fromReportDate must not be after throughReportDate.");
   }
 
@@ -133,7 +133,10 @@ export function collectOriginalFilings(company, submissions, { fromReportDate, t
   recent.form.forEach((form, index) => {
     if (!REQUIRED_FORMS.includes(form)) return;
     const record = recentRecord(recent, index, company, form);
-    if (record.reportDate < fromReportDate || record.reportDate > throughReportDate) return;
+    if (
+      record.reportDate < fromReportDate ||
+      (throughReportDate !== undefined && record.reportDate > throughReportDate)
+    ) return;
     if (filingsByAccession.has(record.accessionNumber)) return;
     const filing = {
       ...record,

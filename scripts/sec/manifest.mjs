@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -8,12 +8,57 @@ import {
   loadConfiguredCompany,
 } from "./discover.mjs";
 
-export const REPORT_DATE_RANGE = Object.freeze({
-  from: "2024-01-01",
-  through: "2026-06-30",
-});
+export const HISTORICAL_START_REPORT_DATE = "2024-01-01";
 
-export function buildManifest(company, submissions) {
+const FILING_FIELDS = [
+  "companyName",
+  "ticker",
+  "cik",
+  "form",
+  "reportDate",
+  "filingDate",
+  "accessionNumber",
+  "primaryDocument",
+  "filingUrl",
+  "repositoryPath",
+];
+
+function sameFiling(left, right) {
+  return FILING_FIELDS.every((field) => left[field] === right[field]);
+}
+
+function sortFilings(filings) {
+  return filings.sort((left, right) =>
+    left.reportDate.localeCompare(right.reportDate) ||
+    left.form.localeCompare(right.form) ||
+    left.filingDate.localeCompare(right.filingDate) ||
+    left.accessionNumber.localeCompare(right.accessionNumber)
+  );
+}
+
+export function mergeManifestFilings(existingFilings = [], discoveredFilings = []) {
+  const byAccession = new Map();
+  for (const filing of existingFilings) {
+    const existing = byAccession.get(filing.accessionNumber);
+    if (existing && !sameFiling(existing, filing)) {
+      throw new Error(`Existing manifest has conflicting accession ${filing.accessionNumber}.`);
+    }
+    byAccession.set(filing.accessionNumber, filing);
+  }
+  for (const filing of discoveredFilings) {
+    const existing = byAccession.get(filing.accessionNumber);
+    if (existing && !sameFiling(existing, filing)) {
+      throw new Error(`SEC metadata conflicts with existing accession ${filing.accessionNumber}.`);
+    }
+    if (!existing) byAccession.set(filing.accessionNumber, filing);
+  }
+  return sortFilings([...byAccession.values()]);
+}
+
+export function buildManifest(company, submissions, existingManifest) {
+  const discoveredFilings = collectOriginalFilings(company, submissions, {
+    fromReportDate: HISTORICAL_START_REPORT_DATE,
+  });
   return {
     schemaVersion: 1,
     company: {
@@ -21,11 +66,10 @@ export function buildManifest(company, submissions) {
       ticker: company.ticker,
       cik: company.sec.cik,
     },
-    reportDateRange: REPORT_DATE_RANGE,
-    filings: collectOriginalFilings(company, submissions, {
-      fromReportDate: REPORT_DATE_RANGE.from,
-      throughReportDate: REPORT_DATE_RANGE.through,
-    }),
+    reportDateRange: {
+      from: HISTORICAL_START_REPORT_DATE,
+    },
+    filings: mergeManifestFilings(existingManifest?.filings, discoveredFilings),
   };
 }
 
@@ -47,7 +91,13 @@ async function main() {
   const submissions = await fetchCompanySubmissions(company, {
     userAgent: process.env.SEC_USER_AGENT,
   });
-  const manifest = buildManifest(company, submissions);
+  let existingManifest;
+  try {
+    existingManifest = JSON.parse(await readFile(path.join(process.cwd(), "data", "sec", "manifest.json"), "utf8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const manifest = buildManifest(company, submissions, existingManifest);
   const outputPath = await writeManifest(manifest);
   process.stdout.write(`${outputPath}\n${serializeManifest(manifest)}`);
 }
