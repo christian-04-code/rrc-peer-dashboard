@@ -124,7 +124,7 @@ export function ChartWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickers.join(","), metric, showsForecast, currentMarketPrices]);
 
-  const guidanceAxisPeriods = buildGuidanceAxisPeriods(guidance.points.map((point) => point.period));
+  const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.period));
   const axisQuarters = Array.from(new Set([
     ...quarters,
     ...(showsForecast ? FORECAST_AXIS_LABELS : []),
