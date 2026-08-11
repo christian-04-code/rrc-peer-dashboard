@@ -29,8 +29,11 @@ test("null values never render a circle/point (no fake tooltips for unsupported 
   assert.match(source, /if \(value === null\) return null;/);
 });
 
-test("existing SVG structure, dashed forecast styling, and single-charting-library constraint are preserved", () => {
+test("existing SVG structure and single-charting-library constraint are preserved while dashed styling belongs to guidance", () => {
+  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
   assert.doesNotMatch(source, /from "recharts"|from "chart\.js"|from "d3"|from "victory"/);
-  assert.match(source, /forecast-line/);
+  assert.match(source, /model-forecast-line/);
+  assert.match(source, /management-guidance-line/);
+  assert.match(css, /management-guidance-line[^}]*stroke-dasharray/);
   assert.match(source, /<svg/);
 });

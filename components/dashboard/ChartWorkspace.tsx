@@ -10,6 +10,7 @@ import {
   forecastQuarterLabel,
   type ForecastChartMetric
 } from "@/lib/dashboard/chart-forecast";
+import { getChartGuidance, getVisibleChartGuidance } from "@/lib/dashboard/chart-guidance";
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
@@ -101,6 +102,10 @@ export function ChartWorkspace({
   const showsForecast = FORECAST_METRICS.has(metric);
   const tickers = [ticker, ...comparisonTickers.filter((peer) => peer !== ticker)];
   const [hover, setHover] = useState<HoverPoint | null>(null);
+  const [showManagementGuidance, setShowManagementGuidance] = useState(false);
+
+  const guidance = useMemo(() => getChartGuidance(ticker, metric), [ticker, metric]);
+  const visibleGuidance = getVisibleChartGuidance(guidance, showManagementGuidance);
 
   useEffect(() => {
     setHover(null);
@@ -119,9 +124,17 @@ export function ChartWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickers.join(","), metric, showsForecast, currentMarketPrices]);
 
-  const axisQuarters = showsForecast ? [...quarters, ...FORECAST_AXIS_LABELS] : quarters;
+  const guidanceAxisPeriods = buildGuidanceAxisPeriods(guidance.points.map((point) => point.period));
+  const axisQuarters = Array.from(new Set([
+    ...quarters,
+    ...(showsForecast ? FORECAST_AXIS_LABELS : []),
+    ...guidanceAxisPeriods
+  ]));
   const splitIndex = quarters.length;
-  const numericValues = series.flatMap((item) => item.values.filter((value): value is number => value !== null));
+  const numericValues = [
+    ...series.flatMap((item) => item.values.filter((value): value is number => value !== null)),
+    ...visibleGuidance.flatMap((point) => point.kind === "point" ? [point.value] : [point.low, point.high])
+  ];
 
   if (!config.comparable || numericValues.length === 0) {
     return (
@@ -150,11 +163,25 @@ export function ChartWorkspace({
       <div>
         <h2>{title}</h2>
         <p>
-          {showsForecast
-            ? `Reported actuals through ${quarters[quarters.length - 1]} · ${FORECAST_AXIS_LABELS[0]}–${FORECAST_AXIS_LABELS[FORECAST_AXIS_LABELS.length - 1]} is the modeled forecast from the deterministic RRC engine (current commodity-price inputs where available) · dashed = modeled, not reported · peer forecasts unavailable (blank), not fabricated`
-            : "Verified standalone quarterly actuals · Q1 2024 through Q1 2026 · blanks are not estimated"}
+          Reported actuals are shown through the latest reported quarter. Internal model forecasts are shown separately.
+          Dashed overlays represent management guidance where publicly provided; missing guidance is left blank.
         </p>
         {config.caveat ? <p className="muted">{config.caveat}</p> : null}
+      </div>
+      <div className="chart-guidance-controls">
+        <button
+          type="button"
+          className="chart-guidance-toggle"
+          aria-pressed={showManagementGuidance}
+          onClick={() => setShowManagementGuidance((current) => !current)}
+        >
+          {showManagementGuidance ? "Hide" : "Show"} Management Guidance
+        </button>
+        {guidance.status === "not_provided" ? (
+          <span>No public management guidance provided for this metric</span>
+        ) : guidance.status === "partial" ? (
+          <span>Only explicitly disclosed periods are shown</span>
+        ) : null}
       </div>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${tickers.join(", ")} from Q1 2024 through ${axisQuarters[axisQuarters.length - 1]}.`}>
         <g className="grid-lines">
@@ -188,7 +215,7 @@ export function ChartWorkspace({
                 <path key={`actual-${item.ticker}-${segmentIndex}`} className={lineClass} style={{ stroke: color }} d={path} fill="none" />
               ))}
               {modeledPaths.map((path, segmentIndex) => (
-                <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} forecast-line`} style={{ stroke: color }} d={path} fill="none" />
+                <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} model-forecast-line`} style={{ stroke: color }} d={path} fill="none" />
               ))}
               {item.values.map((value, index) => {
                 if (value === null) return null;
@@ -206,7 +233,7 @@ export function ChartWorkspace({
                 return (
                   <circle
                     key={pointKey}
-                    className={pointClass}
+                    className={`${pointClass}${modeled ? " model-forecast-point" : ""}`}
                     style={{ fill: color }}
                     cx={point.x}
                     cy={point.y}
@@ -224,6 +251,33 @@ export function ChartWorkspace({
             </Fragment>
           );
         })}
+        {visibleGuidance.map((point) => {
+          const index = axisQuarters.indexOf(point.period);
+          if (index < 0) return null;
+          const x = xFor(index);
+          const color = getCompanyColor(ticker);
+          const label = `${ticker} management guidance · ${point.disclosure}`;
+
+          if (point.kind === "range") {
+            const yLow = yFor(point.low);
+            const yHigh = yFor(point.high);
+            return (
+              <g key={`guidance-${point.period}-${point.disclosure}`} role="img" aria-label={`${label}, range ${formatValue(point.low)} to ${formatValue(point.high)} ${config.unit}`}>
+                <line className="management-guidance-range" style={{ stroke: color }} x1={x} y1={yHigh} x2={x} y2={yLow} />
+                <line className="management-guidance-cap" style={{ stroke: color }} x1={x - 7} y1={yHigh} x2={x + 7} y2={yHigh} />
+                <line className="management-guidance-cap" style={{ stroke: color }} x1={x - 7} y1={yLow} x2={x + 7} y2={yLow} />
+              </g>
+            );
+          }
+
+          const y = yFor(point.value);
+          return (
+            <g key={`guidance-${point.period}-${point.disclosure}`} role="img" aria-label={`${label}, ${formatValue(point.value)} ${config.unit}`}>
+              <line className="management-guidance-line" style={{ stroke: color }} x1={x - 9} y1={y} x2={x + 9} y2={y} />
+              <circle className="management-guidance-point" style={{ stroke: color }} cx={x} cy={y} r={5} />
+            </g>
+          );
+        })}
         {hover ? <ChartPointTooltip point={hover} unit={config.unit} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
       </svg>
       <div className="chart-legend">
@@ -236,9 +290,33 @@ export function ChartWorkspace({
             {seriesTicker}
           </span>
         ))}
+        <span className="chart-semantic-legend actual-legend">Actual</span>
+        {showsForecast ? <span className="chart-semantic-legend model-legend">Internal Model Forecast</span> : null}
+        <span className="chart-semantic-legend guidance-legend">Management Guidance — dashed</span>
       </div>
     </div>
   );
+}
+
+function buildGuidanceAxisPeriods(periods: string[]): string[] {
+  const latest = periods
+    .map((period) => {
+      const match = /^Q([1-4]) (\d{4})$/.exec(period);
+      return match ? { quarter: Number(match[1]), year: Number(match[2]) } : null;
+    })
+    .filter((period): period is { quarter: number; year: number } => period !== null)
+    .sort((a, b) => a.year - b.year || a.quarter - b.quarter)
+    .at(-1);
+
+  if (!latest || latest.year < 2026) return [];
+  const periodsThroughTarget: string[] = [];
+  for (let year = 2026; year <= latest.year; year += 1) {
+    for (let quarter = year === 2026 ? 2 : 1; quarter <= 4; quarter += 1) {
+      if (year === latest.year && quarter > latest.quarter) break;
+      periodsThroughTarget.push(`Q${quarter} ${year}`);
+    }
+  }
+  return periodsThroughTarget;
 }
 
 // Single reusable tooltip renderer for every chart metric/series (primary, comparison,

@@ -80,7 +80,7 @@ h2 { font-size: 15px; }
 .y-axis-label { text-anchor: end; }
 .axis-unit { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
 .primary-line { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
-.primary-line.forecast-line { stroke-dasharray: 9 7; }
+.primary-line.model-forecast-line { opacity: .48; }
 .chart-area .forecast-pulse-ring { fill: none; stroke: var(--accent); stroke-width: 2; opacity: 0; animation: forecastPulse 2.6s ease-out infinite; }
 @keyframes forecastPulse {
   0% { r: 6; opacity: .5; }
@@ -91,7 +91,14 @@ h2 { font-size: 15px; }
   .chart-area .forecast-pulse-ring { animation: none; opacity: 0; }
 }
 .peer-line { fill: none; stroke-width: 2.5; opacity: .82; }
-.peer-line.forecast-line { stroke-dasharray: 8 7; }
+.peer-line.model-forecast-line { opacity: .42; }
+.model-forecast-point { opacity: .48; }
+.management-guidance-line, .management-guidance-range, .management-guidance-cap { fill: none; stroke-width: 2.5; stroke-dasharray: 5 4; }
+.management-guidance-point { fill: var(--panel); stroke-width: 2; stroke-dasharray: 3 2; }
+.chart-guidance-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.chart-guidance-controls span { color: var(--muted); font-size: 11px; }
+.chart-guidance-toggle { padding: 5px 9px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font-size: 11px; }
+.chart-guidance-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .chart-area circle { cursor: pointer; }
 .chart-tooltip rect { fill: var(--panel); stroke: var(--border); stroke-width: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.28)); }
 .chart-tooltip text { fill: var(--text); font-size: 11px; }
@@ -99,6 +106,10 @@ h2 { font-size: 15px; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: var(--muted); font-size: 12px; }
 .chart-legend span { border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; }
 .chart-legend .primary-legend { color: var(--text); border-color: var(--accent); }
+.chart-legend .chart-semantic-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.chart-semantic-legend::before { content: ""; width: 16px; border-top: 2px solid currentColor; }
+.chart-semantic-legend.model-legend::before { opacity: .45; }
+.chart-semantic-legend.guidance-legend::before { border-top-style: dashed; }
 aside { display: flex; flex-direction: column; gap: 14px; }
 .panel { padding: 16px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

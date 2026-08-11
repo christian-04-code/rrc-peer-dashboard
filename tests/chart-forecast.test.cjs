@@ -63,6 +63,7 @@ test("peer tickers unsupported by the forecast engine return an empty forecast s
   for (const ticker of ["AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
     assert.deepEqual(buildForecastChartSeries(ticker, "revenue"), []);
     assert.deepEqual(buildForecastChartSeries(ticker, "ebitdax"), []);
+    assert.deepEqual(buildForecastChartSeries(ticker, "fcf"), []);
   }
 });
 
@@ -75,9 +76,14 @@ test("historical actual quarters (financials-quarterly.ts) are untouched by the 
   assert.ok(!forecastPeriods.includes("Q1 2026"));
 });
 
-test("ChartWorkspace renders modeled forecast periods with the dashed forecast-line class, distinct from reported actuals", () => {
+test("ChartWorkspace renders internal model forecasts with a non-dashed treatment", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "ChartWorkspace.tsx"), "utf8");
-  assert.match(source, /forecast-line/);
+  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
+  assert.match(source, /model-forecast-line/);
+  assert.doesNotMatch(source, /className=\{`\$\{lineClass\} forecast-line`\}/);
+  assert.match(css, /\.primary-line\.model-forecast-line\s*\{[^}]*opacity/);
+  assert.doesNotMatch(css, /\.model-forecast-line\s*\{[^}]*stroke-dasharray/);
+  assert.match(css, /\.management-guidance-line[^}]*stroke-dasharray/);
   assert.match(source, /buildForecastChartSeries/);
   assert.match(source, /"revenue"/);
   assert.match(source, /"ebitdax"/);
