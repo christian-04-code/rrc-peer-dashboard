@@ -8,6 +8,7 @@ export type GuidanceStatus = "new" | "raised" | "lowered" | "narrowed" | "reaffi
 type GuidanceEntry = {
   company: Ticker;
   metric: string;
+  chartMetric?: Metric;
   period: string;
   plotPeriod: string;
   low: number | null;
@@ -62,13 +63,42 @@ export type SelectedChartGuidanceResult = {
   points: ChartGuidancePoint[];
 };
 
-function toChartValue(value: number, unit: string): number | null {
-  if (unit === "Bcfe/d") return value * 1_000;
-  if (unit.toLowerCase() === "mmcfe/d" || unit === "$MM") return value;
+function daysInGuidancePeriod(period: string): number | null {
+  const fiscalYear = /^FY (\d{4})$/.exec(period);
+  if (fiscalYear) {
+    const year = Number(fiscalYear[1]);
+    return (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86_400_000;
+  }
+
+  const fiscalQuarter = /^Q([1-4]) (\d{4})$/.exec(period);
+  if (fiscalQuarter) {
+    const quarter = Number(fiscalQuarter[1]);
+    const year = Number(fiscalQuarter[2]);
+    const startMonth = (quarter - 1) * 3;
+    return (Date.UTC(year, startMonth + 3, 1) - Date.UTC(year, startMonth, 1)) / 86_400_000;
+  }
+
   return null;
 }
 
-function normalizeEntry(entry: GuidanceEntry): ChartGuidancePoint | null {
+function toChartValue(value: number, entry: GuidanceEntry, metric: Metric): number | null {
+  if (entry.unit === "Bcfe/d") return value * 1_000;
+  if (entry.unit.toLowerCase() === "mmcfe/d" || entry.unit === "$MM") return value;
+  if (metric === "production" && entry.unit === "Bcfe") {
+    const days = daysInGuidancePeriod(entry.period);
+    return days === null ? null : value * 1_000 / days;
+  }
+  return null;
+}
+
+function chartMetricForEntry(entry: GuidanceEntry): Metric | null {
+  const metric = entry.chartMetric ?? entry.metric;
+  return ["production", "revenue", "fcf", "capex", "debt", "ebitdax"].includes(metric)
+    ? metric as Metric
+    : null;
+}
+
+function normalizeEntry(entry: GuidanceEntry, metric: Metric): ChartGuidancePoint | null {
   if (!entry.chartable) return null;
   // Thresholds remain visible in the full guidance view, but are never treated as ordinary points.
   if (entry.operator) return null;
@@ -82,7 +112,7 @@ function normalizeEntry(entry: GuidanceEntry): ChartGuidancePoint | null {
     : entry.midpoint;
   const metadata: GuidanceMetadata = {
     ticker: entry.company,
-    metric: entry.metric as Metric,
+    metric,
     period: entry.period,
     plotPeriod: entry.plotPeriod,
     midpoint: normalizedMidpoint,
@@ -100,15 +130,15 @@ function normalizeEntry(entry: GuidanceEntry): ChartGuidancePoint | null {
   };
 
   if (entry.low !== null && entry.high !== null) {
-    const chartLow = toChartValue(entry.low, entry.unit);
-    const chartHigh = toChartValue(entry.high, entry.unit);
-    const chartMidpoint = toChartValue(normalizedMidpoint ?? (entry.low + entry.high) / 2, entry.unit);
+    const chartLow = toChartValue(entry.low, entry, metric);
+    const chartHigh = toChartValue(entry.high, entry, metric);
+    const chartMidpoint = toChartValue(normalizedMidpoint ?? (entry.low + entry.high) / 2, entry, metric);
     if (chartLow === null || chartHigh === null || chartMidpoint === null) return null;
     return { ...metadata, kind: "range", low: entry.low, high: entry.high, chartLow, chartHigh, chartMidpoint };
   }
 
   if (entry.midpoint === null) return null;
-  const chartValue = toChartValue(entry.midpoint, entry.unit);
+  const chartValue = toChartValue(entry.midpoint, entry, metric);
   return chartValue === null ? null : { ...metadata, kind: "point", value: entry.midpoint, chartValue };
 }
 
@@ -117,8 +147,8 @@ export function getChartGuidance(ticker: Ticker, metric: Metric): ChartGuidanceR
   const company = data.companies[ticker];
   const auditStatus = company?.audit[metric] ?? "not_guided";
   const points = (company?.entries ?? [])
-    .filter((entry) => entry.metric === metric && entry.reportingCycle === data.meta.reportingCycle)
-    .map(normalizeEntry)
+    .filter((entry) => chartMetricForEntry(entry) === metric && entry.reportingCycle === data.meta.reportingCycle)
+    .map((entry) => normalizeEntry(entry, metric))
     .filter((entry): entry is ChartGuidancePoint => entry !== null);
 
   return { status: points.length > 0 ? "provided" : "not_provided", auditStatus, points };

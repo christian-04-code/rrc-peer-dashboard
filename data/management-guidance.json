@@ -1303,8 +1303,8 @@
           "guidanceType": "range",
           "source": "CNX Resources Q2 2026 Earnings",
           "sourceDate": "2026-07-30",
-          "chartable": false,
-          "note": "Annual volume is retained as disclosed and is not converted into a daily-rate chart value.",
+          "chartable": true,
+          "note": "Annual volume is converted to the chart's average daily rate using the exact 365 days in FY 2026.",
           "reportingCycle": "Q2 2026",
           "priorReportingCycle": "Q1 2026",
           "status": "reaffirmed",
@@ -2547,10 +2547,10 @@
           "source": "EQT Corporation Q2 2026 Earnings",
           "sourceLocation": "Q2 2026 Results / Earnings Presentation",
           "sourceDate": "2026-07-21",
-          "chartable": false,
+          "chartable": true,
           "reportingCycle": "Q2 2026",
           "managementWording": "Raising our 2026 production guidance by roughly 90 Bcfe at the midpoint.",
-          "note": "Annual volume retained as disclosed, not converted to a daily-rate chart value. Prior FY2026 guidance (Q1 2026 cycle): 2,275-2,375 Bcfe."
+          "note": "Annual volume is converted to the chart's average daily rate using the exact 365 days in FY 2026. Prior FY2026 guidance (Q1 2026 cycle): 2,275-2,375 Bcfe."
         },
         {
           "company": "EQT",
@@ -2586,7 +2586,8 @@
           "sourceDate": "2026-07-21",
           "chartable": true,
           "reportingCycle": "Q2 2026",
-          "managementWording": "The Company expects total sales volume of 570 to 620 Bcfe in the third quarter of 2026."
+          "managementWording": "The Company expects total sales volume of 570 to 620 Bcfe in the third quarter of 2026.",
+          "note": "Quarterly volume is converted to the chart's average daily rate using the exact 92 days in Q3 2026."
         },
         {
           "company": "EQT",
@@ -2681,6 +2682,7 @@
         {
           "company": "EQT",
           "metric": "net_debt_target",
+          "chartMetric": "debt",
           "period": "Near Term / Long-Term",
           "plotPeriod": "Q4 2026",
           "low": null,
