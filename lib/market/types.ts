@@ -1,7 +1,7 @@
 export type MarketMetricStatus = "ok" | "unavailable";
 export type MarketMetricClassification = "live" | "delayed";
 export type MarketFrequency = "daily" | "weekly" | "monthly" | "annual";
-export type MarketFreshness = "current" | "stale" | "unavailable";
+export type MarketFreshness = "current" | "lagged" | "stale" | "unavailable";
 
 export type MarketObservation = {
   period: string;

@@ -12,6 +12,7 @@ export function getOilPriceApiKey(): string {
 }
 
 const OIL_PRICE_API_BASE_URL = "https://api.oilpriceapi.com/v1";
+const OIL_PRICE_API_DEMO_URL = `${OIL_PRICE_API_BASE_URL}/demo/prices`;
 
 // 60 minutes -- the free tier is capped around 200 requests/month, far too low to
 // poll like Finnhub's ~60s share prices. Uses Next.js's fetch Data Cache (the same
@@ -45,6 +46,13 @@ type OilPriceApiPriceRow = {
   changes?: unknown;
 };
 
+type OilPriceApiDemoRow = {
+  code?: unknown;
+  price?: unknown;
+  currency?: unknown;
+  updated_at?: unknown;
+};
+
 type OilPriceApiPayload = {
   status?: unknown;
   data?: {
@@ -56,6 +64,7 @@ type OilPriceApiPayload = {
 export type OilPriceApiResult = {
   quotesByCode: Map<string, OilPriceApiQuote>;
   missingCodes: string[];
+  accessMode: "authenticated" | "keyless-demo";
 };
 
 function isFiniteNumber(value: unknown): value is number {
@@ -94,6 +103,26 @@ function normalizeRow(row: OilPriceApiPriceRow): OilPriceApiQuote | null {
   };
 }
 
+function normalizeDemoRow(row: OilPriceApiDemoRow): OilPriceApiQuote | null {
+  const code = row?.code;
+  if (typeof code !== "string" || code.trim() === "") return null;
+  const units: Record<string, string> = { WTI_USD: "bbl", NATURAL_GAS_USD: "MMBtu" };
+  return {
+    code,
+    price: isFiniteNumber(row.price) ? row.price : null,
+    currency: typeof row.currency === "string" ? row.currency : null,
+    unit: units[code] ?? null,
+    dataStatus: "keyless-demo",
+    asOf: typeof row.updated_at === "string" ? row.updated_at : null,
+    stale: null,
+    synthetic: null,
+    // The keyless payload exposes one untyped change_24h field. Do not guess
+    // whether it is an amount or percentage.
+    change24hAmount: null,
+    change24hPercent: null
+  };
+}
+
 /**
  * One batched request for every requested code via OilPriceAPI's documented
  * `by_code=A,B` multi-commodity query (GET /v1/prices/latest) -- never one request
@@ -105,21 +134,42 @@ function normalizeRow(row: OilPriceApiPriceRow): OilPriceApiQuote | null {
  * missing, never fabricated.
  */
 export async function fetchOilPriceApiQuotes(codes: string[]): Promise<OilPriceApiResult> {
-  if (codes.length === 0) return { quotesByCode: new Map(), missingCodes: [] };
+  if (codes.length === 0) return { quotesByCode: new Map(), missingCodes: [], accessMode: "authenticated" };
 
   const url = new URL(`${OIL_PRICE_API_BASE_URL}/prices/latest`);
   url.searchParams.set("by_code", codes.join(","));
 
   let response: Response;
-  try {
-    response = await fetch(url, {
-      headers: { Authorization: `Token ${getOilPriceApiKey()}` },
-      next: { revalidate: REVALIDATE_SECONDS }
-    });
-  } catch (error) {
-    throw new Error(
-      `OilPriceAPI network request failed for codes "${codes.join(",")}": ${error instanceof Error ? error.message : String(error)}`
-    );
+  let accessMode: OilPriceApiResult["accessMode"] = "authenticated";
+  const apiKey = process.env.OIL_PRICE_API?.trim();
+
+  if (apiKey) {
+    try {
+      response = await fetch(url, {
+        headers: { Authorization: `Token ${apiKey}` },
+        next: { revalidate: REVALIDATE_SECONDS }
+      });
+    } catch (error) {
+      throw new Error(
+        `OilPriceAPI network request failed for codes "${codes.join(",")}": ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  } else {
+    response = new Response(null, { status: 401 });
+  }
+
+  // OilPriceAPI publishes a keyless, rate-limited current-price endpoint. Use
+  // it only when the configured credential is absent/rejected, preserving the
+  // authenticated batch endpoint as primary.
+  if (response.status === 401 || response.status === 403) {
+    accessMode = "keyless-demo";
+    try {
+      response = await fetch(OIL_PRICE_API_DEMO_URL, { next: { revalidate: REVALIDATE_SECONDS } });
+    } catch (error) {
+      throw new Error(
+        `OilPriceAPI keyless fallback failed for codes "${codes.join(",")}": ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   if (!response.ok) {
@@ -144,8 +194,10 @@ export async function fetchOilPriceApiQuotes(codes: string[]): Promise<OilPriceA
   const rawPrices = payload.data?.prices;
   const rows: unknown[] = Array.isArray(rawPrices) ? rawPrices : rawPrices ? [rawPrices] : [];
   const quotesByCode = new Map<string, OilPriceApiQuote>();
-  for (const row of rows as OilPriceApiPriceRow[]) {
-    const quote = normalizeRow(row);
+  for (const row of rows) {
+    const quote = accessMode === "keyless-demo"
+      ? normalizeDemoRow(row as OilPriceApiDemoRow)
+      : normalizeRow(row as OilPriceApiPriceRow);
     if (quote) quotesByCode.set(quote.code, quote);
   }
 
@@ -154,5 +206,5 @@ export async function fetchOilPriceApiQuotes(codes: string[]): Promise<OilPriceA
   // API's own data.missing list happens to also mention it.
   const missingCodes = codes.filter((code) => !quotesByCode.has(code));
 
-  return { quotesByCode, missingCodes };
+  return { quotesByCode, missingCodes, accessMode };
 }

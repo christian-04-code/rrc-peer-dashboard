@@ -221,6 +221,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .neutral { color: var(--muted); }
 .freshness-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #58697b; flex: 0 0 auto; }
 .freshness-dot.current { background: var(--positive); box-shadow: 0 0 0 3px rgba(112,201,154,.1); }
+.freshness-dot.lagged { background: #e5ad63; }
 .freshness-dot.stale { background: #e5ad63; }
 .macro-spark { width: 100%; height: 32px; }
 .macro-spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }

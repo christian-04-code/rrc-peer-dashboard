@@ -47,6 +47,16 @@ const CURRENT_AGE_DAYS: Record<MarketFrequency, number> = {
   annual: 400
 };
 
+// Official observations do not all publish on the same cadence. Values outside
+// the normal current window can still be the newest valid release, so keep that
+// publication lag distinct from a genuinely stale feed.
+const LAGGED_AGE_DAYS: Record<MarketFrequency, number> = {
+  daily: 14,
+  weekly: 21,
+  monthly: 120,
+  annual: 800
+};
+
 function observationDate(period: string, frequency: MarketFrequency): Date | null {
   let normalized = period;
   if (frequency === "monthly" && /^\d{4}-\d{2}$/.test(period)) {
@@ -67,7 +77,16 @@ export function calculateFreshness(
   const date = observationDate(period, frequency);
   if (!date) return "unavailable";
   const ageDays = Math.max(0, (now.getTime() - date.getTime()) / DAY_MS);
-  return ageDays <= CURRENT_AGE_DAYS[frequency] ? "current" : "stale";
+  if (ageDays <= CURRENT_AGE_DAYS[frequency]) return "current";
+  return ageDays <= LAGGED_AGE_DAYS[frequency] ? "lagged" : "stale";
+}
+
+export function monthlyMmcfToBcfd(value: number | null, period: string | null): number | null {
+  if (value === null || !period || !/^\d{4}-\d{2}$/.test(period)) return null;
+  const [year, month] = period.split("-").map(Number);
+  if (month < 1 || month > 12) return null;
+  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return value / days / 1000;
 }
 
 function isoWeek(date: Date): number {

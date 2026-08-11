@@ -41,8 +41,8 @@ test("fetchEiaSeries builds a v2 request and parses numeric rows", async () => {
       JSON.stringify({
         response: {
           data: [
-            { period: "2026-08-01", value: "3.25" },
             { period: "2026-07-31", value: 3.1 },
+            { period: "2026-08-01", value: "3.25" },
           ],
         },
       }),
@@ -66,7 +66,8 @@ test("fetchEiaSeries builds a v2 request and parses numeric rows", async () => {
   assert.deepEqual(result.points, [
     { period: "2026-08-01", value: 3.25 },
     { period: "2026-07-31", value: 3.1 },
-  ]);
+  ], "the newest observation is selected even if the provider response is not ordered");
+  assert.equal(result.fetchedAt !== result.points[0].period, true, "retrieval timestamp stays distinct from the observation period");
 });
 
 test("fetchEiaSeries rejects non-OK responses", async () => {
