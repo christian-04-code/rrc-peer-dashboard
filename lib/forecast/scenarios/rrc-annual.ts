@@ -20,8 +20,14 @@ import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
 import { rrcManagementGuidance } from "@/lib/forecast/guidance/rrc";
 import { findGuidance, type GuidanceEntry } from "@/lib/forecast/guidance/types";
 import { calculateMultipleValuation, calculateDcf, type MultipleValuationResult, type DcfResult } from "@/lib/forecast/valuation";
-import { summarizeAnnualProduction, type ProductionOverrideAttribution, type ProductionOverrideInput } from "@/lib/forecast/production-engine";
+import {
+  buildFlatProductionForecast,
+  summarizeAnnualProduction,
+  type ProductionOverrideAttribution,
+  type ProductionOverrideInput
+} from "@/lib/forecast/production-engine";
 import { runRrcHedgedScenario } from "@/lib/forecast/scenarios/rrc-hedged";
+import { latestReportedProduction, quarterDays } from "@/lib/forecast/scenarios/rrc-complete";
 import type {
   RrcAnnualOverride,
   RrcAnnualOverrides,
@@ -46,6 +52,8 @@ export type RrcAnnualCostsInput = {
   cashTaxRate?: number;
 };
 export type RrcAnnualCapexInput = { totalMillion?: number };
+/** Realized gas price = Henry Hub + gasBasisPerMcf; realized oil price = WTI + oilDifferentialPerBbl. Sign exactly as disclosed by management. */
+export type RrcAnnualPricingInput = { gasBasisPerMcf?: number; oilDifferentialPerBbl?: number };
 export type RrcCustomCommodityInput = { henryHubPerMmbtu?: number; wtiPerBbl?: number; nglPerBbl?: number };
 
 export type RrcAnnualForecastRequest = {
@@ -53,6 +61,7 @@ export type RrcAnnualForecastRequest = {
   production: Partial<Record<RrcForecastYear, RrcAnnualProductionInput>>;
   costs: Partial<Record<RrcForecastYear, RrcAnnualCostsInput>>;
   capex: Partial<Record<RrcForecastYear, RrcAnnualCapexInput>>;
+  pricing: Partial<Record<RrcForecastYear, RrcAnnualPricingInput>>;
   commodityMode: RrcCommodityMode;
   customCommodity?: RrcCustomCommodityInput;
   /** Already-resolved current-market SourcedValues (classification "live"), e.g. from buildCurrentMarketPricesFromMarketResponse -- passed through unchanged. */
@@ -179,7 +188,32 @@ export function resolveAnnualCapexDefault(year: RrcForecastYear, strategy: RrcPo
   };
 }
 
-const DAYS_PER_YEAR = 365;
+const MODELED_PRICING_FALLBACKS: Record<"gasBasisPerMcf" | "oilDifferentialPerBbl", { value: number; unit: string }> = {
+  gasBasisPerMcf: { value: 0.18, unit: "$/Mcf" },
+  oilDifferentialPerBbl: { value: -10.68, unit: "$/bbl" }
+};
+
+/** Mirrors rrc-complete.ts exactly: guidance midpoint when RRC guided that differential for the year, else the Q1 2026 reported differential held flat (modeled). Realized gas price = Henry Hub + this value; realized oil price = WTI + this value; sign exactly as disclosed. */
+export function resolveAnnualPricingDefault(metric: "gasBasisPerMcf" | "oilDifferentialPerBbl", year: RrcForecastYear): ResolvedAnnualValue {
+  const guidance = findGuidance(rrcManagementGuidance, metric, year);
+  if (guidance && guidance.midpoint !== null) return guidanceToResolved(guidance);
+  const fallback = MODELED_PRICING_FALLBACKS[metric];
+  return {
+    value: fallback.value,
+    classification: "modeled",
+    sourceName: "Range Resources",
+    sourceReference: "Q1 2026 Form 10-Q realized-pricing disclosure",
+    sourceDate: "2026-08-04",
+    notes: `Q1 2026 reported differential held flat as the forward anchor; RRC did not guide this differential for ${year}.`
+  };
+}
+
+export function resolveAnnualPricingDefaults(year: RrcForecastYear): Record<"gasBasisPerMcf" | "oilDifferentialPerBbl", ResolvedAnnualValue> {
+  return {
+    gasBasisPerMcf: resolveAnnualPricingDefault("gasBasisPerMcf", year),
+    oilDifferentialPerBbl: resolveAnnualPricingDefault("oilDifferentialPerBbl", year)
+  };
+}
 
 function totalMmcfePerDay(gas: number, ngl: number, oil: number): number {
   return gas + (ngl + oil) * 6;
@@ -208,6 +242,26 @@ function expandAnnualProductionToQuarterlyOverrides(
     oilMbblPerDay,
     attribution
   }));
+}
+
+/**
+ * Computes the exact annual production volume (MMcfe) the forecast engine will produce for
+ * a year, using the same production overrides and the same buildFlatProductionForecast call
+ * the engine itself makes internally (rrc-complete.ts calls it once across all 12 quarters;
+ * per-quarter results are independent of what happens in other years, so filtering the same
+ * overrides down to one year's 4 quarters reproduces identical numbers). A $/Mcfe cost
+ * conversion (e.g. G&A) can then use precisely the volume basis Revenue will use for that
+ * year, instead of a separate approximation that could drift from the real reconciled total.
+ */
+function annualMcfeForYear(year: RrcForecastYear, productionOverrides: ProductionOverrideInput[]): number | null {
+  const periods = [1, 2, 3, 4].map((quarter) => {
+    const period = `${year}Q${quarter}`;
+    return { period, days: quarterDays(period) };
+  });
+  const yearOverrides = productionOverrides.filter((override) => override.period.startsWith(year));
+  const flatProduction = buildFlatProductionForecast(latestReportedProduction, periods, yearOverrides);
+  const summary = summarizeAnnualProduction(flatProduction.map((period) => ({ volumes: period.volumes })));
+  return summary.totalMcfe;
 }
 
 function userSourced(value: number | undefined, unit: string, notes: string): SourcedValue | undefined {
@@ -278,15 +332,26 @@ export function resolveRrcAnnualInputs(request: RrcAnnualForecastRequest): {
   for (const year of RRC_FORECAST_YEARS) {
     const costs = request.costs[year];
     const capex = request.capex[year];
-    const totalBcfePerDay = productionResolution[year]?.value;
+    const pricing = request.pricing[year];
     const cashGaPerMcfeInput = costs?.cashGaPerMcfe;
     const cashGaMillion =
-      typeof cashGaPerMcfeInput === "number" && Number.isFinite(cashGaPerMcfeInput) && typeof totalBcfePerDay === "number" && Number.isFinite(totalBcfePerDay)
-        ? userSourced(
-            totalBcfePerDay * DAYS_PER_YEAR * cashGaPerMcfeInput,
-            "$mm",
-            `User-entered $${cashGaPerMcfeInput}/Mcfe G&A assumption, converted to an annual dollar figure using this year's ${totalBcfePerDay} Bcfe/d resolved production (${DAYS_PER_YEAR}-day approximation).`
-          )
+      typeof cashGaPerMcfeInput === "number" && Number.isFinite(cashGaPerMcfeInput)
+        ? (() => {
+            // cashGaMillion is a per-quarter $mm run-rate (rrc-complete.ts applies the same
+            // SourcedValue flat across all 4 quarters of the year, exactly like loePerMcfe,
+            // cashInterestMillion, and explorationMillion), so the annual dollar figure
+            // implied by the entered $/Mcfe rate is divided by 4 here -- using this year's
+            // exact forecast-reconciled annual production (same volume Revenue uses; no
+            // separate 365-day approximation), not an average-quarter estimate.
+            const annualMcfe = annualMcfeForYear(year, productionOverrides);
+            if (annualMcfe === null) return undefined;
+            const annualGaMillion = (annualMcfe * cashGaPerMcfeInput) / 1000;
+            return userSourced(
+              annualGaMillion / 4,
+              "$mm",
+              `User-entered $${cashGaPerMcfeInput}/Mcfe G&A assumption implies $${annualGaMillion.toFixed(1)}mm annually using this year's forecast-reconciled annual production (${annualMcfe.toFixed(1)} MMcfe, the same volume this run uses for Revenue), applied as a flat $${(annualGaMillion / 4).toFixed(1)}mm/quarter run-rate.`
+            );
+          })()
         : undefined;
     const entry: RrcAnnualOverride = {
       loePerMcfe: userSourced(costs?.loePerMcfe, "$/Mcfe", "User-entered LOE assumption."),
@@ -295,7 +360,9 @@ export function resolveRrcAnnualInputs(request: RrcAnnualForecastRequest): {
       explorationMillion: userSourced(costs?.explorationMillion, "$mm", "User-entered exploration expense assumption."),
       cashInterestMillion: userSourced(costs?.cashInterestMillion, "$mm", "User-entered cash interest assumption."),
       cashTaxRate: userSourced(costs?.cashTaxRate, "decimal", "User-entered cash tax rate assumption."),
-      capexTotalMillion: userSourced(capex?.totalMillion, "$mm", "User-entered annual capex assumption.")
+      capexTotalMillion: userSourced(capex?.totalMillion, "$mm", "User-entered annual capex assumption."),
+      gasBasisPerMcf: userSourced(pricing?.gasBasisPerMcf, "$/Mcf", "User-entered gas differential vs. NYMEX assumption (realized gas price = Henry Hub + this value)."),
+      oilDifferentialPerBbl: userSourced(pricing?.oilDifferentialPerBbl, "$/bbl", "User-entered oil differential vs. WTI assumption (realized oil price = WTI + this value).")
     };
     if (Object.values(entry).some((v) => v !== undefined)) annualOverrides[year] = entry;
   }

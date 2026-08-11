@@ -84,17 +84,23 @@ type ApiDefaults = {
   productionDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
   costDefaults: Record<RrcForecastYear, { loePerMcfe: ResolvedAnnualValue; cashGaPerMcfe: ResolvedAnnualValue; cashTaxRate: ResolvedAnnualValue }>;
   capexDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
+  pricingDefaults: Record<RrcForecastYear, { gasBasisPerMcf: ResolvedAnnualValue; oilDifferentialPerBbl: ResolvedAnnualValue }>;
   currentNetDebtMillion: number | null;
   dilutedSharesMillion: number | null;
   result: AnnualForecastResult;
 };
 
 type CostField = "loePerMcfe" | "gatheringTransportPerMcfe" | "cashGaPerMcfe" | "explorationMillion" | "cashInterestMillion" | "cashTaxRate";
+type PricingField = "gasBasisPerMcf" | "oilDifferentialPerBbl";
 
 const EMPTY_YEAR_STRINGS = { "2026": "", "2027": "", "2028": "" } as Record<RrcForecastYear, string>;
 
 function emptyCostYear(): Record<CostField, string> {
   return { loePerMcfe: "", gatheringTransportPerMcfe: "", cashGaPerMcfe: "", explorationMillion: "", cashInterestMillion: "", cashTaxRate: "" };
+}
+
+function emptyPricingYear(): Record<PricingField, string> {
+  return { gasBasisPerMcf: "", oilDifferentialPerBbl: "" };
 }
 
 const CLASSIFICATION_STYLE: Record<Classification, { label: string; bg: string; color: string }> = {
@@ -237,6 +243,11 @@ export function RrcScenarioWorkbench() {
     "2028": emptyCostYear()
   });
   const [capex, setCapex] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
+  const [pricing, setPricing] = useState<Record<RrcForecastYear, Record<PricingField, string>>>({
+    "2026": emptyPricingYear(),
+    "2027": emptyPricingYear(),
+    "2028": emptyPricingYear()
+  });
 
   useEffect(() => {
     fetch("/api/rrc-scenarios")
@@ -271,6 +282,14 @@ export function RrcScenarioWorkbench() {
             ])
           ),
           capex: Object.fromEntries(YEARS.map((year) => [year, { totalMillion: parsedOrUndefined(capex[year]) }])),
+          pricing: Object.fromEntries(
+            YEARS.map((year) => [
+              year,
+              Object.fromEntries(
+                (Object.keys(pricing[year]) as PricingField[]).map((field) => [field, parsedOrUndefined(pricing[year][field])])
+              )
+            ])
+          ),
           commodityMode,
           customCommodity: {
             henryHubPerMmbtu: parsedOrUndefined(customHenryHub),
@@ -310,6 +329,11 @@ export function RrcScenarioWorkbench() {
   function capexClassification(year: RrcForecastYear): Classification {
     if (capex[year].trim() !== "") return "user";
     return defaults?.capexDefaults[year]?.classification ?? "modeled";
+  }
+
+  function pricingClassification(year: RrcForecastYear, field: PricingField): Classification {
+    if (pricing[year][field].trim() !== "") return "user";
+    return defaults?.pricingDefaults[year]?.[field]?.classification ?? "modeled";
   }
 
   return (
@@ -434,6 +458,36 @@ export function RrcScenarioWorkbench() {
           ))}
         </div>
         <p className="muted panel-note">Evenly allocated across quarters internally; the quarterly engine is unchanged.</p>
+
+        <h3 className="wb-group-title">Realized pricing differentials</h3>
+        {YEARS.map((year) => (
+          <div className="wb-year-group" key={year}>
+            <p className="wb-year-label">{year}E</p>
+            <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
+              <label className="wb-field">
+                <span className="wb-field-label">Gas differential vs. NYMEX $/Mcf <ClassificationPill classification={pricingClassification(year, "gasBasisPerMcf")} /></span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={num(defaults?.pricingDefaults[year]?.gasBasisPerMcf.value ?? null)}
+                  value={pricing[year].gasBasisPerMcf}
+                  onChange={(event) => setPricing((prev) => ({ ...prev, [year]: { ...prev[year], gasBasisPerMcf: event.target.value } }))}
+                />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">Oil differential vs. WTI $/bbl <ClassificationPill classification={pricingClassification(year, "oilDifferentialPerBbl")} /></span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={num(defaults?.pricingDefaults[year]?.oilDifferentialPerBbl.value ?? null)}
+                  value={pricing[year].oilDifferentialPerBbl}
+                  onChange={(event) => setPricing((prev) => ({ ...prev, [year]: { ...prev[year], oilDifferentialPerBbl: event.target.value } }))}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+        <p className="muted panel-note">Realized gas price = Henry Hub + gas differential. Realized oil price = WTI + oil differential. Sign exactly as disclosed by management.</p>
 
         <h3 className="wb-group-title">Valuation</h3>
         <div className="wb-groups">

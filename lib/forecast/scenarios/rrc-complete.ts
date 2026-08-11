@@ -2,6 +2,8 @@ import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
 import { rrcHedgeBookQ1_2026 } from "@/lib/forecast/data/rrc-hedges";
 import { FORECAST_ENGINE_VERSION, runForecastScenario } from "@/lib/forecast/engine";
 import { rollForwardBalanceSheet } from "@/lib/forecast/balance-sheet";
+import { rrcManagementGuidance } from "@/lib/forecast/guidance/rrc";
+import { findGuidance, type GuidanceMetricKey, type GuidanceYear } from "@/lib/forecast/guidance/types";
 import {
   buildFlatProductionForecast,
   toProductionAssumptions,
@@ -50,6 +52,10 @@ export type RrcAnnualOverride = {
   cashInterestMillion?: SourcedValue;
   cashTaxRate?: SourcedValue;
   capexTotalMillion?: SourcedValue;
+  /** Realized gas price = Henry Hub + this differential (sign exactly as disclosed, e.g. a guided "NYMEX minus $0.35-$0.45/Mcf" resolves to -0.40). */
+  gasBasisPerMcf?: SourcedValue;
+  /** Realized oil price = WTI + this differential (sign exactly as disclosed). */
+  oilDifferentialPerBbl?: SourcedValue;
 };
 
 export type RrcAnnualOverrides = Partial<Record<RrcAnnualYear, RrcAnnualOverride>>;
@@ -112,7 +118,29 @@ function unavailable(unit: string, period: string, notes: string): SourcedValue 
   });
 }
 
-function quarterDays(period: string): number {
+/**
+ * Looks up a management-guided pricing differential midpoint for a given year, using the
+ * sign exactly as disclosed (e.g. a guided "NYMEX minus $0.35-$0.45/Mcf" range resolves to
+ * a -0.40 midpoint, matching guidance/rrc.ts's stored low/high). Returns null when RRC did
+ * not guide that metric for that year, so the caller falls back to the existing
+ * modeled/reported anchor rather than fabricating a guided figure.
+ */
+function guidedDifferentialValue(metric: GuidanceMetricKey, year: GuidanceYear, unit: string, period: string): SourcedValue | null {
+  const guidance = findGuidance(rrcManagementGuidance, metric, year);
+  if (!guidance || guidance.midpoint === null) return null;
+  const rangeText = guidance.low !== null && guidance.high !== null ? ` Midpoint of the guided ${guidance.low} to ${guidance.high} ${unit} range.` : "";
+  return value({
+    value: guidance.midpoint,
+    unit,
+    period,
+    classification: "guided",
+    name: guidance.sourceName,
+    reference: guidance.sourceReference,
+    notes: `${guidance.notes ?? ""}${rangeText}`.trim()
+  });
+}
+
+export function quarterDays(period: string): number {
   const year = Number(period.slice(0, 4));
   const quarter = Number(period.slice(-1));
   if (quarter === 1) {
@@ -122,7 +150,7 @@ function quarterDays(period: string): number {
   return quarter === 2 ? 91 : 92;
 }
 
-/** Guided 2026 capital category mix ($mm): $500 maintenance D&C + $130 growth D&C + $25 land/acreage + $20 facilities = $675mm, matching the guided 2026 total capex midpoint exactly. No separate 2027 category-level guidance was issued, so 2027 (and any user-edited total) reuses these same proportions. */
+/** Guided 2026 capital category mix ($mm): $500 maintenance D&C + $130 growth D&C (mid of $120-140MM) + $25 land/acreage (mid of $15-35MM) + $20 facilities (mid of $15-25MM) = $675MM, matching the guided 2026 total capex midpoint exactly. This is the ONLY year RRC discloses a category-level capex breakdown. */
 const GUIDED_2026_CAPEX_SPLIT = { maintenance: 500, growth: 130, land: 25, facilities: 20 };
 const GUIDED_2026_CAPEX_TOTAL =
   GUIDED_2026_CAPEX_SPLIT.maintenance +
@@ -141,20 +169,25 @@ function defaultAnnualCapexMillion(year: number, strategy: RrcPost2027Strategy):
   return { value: 675, classification: "modeled", notes: "No 2028 continued-growth capital figure is guided; this scenario models it as a continuation of the 2026-2027 capital level." };
 }
 
-/** Splits an annual capex total into the engine's four capex line items. Pre-2028, uses the guided 2026 category proportions (scaled to whatever total is in effect); at 2028+ capital goes entirely to whichever bucket matches the selected strategy, consistent with the existing maintenance-vs-growth fork. */
-function capexLineItems(totalMillion: number, year: number, strategy: RrcPost2027Strategy): { maintenance: number; growth: number; land: number; facilities: number } {
-  if (year >= 2028) {
-    return strategy === "maintenance"
-      ? { maintenance: totalMillion, growth: 0, land: 0, facilities: 0 }
-      : { maintenance: 0, growth: totalMillion, land: 0, facilities: 0 };
-  }
-  const scale = totalMillion / GUIDED_2026_CAPEX_TOTAL;
-  return {
-    maintenance: GUIDED_2026_CAPEX_SPLIT.maintenance * scale,
-    growth: GUIDED_2026_CAPEX_SPLIT.growth * scale,
-    land: GUIDED_2026_CAPEX_SPLIT.land * scale,
-    facilities: GUIDED_2026_CAPEX_SPLIT.facilities * scale
-  };
+type CapexCategorySplit = { maintenance: number; growth: number; land: number; facilities: number };
+
+/**
+ * Returns the source-backed capex category breakdown for a year/strategy, or null when no
+ * such breakdown exists. Never scales or reuses another year's proportions against an
+ * arbitrary total: this is consulted ONLY when the period is using the unmodified default
+ * annual total (see periodAssumptions below) -- the moment a caller overrides the total,
+ * there is no longer a disclosed split for that specific number, so the category fields
+ * fall back to unsupported/null rather than an invented proportional estimate.
+ *   - 2026: RRC discloses the full maintenance/growth/land/facilities breakdown.
+ *   - 2028 maintenance strategy: RRC's "2028+ Maintenance D&C: ~$600MM annually" figure IS
+ *     the maintenance category by definition; growth/land/facilities are not addressed and
+ *     stay null rather than being assumed to be zero.
+ *   - Everything else (2027; 2028 continued-growth): no category-level guidance exists.
+ */
+function sourceBackedCapexCategories(year: number, strategy: RrcPost2027Strategy): Partial<CapexCategorySplit> | null {
+  if (year === 2026) return { ...GUIDED_2026_CAPEX_SPLIT };
+  if (year >= 2028 && strategy === "maintenance") return { maintenance: 600 };
+  return null;
 }
 
 function periodAssumptions(
@@ -223,15 +256,27 @@ function periodAssumptions(
       nglRealizationPctOfWti: resolvedNglRealizationPctOfWti
     },
     pricing: {
-      gasBasisPerMcf: value({
-        value: 0.18,
-        unit: "$/Mcf",
-        period,
-        classification: isQ1Actual ? "reported" : "modeled",
-        name: "Range Resources",
-        reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
-        notes: "Uses the Q1 2026 premium to NYMEX including basis hedges as the initial forward anchor."
-      }),
+      gasBasisPerMcf: isQ1Actual
+        ? value({
+            value: 0.18,
+            unit: "$/Mcf",
+            period,
+            classification: "reported",
+            name: "Range Resources",
+            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
+            notes: "Reported Q1 2026 premium to NYMEX including basis hedges. Historical actual; never overridden by guidance or a user assumption."
+          })
+        : annualOverride?.gasBasisPerMcf ??
+          guidedDifferentialValue("gasBasisPerMcf", yearKey, "$/Mcf", period) ??
+          value({
+            value: 0.18,
+            unit: "$/Mcf",
+            period,
+            classification: "modeled",
+            name: "Range Resources",
+            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
+            notes: `Uses the Q1 2026 premium to NYMEX including basis hedges as the forward anchor, held flat; RRC did not guide a gas differential for ${year}.`
+          }),
       gasTransportMarketingPerMcf: value({
         value: 0,
         unit: "$/Mcf",
@@ -268,15 +313,27 @@ function periodAssumptions(
         reference: "No source-backed NGL hedge impact loaded",
         notes: "No separate NGL hedge adjustment applied."
       }),
-      oilDifferentialPerBbl: value({
-        value: -10.68,
-        unit: "$/bbl",
-        period,
-        classification: isQ1Actual ? "reported" : "modeled",
-        name: "Range Resources",
-        reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
-        notes: "Uses the Q1 2026 oil differential as the forward anchor."
-      }),
+      oilDifferentialPerBbl: isQ1Actual
+        ? value({
+            value: -10.68,
+            unit: "$/bbl",
+            period,
+            classification: "reported",
+            name: "Range Resources",
+            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
+            notes: "Reported Q1 2026 oil differential to WTI. Historical actual; never overridden by guidance or a user assumption."
+          })
+        : annualOverride?.oilDifferentialPerBbl ??
+          guidedDifferentialValue("oilDifferentialPerBbl", yearKey, "$/bbl", period) ??
+          value({
+            value: -10.68,
+            unit: "$/bbl",
+            period,
+            classification: "modeled",
+            name: "Range Resources",
+            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
+            notes: `Uses the Q1 2026 oil differential as the forward anchor, held flat; RRC did not guide an oil differential for ${year}.`
+          }),
       oilHedgeImpactPerBbl: value({
         value: 0,
         unit: "$/bbl",
@@ -388,40 +445,66 @@ function periodAssumptions(
     capex: (() => {
       const fallback = defaultAnnualCapexMillion(year, strategy);
       const totalOverride = annualOverride?.capexTotalMillion;
+      const isUsingDefaultTotal = !totalOverride;
       const totalMillion = totalOverride?.value ?? fallback.value;
       const totalClassification: AssumptionClassification = totalOverride ? totalOverride.source.classification : fallback.classification;
       const totalName = totalOverride ? totalOverride.source.name : "Range Resources management guidance (Q1 2026)";
       const totalReference = totalOverride ? totalOverride.source.reference ?? "" : "Peer Comp Site 1Q26 Guidance";
       const totalNotes = totalOverride ? totalOverride.source.notes ?? "" : fallback.notes;
-      const perQuarter = totalMillion === null ? { maintenance: null, growth: null, land: null, facilities: null } : (() => {
-        const annualSplit = capexLineItems(totalMillion, year, strategy);
-        return {
-          maintenance: annualSplit.maintenance / 4,
-          growth: annualSplit.growth / 4,
-          land: annualSplit.land / 4,
-          facilities: annualSplit.facilities / 4
-        };
-      })();
 
-      function line(field: "maintenance" | "growth" | "land" | "facilities", label: string): SourcedValue {
+      // Drives CapexResult.totalMillion (and therefore free cash flow) directly, independent
+      // of whether the category lines below are fully populated -- see calculateCapex, which
+      // prefers this field over the categorical sum. Quarterly = 1/4 of the annual figure.
+      const totalOverrideMillion = value({
+        value: totalMillion === null ? null : totalMillion / 4,
+        unit: "$mm",
+        period,
+        classification: totalClassification,
+        name: totalName,
+        reference: totalReference,
+        notes: `${totalNotes} Total annual CapEx for ${year} (used directly for FCF); category lines are populated only where a source-backed breakdown exists for this exact total.`.trim()
+      });
+
+      // Category-level detail is populated ONLY when this period is using the unmodified
+      // default annual total for a year RRC actually disclosed a category breakdown for
+      // (see sourceBackedCapexCategories) -- never scaled or reused from another year's or
+      // another total's proportions. The moment a caller overrides the annual total, there
+      // is no longer a disclosed split for that specific number, so every category becomes
+      // unsupported/null rather than an invented estimate.
+      const categories = isUsingDefaultTotal ? sourceBackedCapexCategories(year, strategy) : null;
+
+      function categoryLine(field: keyof CapexCategorySplit, label: string): SourcedValue {
+        const annualCategoryValue = categories?.[field];
+        if (annualCategoryValue === undefined) {
+          return value({
+            value: null,
+            unit: "$mm",
+            period,
+            classification: "modeled",
+            name: "RRC Peer Dashboard",
+            reference: "Unsupported input",
+            notes: `No source-backed ${label} figure exists for ${year}${isUsingDefaultTotal ? "" : " at this user-entered total"}; left unsupported rather than estimated from another year's or another total's proportions. Total annual CapEx (which drives FCF) is unaffected.`
+          });
+        }
         return value({
-          value: perQuarter[field],
+          value: annualCategoryValue / 4,
           unit: "$mm",
           period,
-          classification: totalClassification,
-          name: totalName,
-          reference: totalReference,
-          notes: `${label} allocation of the ${year} annual capital case (evenly split across quarters). ${totalNotes}`.trim()
+          classification: "guided",
+          name: "Range Resources management guidance (Q1 2026)",
+          reference: "Peer Comp Site 1Q26 Guidance",
+          notes: `${label} allocation of the guided ${year} annual capital case (evenly split across quarters).`
         });
       }
 
       return {
-        maintenanceDcMillion: line("maintenance", "Maintenance D&C"),
-        growthDcMillion: line("growth", "Growth D&C"),
-        landLeaseholdMillion: line("land", "Land and leasehold"),
-        facilitiesMillion: line("facilities", "Facilities/software/other"),
+        maintenanceDcMillion: categoryLine("maintenance", "Maintenance D&C"),
+        growthDcMillion: categoryLine("growth", "Growth D&C"),
+        landLeaseholdMillion: categoryLine("land", "Land and leasehold"),
+        facilitiesMillion: categoryLine("facilities", "Facilities/software/other"),
         environmentalMillion: value({ value: 0, unit: "$mm", period, classification: "modeled", name: "RRC Peer Dashboard", reference: "Scenario convention", notes: "No separate amount assumed; not guided." }),
-        otherMillion: value({ value: 0, unit: "$mm", period, classification: "modeled", name: "RRC Peer Dashboard", reference: "Scenario convention", notes: "No separate amount assumed; not guided." })
+        otherMillion: value({ value: 0, unit: "$mm", period, classification: "modeled", name: "RRC Peer Dashboard", reference: "Scenario convention", notes: "No separate amount assumed; not guided." }),
+        totalOverrideMillion
       };
     })()
   };

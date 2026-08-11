@@ -4,10 +4,12 @@ import {
   resolveAnnualProductionDefault,
   resolveAnnualCostDefaults,
   resolveAnnualCapexDefault,
+  resolveAnnualPricingDefaults,
   RRC_FORECAST_YEARS,
   type RrcAnnualForecastRequest,
   type RrcAnnualCostsInput,
   type RrcAnnualCapexInput,
+  type RrcAnnualPricingInput,
   type RrcCommodityMode,
   type RrcForecastYear
 } from "@/lib/forecast/scenarios/rrc-annual";
@@ -93,6 +95,24 @@ function sanitizeCapex(input: unknown): RrcAnnualForecastRequest["capex"] {
   return out;
 }
 
+const PRICING_FIELDS: Array<keyof RrcAnnualPricingInput> = ["gasBasisPerMcf", "oilDifferentialPerBbl"];
+
+function sanitizePricing(input: unknown): RrcAnnualForecastRequest["pricing"] {
+  const out: RrcAnnualForecastRequest["pricing"] = {};
+  if (typeof input !== "object" || input === null) return out;
+  for (const year of RRC_FORECAST_YEARS) {
+    const entry = (input as Record<string, unknown>)[year];
+    if (typeof entry !== "object" || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    const sanitized: RrcAnnualPricingInput = {};
+    for (const field of PRICING_FIELDS) {
+      if (validNumber(record[field])) sanitized[field] = record[field] as number;
+    }
+    if (Object.keys(sanitized).length > 0) out[year] = sanitized;
+  }
+  return out;
+}
+
 function sanitizeCommodityMode(value: unknown): RrcCommodityMode {
   return value === "custom" ? "custom" : "current-market";
 }
@@ -113,6 +133,7 @@ type ScenarioRequestBody = {
   production?: unknown;
   costs?: unknown;
   capex?: unknown;
+  pricing?: unknown;
   commodityMode?: unknown;
   customCommodity?: unknown;
   liveCommodity?: { henryHub?: LiveMarketMetric; wti?: LiveMarketMetric };
@@ -138,6 +159,7 @@ function sanitizeRequest(body: ScenarioRequestBody): RrcAnnualForecastRequest {
     production: sanitizeProduction(body.production),
     costs: sanitizeCosts(body.costs),
     capex: sanitizeCapex(body.capex),
+    pricing: sanitizePricing(body.pricing),
     commodityMode,
     customCommodity: commodityMode === "custom" ? sanitizeCustomCommodity(body.customCommodity) : undefined,
     liveCommodity: commodityMode === "current-market" ? buildCurrentMarketPrices(body.liveCommodity ?? {}) : undefined,
@@ -174,6 +196,7 @@ export async function GET() {
     production: {},
     costs: {},
     capex: {},
+    pricing: {},
     commodityMode: "current-market",
     valuation: { targetEvToEbitdax: RRC_VALUATION_PRESETS.base, forwardYear: "2027" }
   };
@@ -185,6 +208,7 @@ export async function GET() {
     productionDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualProductionDefault(year)])),
     costDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCostDefaults(year)])),
     capexDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCapexDefault(year, strategy)])),
+    pricingDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualPricingDefaults(year)])),
     currentNetDebtMillion: rrcQ1_2026Baseline.balanceSheetNetDebtMillion.value,
     dilutedSharesMillion: rrcQ1_2026Baseline.dilutedSharesMillion.value,
     result: runRrcAnnualForecast(defaultRequest)

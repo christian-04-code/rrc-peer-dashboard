@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const { load } = require("./helpers/ts-loader.cjs");
 
 const rrcAnnual = load("lib/forecast/scenarios/rrc-annual.ts");
+const rrcComplete = load("lib/forecast/scenarios/rrc-complete.ts");
 const guidance = load("lib/forecast/guidance/rrc.ts");
 const guidanceTypes = load("lib/forecast/guidance/types.ts");
 
@@ -12,6 +13,7 @@ function baseRequest(overrides = {}) {
     production: {},
     costs: {},
     capex: {},
+    pricing: {},
     commodityMode: "current-market",
     valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" },
     ...overrides
@@ -186,4 +188,105 @@ test("Q1 2026 stays reported/historical regardless of production, cost, or capex
   const q1Base = base.quarterly.find((p) => p.period === "2026Q1");
   assert.equal(q1.production.totalMcfe, q1Base.production.totalMcfe);
   assert.equal(q1.revenue.totalMillion, q1Base.revenue.totalMillion);
+});
+
+// --- CapEx: no category inference when no source-backed split exists ---
+
+test("2027 (guided total only, no category-level guidance) leaves every capex category line unsupported/null rather than reusing 2026's proportions", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const q1_2027 = scenario.periods.find((p) => p.period === "2027Q1");
+  assert.equal(q1_2027.capex.maintenanceDcMillion.value, null);
+  assert.equal(q1_2027.capex.growthDcMillion.value, null);
+  assert.equal(q1_2027.capex.landLeaseholdMillion.value, null);
+  assert.equal(q1_2027.capex.facilitiesMillion.value, null);
+  // Total (which FCF depends on) is unaffected by the unsupported categories.
+  assert.ok(Math.abs(q1_2027.capex.totalOverrideMillion.value - 675 / 4) < 1e-9);
+});
+
+test("2026 (real guided category breakdown: 500/130/25/20 = $675mm) populates every category line from the actual disclosed figures", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const q1_2026 = scenario.periods.find((p) => p.period === "2026Q1");
+  assert.ok(Math.abs(q1_2026.capex.maintenanceDcMillion.value - 500 / 4) < 1e-9);
+  assert.ok(Math.abs(q1_2026.capex.growthDcMillion.value - 130 / 4) < 1e-9);
+  assert.ok(Math.abs(q1_2026.capex.landLeaseholdMillion.value - 25 / 4) < 1e-9);
+  assert.ok(Math.abs(q1_2026.capex.facilitiesMillion.value - 20 / 4) < 1e-9);
+  for (const field of ["maintenanceDcMillion", "growthDcMillion", "landLeaseholdMillion", "facilitiesMillion"]) {
+    assert.equal(q1_2026.capex[field].source.classification, "guided");
+  }
+});
+
+test("overriding 2026's total capex to a number RRC never disclosed a breakdown for nulls every category line -- it does not scale the guided 500/130/25/20 proportions onto the new total", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {
+    annualOverrides: { 2026: { capexTotalMillion: { value: 800, unit: "$mm", source: { name: "User input", period: "user-entered", retrievedAt: "now", classification: "user", notes: "" } } } }
+  });
+  const q1_2026 = scenario.periods.find((p) => p.period === "2026Q1");
+  assert.equal(q1_2026.capex.maintenanceDcMillion.value, null);
+  assert.equal(q1_2026.capex.growthDcMillion.value, null);
+  assert.equal(q1_2026.capex.landLeaseholdMillion.value, null);
+  assert.equal(q1_2026.capex.facilitiesMillion.value, null);
+  assert.ok(Math.abs(q1_2026.capex.totalOverrideMillion.value - 800 / 4) < 1e-9);
+  assert.equal(q1_2026.capex.totalOverrideMillion.source.classification, "user");
+});
+
+test("annual FCF uses the correct total annual CapEx for a year with no category-level guidance (2027)", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest());
+  assert.ok(Math.abs(result.annual["2027"].capexMillion - 675) < 0.5);
+  const quarters = result.quarterly.filter((p) => p.period.startsWith("2027"));
+  const fcfFromQuarters = quarters.reduce((sum, p) => sum + p.freeCashFlowMillion, 0);
+  assert.ok(Math.abs(result.annual["2027"].freeCashFlowMillion - fcfFromQuarters) < 1e-6);
+});
+
+// --- Realized pricing: management differential midpoints flow into realized gas/oil pricing ---
+
+test("management gas differential midpoint flows into realized gas pricing for a guided year (2026, non-Q1)", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const q2_2026 = scenario.periods.find((p) => p.period === "2026Q2");
+  assert.equal(q2_2026.pricing.gasBasisPerMcf.value, -0.4);
+  assert.equal(q2_2026.pricing.gasBasisPerMcf.source.classification, "guided");
+  // Realized gas price = Henry Hub (3.75 modeled default, no live/custom price supplied) + guided differential.
+  const { calculatePricing } = load("lib/forecast/calculations.ts");
+  const result = calculatePricing(q2_2026, []);
+  assert.ok(Math.abs(result.realizedGasPerMcf - (3.75 + -0.4)) < 1e-9);
+});
+
+test("management oil differential midpoint flows into realized oil pricing for a guided year (2026, non-Q1)", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const q2_2026 = scenario.periods.find((p) => p.period === "2026Q2");
+  assert.equal(q2_2026.pricing.oilDifferentialPerBbl.value, -12);
+  assert.equal(q2_2026.pricing.oilDifferentialPerBbl.source.classification, "guided");
+  const { calculatePricing } = load("lib/forecast/calculations.ts");
+  const result = calculatePricing(q2_2026, []);
+  assert.ok(Math.abs(result.realizedOilPerBbl - (65 + -12)) < 1e-9);
+});
+
+test("a year RRC did not guide a differential for (2027) does not silently use the Q1 2026 realized differential as guidance -- it falls back to the existing modeled anchor, classified 'modeled' not 'guided'", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const q2_2027 = scenario.periods.find((p) => p.period === "2027Q2");
+  assert.equal(q2_2027.pricing.gasBasisPerMcf.value, 0.18);
+  assert.equal(q2_2027.pricing.gasBasisPerMcf.source.classification, "modeled");
+  assert.equal(q2_2027.pricing.oilDifferentialPerBbl.value, -10.68);
+  assert.equal(q2_2027.pricing.oilDifferentialPerBbl.source.classification, "modeled");
+});
+
+test("a user-entered pricing differential supersedes guidance and is classified 'user'", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ pricing: { 2026: { oilDifferentialPerBbl: -20 } } }));
+  const q2_2026 = result.quarterly.find((p) => p.period === "2026Q2");
+  // realized oil = WTI (65 modeled default) + user override (-20), not the guided -12.
+  assert.ok(Math.abs(q2_2026.pricing.realizedOilPerBbl - (65 + -20)) < 1e-9);
+
+  const resolved = rrcAnnual.resolveRrcAnnualInputs(baseRequest({ pricing: { 2026: { oilDifferentialPerBbl: -20 } } }));
+  assert.equal(resolved.annualOverrides["2026"].oilDifferentialPerBbl.value, -20);
+  assert.equal(resolved.annualOverrides["2026"].oilDifferentialPerBbl.source.classification, "user");
+});
+
+// --- G&A $/Mcfe conversion reconciles to the forecast's own annual production volume ---
+
+test("G&A $/Mcfe conversion uses the exact same annual production volume the forecast uses for Revenue, not a separate 365-day approximation", () => {
+  const cashGaPerMcfe = 0.25;
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ costs: { 2027: { cashGaPerMcfe } } } ));
+  const annualMcfe = result.annual["2027"].production.totalMcfe;
+  const quarters = result.quarterly.filter((p) => p.period.startsWith("2027"));
+  const gaFromQuarters = quarters.reduce((sum, p) => sum + p.costs.cashGaMillion, 0);
+  const expectedAnnualGa = (annualMcfe * cashGaPerMcfe) / 1000;
+  assert.ok(Math.abs(gaFromQuarters - expectedAnnualGa) < 1e-6, `G&A derived from the forecast's own quarters ($${gaFromQuarters}mm) should equal rate x forecast volume ($${expectedAnnualGa}mm) exactly, not an approximation`);
 });
