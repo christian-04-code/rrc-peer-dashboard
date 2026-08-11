@@ -24,17 +24,16 @@ test("ForecastWorkspacePanel does not fabricate a forecast for tickers the engin
   assert.match(source, /&quot;--&quot;|"--"/);
 });
 
-test("ForecastWorkspacePanel wires live commodity prices into the workbench, preserving the existing live-pricing feature", () => {
-  assert.match(source, /extractLiveMarketMetrics/);
-  assert.match(source, /useMarketData/);
-});
-
 const rrcWorkbenchSource = fs.readFileSync(
   path.join(process.cwd(), "components", "forecast", "RrcScenarioWorkbench.tsx"),
   "utf8"
 );
 
-test("RrcScenarioWorkbench accepts and forwards currentMarketPrices without changing its default (no-prop) behavior", () => {
-  assert.match(rrcWorkbenchSource, /currentMarketPrices\?:/);
-  assert.match(rrcWorkbenchSource, /currentMarketPrices\s*[,}]/);
+test("RrcScenarioWorkbench is self-sufficient: it resolves live commodity prices itself via useMarketData, rather than requiring ForecastWorkspacePanel to compute and drill them down as props", () => {
+  assert.match(rrcWorkbenchSource, /useMarketData/);
+  assert.match(rrcWorkbenchSource, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
+  assert.match(rrcWorkbenchSource, /resolveCommoditySources\(market\.data\)/);
+  // No commodity props expected on the call site -- confirms the simplification actually
+  // removed the prop-drilling rather than leaving unused plumbing behind.
+  assert.match(source, /<RrcScenarioWorkbench \/>/);
 });

@@ -8,11 +8,18 @@ function readComponent(...segments) {
   return fs.readFileSync(path.join(process.cwd(), ...segments), "utf8");
 }
 
-test("ForecastWorkspacePanel no longer polls FMP; commodity inputs use OilPriceAPI-first/EIA-fallback via the existing /api/market response", () => {
-  const source = readComponent("components", "dashboard", "ForecastWorkspacePanel.tsx");
-  assert.doesNotMatch(source, /useFmpQuotes/);
-  assert.doesNotMatch(source, /extractLiveMarketMetricsWithFallback/);
-  assert.match(source, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
+test("Forecast no longer polls FMP; commodity inputs use OilPriceAPI-first/EIA-fallback via the existing /api/market response", () => {
+  const panelSource = readComponent("components", "dashboard", "ForecastWorkspacePanel.tsx");
+  assert.doesNotMatch(panelSource, /useFmpQuotes/);
+  assert.doesNotMatch(panelSource, /extractLiveMarketMetricsWithFallback/);
+
+  // RrcScenarioWorkbench is self-sufficient (calls useMarketData() itself) rather than
+  // receiving commodity props from ForecastWorkspacePanel; the OilPriceAPI-first/EIA-fallback
+  // wiring lives there now.
+  const workbenchSource = readComponent("components", "forecast", "RrcScenarioWorkbench.tsx");
+  assert.doesNotMatch(workbenchSource, /useFmpQuotes/);
+  assert.doesNotMatch(workbenchSource, /extractLiveMarketMetricsWithFallback/);
+  assert.match(workbenchSource, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
 });
 
 test("HomeDashboard's forecast chart commodity prices use OilPriceAPI-first/EIA-fallback (FMP removed from that flow)", () => {

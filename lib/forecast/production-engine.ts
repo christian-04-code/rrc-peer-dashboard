@@ -33,12 +33,22 @@ export type ProductionRatePerDay = {
 
 export type ProductionSourceClassification = "reported" | "override";
 
-/** A user-entered production value for one future period. Omit a field to leave it at the reported baseline; pass null to explicitly clear it. */
+/** Describes who/what supplied an override, when it isn't a raw user entry (e.g. a management-guidance-derived default). Omitting this preserves the original behavior: every override is attributed to the end user. */
+export type ProductionOverrideAttribution = {
+  classification: Exclude<AssumptionSource["classification"], "reported">;
+  sourceName: string;
+  sourceReference?: string;
+  notePrefix: string;
+};
+
+/** A production value for one future period, from the user or from a resolved default (e.g. a management-guidance target). Omit a field to leave it at the reported baseline; pass null to explicitly clear it. */
 export type ProductionOverrideInput = {
   period: string;
   gasMmcfPerDay?: number | null;
   nglMbblPerDay?: number | null;
   oilMbblPerDay?: number | null;
+  /** Defaults to { classification: "user", sourceName: "User production assumption", notePrefix: "User production assumption. Not company guidance; a local scenario override." } */
+  attribution?: ProductionOverrideAttribution;
 };
 
 export type FlatProductionPeriodResult = {
@@ -82,13 +92,20 @@ function rate(gas: number | null, ngl: number | null, oil: number | null): Produ
   return { gasMmcfPerDay: gas, nglMbblPerDay: ngl, oilMbblPerDay: oil, totalMcfePerDay: totalFromMcfe(gas, ngl, oil) };
 }
 
-function overrideSource(period: string, notes: string): AssumptionSource {
+const DEFAULT_ATTRIBUTION: ProductionOverrideAttribution = {
+  classification: "user",
+  sourceName: "User production assumption",
+  notePrefix: "User production assumption. Not company guidance; a local scenario override."
+};
+
+function overrideSource(period: string, notes: string, attribution: ProductionOverrideAttribution = DEFAULT_ATTRIBUTION): AssumptionSource {
   return {
-    name: "User production assumption",
+    name: attribution.sourceName,
+    reference: attribution.sourceReference,
     period,
     retrievedAt: new Date(0).toISOString(),
-    classification: "modeled",
-    notes: `User production assumption. Not company guidance; a local scenario override. ${notes}`
+    classification: attribution.classification,
+    notes: `${attribution.notePrefix} ${notes}`.trim()
   };
 }
 
@@ -105,24 +122,25 @@ function resolveField(
   reportedSourceValue: AssumptionSource,
   overrideRaw: number | null | undefined,
   period: string,
-  warnings: string[]
+  warnings: string[],
+  attribution?: ProductionOverrideAttribution
 ): { value: number | null; source: AssumptionSource; overridden: boolean } {
   if (overrideRaw === undefined) {
     return { value: reportedValue, source: reportedSource(reportedSourceValue), overridden: false };
   }
   if (overrideRaw === null) {
     warnings.push(`${displayLabel} for ${period} was explicitly cleared by a user override.`);
-    return { value: null, source: overrideSource(period, `${displayLabel} explicitly cleared.`), overridden: true };
+    return { value: null, source: overrideSource(period, `${displayLabel} explicitly cleared.`, attribution), overridden: true };
   }
   if (!isFiniteNumber(overrideRaw)) {
     warnings.push(`${displayLabel} override for ${period} is not a finite number; rejected.`);
-    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: not finite.`), overridden: true };
+    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: not finite.`, attribution), overridden: true };
   }
   if (overrideRaw < 0) {
     warnings.push(`${displayLabel} override for ${period} is negative (${overrideRaw}); rejected rather than clamped.`);
-    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: negative.`), overridden: true };
+    return { value: null, source: overrideSource(period, `${displayLabel} override rejected: negative.`, attribution), overridden: true };
   }
-  return { value: overrideRaw, source: overrideSource(period, `${displayLabel} set to ${overrideRaw}.`), overridden: true };
+  return { value: overrideRaw, source: overrideSource(period, `${displayLabel} set to ${overrideRaw}.`, attribution), overridden: true };
 }
 
 /**
@@ -168,9 +186,9 @@ export function buildFlatProductionForecast(
       override = undefined;
     }
 
-    const gas = resolveField("gas", "Gas production", reportedGas, latestReported.gasMmcfPerDay.source, override?.gasMmcfPerDay, period, warnings);
-    const ngl = resolveField("ngl", "NGL production", reportedNgl, latestReported.nglMbblPerDay.source, override?.nglMbblPerDay, period, warnings);
-    const oil = resolveField("oil", "Oil production", reportedOil, latestReported.oilMbblPerDay.source, override?.oilMbblPerDay, period, warnings);
+    const gas = resolveField("gas", "Gas production", reportedGas, latestReported.gasMmcfPerDay.source, override?.gasMmcfPerDay, period, warnings, override?.attribution);
+    const ngl = resolveField("ngl", "NGL production", reportedNgl, latestReported.nglMbblPerDay.source, override?.nglMbblPerDay, period, warnings, override?.attribution);
+    const oil = resolveField("oil", "Oil production", reportedOil, latestReported.oilMbblPerDay.source, override?.oilMbblPerDay, period, warnings, override?.attribution);
 
     const overriddenFields = ([
       ["gas", gas.overridden],

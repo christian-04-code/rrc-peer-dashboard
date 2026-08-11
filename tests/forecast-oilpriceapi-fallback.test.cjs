@@ -227,11 +227,13 @@ test("12. Forecast formulas produce exactly the same result for identical input 
   );
 });
 
-test("13. Bear/Base/Bull presets are unchanged", () => {
+test("13. Bear/Base/Bull EV/EBITDAX multiples are unchanged", () => {
+  // The simplified Forecast page keeps bear/base/bull as transparent, valuation-only EV/EBITDAX
+  // presets (4.5x / 5.5x / 6.5x, unchanged from the prior scenario workbench). DCF moved to a
+  // secondary, non-preset-driven output, so discount rate / terminal growth are no longer part
+  // of the preset shape -- see rrc-annual.ts's fixed DEFAULT_DCF_DISCOUNT_RATE/TERMINAL_GROWTH_RATE.
   const source = fs.readFileSync(path.join(process.cwd(), "app", "api", "rrc-scenarios", "route.ts"), "utf8");
-  assert.match(source, /bear:\s*\{\s*targetEvToEbitdax:\s*4\.5,\s*discountRate:\s*0\.12,\s*terminalGrowthRate:\s*-0\.01\s*\}/);
-  assert.match(source, /base:\s*\{\s*targetEvToEbitdax:\s*5\.5,\s*discountRate:\s*0\.1,\s*terminalGrowthRate:\s*0\s*\}/);
-  assert.match(source, /bull:\s*\{\s*targetEvToEbitdax:\s*6\.5,\s*discountRate:\s*0\.09,\s*terminalGrowthRate:\s*0\.01\s*\}/);
+  assert.match(source, /RRC_VALUATION_PRESETS\s*=\s*\{\s*bear:\s*4\.5,\s*base:\s*5\.5,\s*bull:\s*6\.5\s*\}/);
 });
 
 test("14. No Forecast client code directly calls OilPriceAPI -- only /api/market's existing server-side integration does", () => {

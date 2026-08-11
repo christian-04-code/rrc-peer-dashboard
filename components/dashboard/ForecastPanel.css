@@ -48,6 +48,18 @@
 
 .wb-compare-empty { border: 1px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
 
+.ann-pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+
+.ann-year-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
+
+.ann-guidance-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ann-guidance-table th, .ann-guidance-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.ann-guidance-table thead th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+
+.ann-details { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.ann-details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text); }
+.ann-details[open] summary { margin-bottom: 6px; }
+
 @media (max-width: 720px) {
   .forecast-head { flex-direction: column; align-items: stretch; }
 }

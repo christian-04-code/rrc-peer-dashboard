@@ -1,5 +1,7 @@
 export type ScenarioKind = "bear" | "base" | "bull" | "custom" | "live";
-export type AssumptionClassification = "reported" | "guided" | "modeled" | "live";
+// reported = filed/actual; guided = management guidance; live = current market;
+// modeled = engine/analyst assumption; user = explicit user override.
+export type AssumptionClassification = "reported" | "guided" | "modeled" | "live" | "user";
 
 export type AssumptionSource = {
   name: string;

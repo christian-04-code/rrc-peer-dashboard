@@ -5,26 +5,34 @@ const path = require("node:path");
 
 const source = fs.readFileSync(path.join(process.cwd(), "components", "forecast", "RrcScenarioWorkbench.tsx"), "utf8");
 
-test("preset defaults powering the Bear/Base/Bull tooltip match the documented valuation assumptions exactly", () => {
-  assert.match(source, /bear:\s*{\s*targetEvToEbitdax:\s*4\.5,\s*discountRate:\s*0\.12,\s*terminalGrowthRate:\s*-0\.01\s*}/);
-  assert.match(source, /base:\s*{\s*targetEvToEbitdax:\s*5\.5,\s*discountRate:\s*0\.1,\s*terminalGrowthRate:\s*0\s*}/);
-  assert.match(source, /bull:\s*{\s*targetEvToEbitdax:\s*6\.5,\s*discountRate:\s*0\.09,\s*terminalGrowthRate:\s*0\.01\s*}/);
+// The simplified Forecast page dropped the old hover/click info-tooltip in favor of a
+// simpler transparency mechanism: the exact multiple a preset applies is always visible
+// and editable in the "Target EV / EBITDAX" field itself (no explanatory copy needed to
+// see what a preset changes), and the valuation summary states the multiple actually used
+// ("AT {multiple}x") next to its EBITDAX input. These tests assert that mechanism instead
+// of the removed PresetInfoTooltip component.
+
+test("Bear/Base/Bull EV/EBITDAX multiples match the documented, unchanged valuation assumptions", () => {
+  assert.match(source, /PRESET_MULTIPLES\s*=\s*\{\s*bear:\s*4\.5,\s*base:\s*5\.5,\s*bull:\s*6\.5\s*\}/);
 });
 
-test("a preset info tooltip is wired next to the scenario preset control and derives text from the real preset values", () => {
-  assert.match(source, /function PresetInfoTooltip/);
-  assert.match(source, /Scenario preset[\s\S]*<PresetInfoTooltip \/>[\s\S]*<select value={preset}/);
-  assert.match(source, /formatPresetAssumptions\(presetDefaults\.bear\)/);
-  assert.match(source, /formatPresetAssumptions\(presetDefaults\.base\)/);
-  assert.match(source, /formatPresetAssumptions\(presetDefaults\.bull\)/);
+test("selecting a preset updates the visible, editable target multiple field (no hidden state)", () => {
+  assert.match(source, /useEffect\(\(\) => setMultiple\(String\(PRESET_MULTIPLES\[preset\]\)\), \[preset\]\)/);
+  assert.match(source, /targetEvToEbitdax:\s*parsedOrUndefined\(multiple\)\s*\?\?\s*PRESET_MULTIPLES\[preset\]/);
 });
 
-test("tooltip copy clarifies these are valuation-only presets, not commodity/operating scenarios", () => {
-  assert.match(source, /Valuation scenario presets only/);
-  assert.match(source, /not commodity prices, production, CapEx, or costs/);
+test("the preset selector only changes the target multiple -- it does not touch production, commodity, cost, or capex state", () => {
+  const presetGroupStart = source.indexOf("Scenario preset");
+  const presetGroupEnd = source.indexOf("</label>", presetGroupStart);
+  const presetGroup = source.slice(presetGroupStart, presetGroupEnd);
+  assert.doesNotMatch(presetGroup, /setProduction|setCosts|setCapex|setCommodityMode/);
 });
 
-test("the preset tooltip does not introduce new scenario assumptions or touch valuation formulas", () => {
-  assert.doesNotMatch(source, /nglRealizationPctOfWti\s*[:=]\s*[0-9.]+;?\s*\/\/.*(preset|tooltip)/i);
-  assert.match(source, /useState<Preset>\("base"\)/, "the default preset is unchanged");
+test("the default preset is unchanged", () => {
+  assert.match(source, /useState<Preset>\("base"\)/);
+});
+
+test("the resulting valuation summary states the exact multiple used against the exact forward-year EBITDAX, so the preset's effect stays visible in the output, not just the input", () => {
+  assert.match(source, /at \{multiple\}x/);
+  assert.match(source, /\{result\.valuation\.forwardYear\}E EBITDAX x multiple/);
 });
