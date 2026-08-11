@@ -131,6 +131,12 @@ function number(value: number | null, digits = 1) {
   return value === null ? "--" : value.toFixed(digits);
 }
 
+function netDebtDisplay(value: number | null) {
+  if (value === null) return { label: "Ending net debt", value: "--", tone: "" as const };
+  if (value < 0) return { label: "Net cash", value: money(Math.abs(value)), tone: "positive" as const };
+  return { label: "Ending net debt", value: money(value), tone: "" as const };
+}
+
 const COMMODITY_CLASSIFICATION_LABEL: Record<ResolvedCommodityClassification, string> = {
   current_market: "OilPriceAPI · Current Market",
   official_delayed: "EIA · Latest Official / Delayed",
@@ -329,31 +335,56 @@ export function RrcScenarioWorkbench({
         <p style={{ margin: 0, opacity: 0.75 }}>Bear, base, and bull valuation cases with an explicit 2028 maintenance-versus-growth fork.</p>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <label>
-          Scenario preset
-          <PresetInfoTooltip />
-          <select value={preset} onChange={(event) => setPreset(event.target.value as Preset)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="bear">Bear</option><option value="base">Base</option><option value="bull">Bull</option></select>
-        </label>
-        <label>Post-2027 strategy<select value={strategy} onChange={(event) => setStrategy(event.target.value as Strategy)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="maintenance">Maintenance</option><option value="continued-growth">Continued growth</option></select></label>
-        <label>Target EV / EBITDAX<input type="number" step="0.1" value={assumptions.targetEvToEbitdax} onChange={(event) => setAssumptions({ ...assumptions, targetEvToEbitdax: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
-        <label>Discount rate<input type="number" step="0.005" value={assumptions.discountRate} onChange={(event) => setAssumptions({ ...assumptions, discountRate: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
-        <label>Terminal growth<input type="number" step="0.005" value={assumptions.terminalGrowthRate} onChange={(event) => setAssumptions({ ...assumptions, terminalGrowthRate: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
+      <section className="wb-groups">
+        <div className="wb-group">
+          <h3 className="wb-group-title">Operating strategy</h3>
+          <label className="wb-field">
+            <span className="wb-field-label">Scenario preset<PresetInfoTooltip /></span>
+            <select value={preset} onChange={(event) => setPreset(event.target.value as Preset)}><option value="bear">Bear</option><option value="base">Base</option><option value="bull">Bull</option></select>
+          </label>
+          <label className="wb-field">Post-2027 strategy<select value={strategy} onChange={(event) => setStrategy(event.target.value as Strategy)}><option value="maintenance">Maintenance</option><option value="continued-growth">Continued growth</option></select></label>
+        </div>
+
+        <div className="wb-group">
+          <h3 className="wb-group-title">Valuation assumptions</h3>
+          <label className="wb-field">
+            Target EV / EBITDAX
+            <span className="wb-suffix-input">
+              <input type="number" step="0.1" value={assumptions.targetEvToEbitdax} onChange={(event) => setAssumptions({ ...assumptions, targetEvToEbitdax: Number(event.target.value) })} />
+              <span>x</span>
+            </span>
+          </label>
+          <label className="wb-field">
+            Discount rate
+            <span className="wb-suffix-input">
+              <input type="number" step="0.5" value={Number((assumptions.discountRate * 100).toFixed(1))} onChange={(event) => setAssumptions({ ...assumptions, discountRate: Number(event.target.value) / 100 })} />
+              <span>%</span>
+            </span>
+          </label>
+          <label className="wb-field">
+            Terminal growth
+            <span className="wb-suffix-input">
+              <input type="number" step="0.5" value={Number((assumptions.terminalGrowthRate * 100).toFixed(1))} onChange={(event) => setAssumptions({ ...assumptions, terminalGrowthRate: Number(event.target.value) / 100 })} />
+              <span>%</span>
+            </span>
+          </label>
+        </div>
       </section>
 
-      <section style={{ border: "1px solid rgba(128,128,128,0.35)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 16 }}>Production assumption</h2>
-          <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(128,128,128,0.35)", background: productionMode === "override" ? "rgba(240,180,40,0.16)" : "rgba(40,180,120,0.16)" }}>
+      <h2 className="wb-group-title" style={{ margin: "2px 0 -6px" }}>Forecast drivers</h2>
+
+      <section className="wb-section">
+        <div className="wb-section-head">
+          <h2>Production assumption</h2>
+          <span className={`wb-pill ${productionMode === "override" ? "override" : "reported"}`}>
             {productionMode === "override" ? "User production assumption" : (latestReported ? `${latestReported.sourceLabel}` : "Latest reported production")}
           </span>
         </div>
 
-        <label>Production mode
+        <label className="wb-field">Production mode
           <select
             value={productionMode}
             onChange={(event) => setProductionMode(event.target.value as ProductionMode)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
           >
             <option value="reported">Latest reported</option>
             <option value="override">Manual override</option>
@@ -361,9 +392,14 @@ export function RrcScenarioWorkbench({
         </label>
 
         {latestReported ? (
-          <p style={{ margin: 0, fontSize: 12, opacity: 0.75 }}>
-            {latestReported.sourceLabel}: gas {number(latestReported.gasMmcfPerDay, 1)} MMcf/d, NGL {number(latestReported.nglMbblPerDay, 1)} Mbbl/d, oil {number(latestReported.oilMbblPerDay, 1)} Mbbl/d. Held constant across all future periods by default.
-          </p>
+          <div>
+            <div className="wb-latest-stats">
+              <div className="wb-latest-stat"><span>Gas</span><strong>{number(latestReported.gasMmcfPerDay, 1)} <small>MMcf/d</small></strong></div>
+              <div className="wb-latest-stat"><span>NGL</span><strong>{number(latestReported.nglMbblPerDay, 1)} <small>Mbbl/d</small></strong></div>
+              <div className="wb-latest-stat"><span>Oil</span><strong>{number(latestReported.oilMbblPerDay, 1)} <small>Mbbl/d</small></strong></div>
+            </div>
+            <p className="wb-latest-note">{latestReported.sourceLabel} · held constant across all future periods by default.</p>
+          </div>
         ) : null}
 
         {productionMode === "override" ? (
@@ -372,33 +408,38 @@ export function RrcScenarioWorkbench({
               <button type="button" onClick={copyLatestReportedToAllPeriods} style={{ padding: "6px 10px" }}>Copy latest reported to all periods</button>
               <button type="button" onClick={resetProduction} style={{ padding: "6px 10px" }}>Reset to latest reported</button>
             </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    <th align="left">Period</th>
-                    <th align="left">Gas (MMcf/d)</th>
-                    <th align="left">NGL (Mbbl/d)</th>
-                    <th align="left">Oil (Mbbl/d)</th>
-                    <th align="left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {FUTURE_PERIODS.map((period) => {
-                    const row = overrides[period] ?? { gasMmcfPerDay: "", nglMbblPerDay: "", oilMbblPerDay: "" };
-                    return (
-                      <tr key={period}>
-                        <td>{period}</td>
-                        <td><input type="number" placeholder="reported" value={row.gasMmcfPerDay} onChange={(event) => updateOverride(period, "gasMmcfPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td><input type="number" placeholder="reported" value={row.nglMbblPerDay} onChange={(event) => updateOverride(period, "nglMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td><input type="number" placeholder="reported" value={row.oilMbblPerDay} onChange={(event) => updateOverride(period, "oilMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td>{isOverridden(period) ? "Override" : "Latest reported"}</td>
+            {[2026, 2027, 2028].map((year) => (
+              <div className="wb-year-group" key={year}>
+                <p className="wb-year-label">{year}</p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        <th align="left">Period</th>
+                        <th align="left">Gas (MMcf/d)</th>
+                        <th align="left">NGL (Mbbl/d)</th>
+                        <th align="left">Oil (Mbbl/d)</th>
+                        <th align="left">Status</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {FUTURE_PERIODS.filter((period) => period.startsWith(String(year))).map((period) => {
+                        const row = overrides[period] ?? { gasMmcfPerDay: "", nglMbblPerDay: "", oilMbblPerDay: "" };
+                        return (
+                          <tr key={period}>
+                            <td>{period}</td>
+                            <td><input type="number" placeholder="reported" value={row.gasMmcfPerDay} onChange={(event) => updateOverride(period, "gasMmcfPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
+                            <td><input type="number" placeholder="reported" value={row.nglMbblPerDay} onChange={(event) => updateOverride(period, "nglMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
+                            <td><input type="number" placeholder="reported" value={row.oilMbblPerDay} onChange={(event) => updateOverride(period, "oilMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
+                            <td>{isOverridden(period) ? "Override" : "Latest reported"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </>
         ) : null}
       </section>
@@ -412,17 +453,20 @@ export function RrcScenarioWorkbench({
       {error ? <p role="alert">{error}</p> : null}
 
       {current ? (
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
-          <article><small>2027 EBITDAX</small><h2>{money(current.result.forecast2027EbitdaxMillion)}</h2></article>
-          <article><small>Ending net debt</small><h2>{money(current.result.endingNetDebtMillion)}</h2></article>
-          <article><small>Multiple value / share</small><h2>{money(current.result.multiple.impliedSharePrice, 2)}</h2></article>
-          <article><small>DCF value / share</small><h2>{money(current.result.dcf.impliedSharePrice, 2)}</h2></article>
-          {fcf.map((item) => <article key={item.year}><small>{item.year} FCF</small><h2>{money(item.value)}</h2></article>)}
+        <section className="wb-result-grid">
+          <div className="wb-result-card"><small>DCF value / share</small><strong>{money(current.result.dcf.impliedSharePrice, 2)}</strong></div>
+          <div className="wb-result-card"><small>Multiple value / share</small><strong>{money(current.result.multiple.impliedSharePrice, 2)}</strong></div>
+          <div className="wb-result-card"><small>2027 EBITDAX</small><strong>{money(current.result.forecast2027EbitdaxMillion)}</strong></div>
+          <div className="wb-result-card">
+            <small>{netDebtDisplay(current.result.endingNetDebtMillion).label}</small>
+            <strong className={netDebtDisplay(current.result.endingNetDebtMillion).tone}>{netDebtDisplay(current.result.endingNetDebtMillion).value}</strong>
+          </div>
+          {fcf.map((item) => <div className="wb-result-card" key={item.year}><small>{item.year} FCF</small><strong>{money(item.value)}</strong></div>)}
         </section>
       ) : null}
 
       {forecastPeriods.length > 0 ? (
-        <section>
+        <section className="wb-section">
           <h2>Quarterly production and revenue</h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -445,28 +489,32 @@ export function RrcScenarioWorkbench({
         </section>
       ) : null}
 
-      <section>
+      <section className="wb-section">
         <h2>Maintenance vs. growth valuation bridge</h2>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th align="left">Metric</th><th align="right">Maintenance</th><th align="right">Growth</th><th align="right">Difference</th></tr></thead>
-            <tbody>
-              {[
-                ["2027 EBITDAX", comparison.maintenance?.result.forecast2027EbitdaxMillion ?? null, comparison["continued-growth"]?.result.forecast2027EbitdaxMillion ?? null],
-                ["Ending net debt", comparison.maintenance?.result.endingNetDebtMillion ?? null, comparison["continued-growth"]?.result.endingNetDebtMillion ?? null],
-                ["EV/EBITDAX implied share price", comparison.maintenance?.result.multiple.impliedSharePrice ?? null, comparison["continued-growth"]?.result.multiple.impliedSharePrice ?? null],
-                ["DCF implied share price", comparison.maintenance?.result.dcf.impliedSharePrice ?? null, comparison["continued-growth"]?.result.dcf.impliedSharePrice ?? null]
-              ].map(([label, maintenance, growth]) => {
-                const left = maintenance as number | null;
-                const right = growth as number | null;
-                return <tr key={label as string}><td>{label}</td><td align="right">{number(left, 2)}</td><td align="right">{number(right, 2)}</td><td align="right">{left === null || right === null ? "--" : number(right - left, 2)}</td></tr>;
-              })}
-            </tbody>
-          </table>
-        </div>
+        {comparison.maintenance && comparison["continued-growth"] ? (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr><th align="left">Metric</th><th align="right">Maintenance</th><th align="right">Growth</th><th align="right">Difference</th></tr></thead>
+              <tbody>
+                {[
+                  ["2027 EBITDAX", comparison.maintenance?.result.forecast2027EbitdaxMillion ?? null, comparison["continued-growth"]?.result.forecast2027EbitdaxMillion ?? null],
+                  ["Ending net debt", comparison.maintenance?.result.endingNetDebtMillion ?? null, comparison["continued-growth"]?.result.endingNetDebtMillion ?? null],
+                  ["EV/EBITDAX implied share price", comparison.maintenance?.result.multiple.impliedSharePrice ?? null, comparison["continued-growth"]?.result.multiple.impliedSharePrice ?? null],
+                  ["DCF implied share price", comparison.maintenance?.result.dcf.impliedSharePrice ?? null, comparison["continued-growth"]?.result.dcf.impliedSharePrice ?? null]
+                ].map(([label, maintenance, growth]) => {
+                  const left = maintenance as number | null;
+                  const right = growth as number | null;
+                  return <tr key={label as string}><td>{label}</td><td align="right">{number(left, 2)}</td><td align="right">{number(right, 2)}</td><td align="right">{left === null || right === null ? "--" : number(right - left, 2)}</td></tr>;
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="wb-compare-empty">Click "Compare maintenance vs growth" to calculate both cases and see this comparison.</p>
+        )}
       </section>
 
-      <p style={{ fontSize: 12, opacity: 0.65 }}>All forecast and valuation assumptions remain explicitly modeled. Unsupported values render “--”; the interface does not fabricate missing inputs.</p>
+      <p style={{ fontSize: 12, opacity: 0.65 }}>All forecast and valuation assumptions remain explicitly modeled. Unsupported values render "--"; the interface does not fabricate missing inputs.</p>
     </main>
   );
 }
