@@ -31,10 +31,13 @@
 .wb-latest-note { margin: 0; font-size: 11px; color: var(--muted); }
 
 .wb-year-group { display: grid; gap: 6px; }
-.wb-year-group + .wb-year-group { margin-top: 4px; }
+.wb-year-group + .wb-year-group { margin-top: 8px; }
 .wb-year-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px; }
 .wb-year-group:first-child .wb-year-label { border-top: 0; padding-top: 0; }
 
+.wb-gap-top { margin-top: 10px; }
+.wb-gap-bottom { margin-bottom: 10px; }
+.wb-result-rows { display: grid; gap: 10px; }
 .wb-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
 .wb-result-card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 13px 14px; display: grid; gap: 5px; }
 .wb-result-card small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }

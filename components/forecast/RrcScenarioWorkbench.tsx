@@ -371,9 +371,9 @@ export function RrcScenarioWorkbench({
         </div>
       </section>
 
-      <h2 className="wb-group-title" style={{ margin: "2px 0 -6px" }}>Forecast drivers</h2>
+      <h2 className="wb-group-title" style={{ margin: "16px 0 -6px" }}>Forecast drivers</h2>
 
-      <section className="wb-section">
+      <section className="wb-section wb-gap-bottom">
         <div className="wb-section-head">
           <h2>Production assumption</h2>
           <span className={`wb-pill ${productionMode === "override" ? "override" : "reported"}`}>
@@ -446,27 +446,31 @@ export function RrcScenarioWorkbench({
 
       {commoditySources ? <CommodityPriceAssumptions henryHub={commoditySources.henryHub} wti={commoditySources.wti} /> : null}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div className="wb-gap-top" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button onClick={() => void run()} disabled={loading} style={{ padding: "10px 16px" }}>{loading ? "Calculating…" : "Run scenario"}</button>
         <button onClick={() => void compareBoth()} disabled={loading} style={{ padding: "10px 16px" }}>Compare maintenance vs growth</button>
       </div>
       {error ? <p role="alert">{error}</p> : null}
 
       {current ? (
-        <section className="wb-result-grid">
-          <div className="wb-result-card"><small>DCF value / share</small><strong>{money(current.result.dcf.impliedSharePrice, 2)}</strong></div>
-          <div className="wb-result-card"><small>Multiple value / share</small><strong>{money(current.result.multiple.impliedSharePrice, 2)}</strong></div>
-          <div className="wb-result-card"><small>2027 EBITDAX</small><strong>{money(current.result.forecast2027EbitdaxMillion)}</strong></div>
-          <div className="wb-result-card">
-            <small>{netDebtDisplay(current.result.endingNetDebtMillion).label}</small>
-            <strong className={netDebtDisplay(current.result.endingNetDebtMillion).tone}>{netDebtDisplay(current.result.endingNetDebtMillion).value}</strong>
-          </div>
-          {fcf.map((item) => <div className="wb-result-card" key={item.year}><small>{item.year} FCF</small><strong>{money(item.value)}</strong></div>)}
-        </section>
+        <div className="wb-result-rows wb-gap-top">
+          <section className="wb-result-grid">
+            <div className="wb-result-card"><small>DCF value / share</small><strong>{money(current.result.dcf.impliedSharePrice, 2)}</strong></div>
+            <div className="wb-result-card"><small>Multiple value / share</small><strong>{money(current.result.multiple.impliedSharePrice, 2)}</strong></div>
+            <div className="wb-result-card"><small>2027 EBITDAX</small><strong>{money(current.result.forecast2027EbitdaxMillion)}</strong></div>
+            <div className="wb-result-card">
+              <small>{netDebtDisplay(current.result.endingNetDebtMillion).label}</small>
+              <strong className={netDebtDisplay(current.result.endingNetDebtMillion).tone}>{netDebtDisplay(current.result.endingNetDebtMillion).value}</strong>
+            </div>
+          </section>
+          <section className="wb-result-grid">
+            {fcf.map((item) => <div className="wb-result-card" key={item.year}><small>{item.year} FCF</small><strong>{money(item.value)}</strong></div>)}
+          </section>
+        </div>
       ) : null}
 
       {forecastPeriods.length > 0 ? (
-        <section className="wb-section">
+        <section className="wb-section wb-gap-top">
           <h2>Quarterly production and revenue</h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -489,7 +493,7 @@ export function RrcScenarioWorkbench({
         </section>
       ) : null}
 
-      <section className="wb-section">
+      <section className="wb-section wb-gap-top">
         <h2>Maintenance vs. growth valuation bridge</h2>
         {comparison.maintenance && comparison["continued-growth"] ? (
           <div style={{ overflowX: "auto" }}>
