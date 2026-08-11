@@ -6,6 +6,11 @@ import { extractLiveMarketMetricsFromMarketResponse, resolveCommoditySources } f
 import type { RrcForecastYear } from "@/lib/forecast/scenarios/rrc-annual";
 
 const YEARS: RrcForecastYear[] = ["2026", "2027", "2028"];
+
+/** 2026 blends Q1/Q2 2026 immutable reported actuals with a Q3/Q4 2026 estimate; 2027/2028 are fully estimated years. */
+function yearLabel(year: RrcForecastYear): string {
+  return year === "2026" ? "2026E (H1 Actual + H2E)" : `${year}E`;
+}
 const PRESET_MULTIPLES = { bear: 4.5, base: 5.5, bull: 6.5 } as const;
 type Preset = keyof typeof PRESET_MULTIPLES;
 type Strategy = "maintenance" | "continued-growth";
@@ -357,7 +362,7 @@ export function RrcScenarioWorkbench() {
           {YEARS.map((year) => (
             <label className="wb-field" key={year}>
               <span className="wb-field-label">
-                {year}E <ClassificationPill classification={productionClassification(year)} />
+                {yearLabel(year)} <ClassificationPill classification={productionClassification(year)} />
               </span>
               <input
                 type="number"
@@ -371,6 +376,7 @@ export function RrcScenarioWorkbench() {
         </div>
         <p className="muted panel-note">
           Default = management guidance midpoint/target when RRC guided that year, otherwise the latest reported total held flat. Editing a year classifies it User Input.
+          For 2026, this is the full-year target -- Q1/Q2 are locked to actual reported production, and Q3/Q4 are solved so the full year reconciles to this figure.
         </p>
 
         <h3 className="wb-group-title">Commodity price mode</h3>
@@ -410,7 +416,7 @@ export function RrcScenarioWorkbench() {
         <h3 className="wb-group-title">Costs</h3>
         {YEARS.map((year) => (
           <div className="wb-year-group" key={year}>
-            <p className="wb-year-label">{year}E</p>
+            <p className="wb-year-label">{yearLabel(year)}</p>
             <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}>
               <label className="wb-field">
                 <span className="wb-field-label">LOE $/Mcfe <ClassificationPill classification={costClassification(year, "loePerMcfe")} /></span>
@@ -445,7 +451,7 @@ export function RrcScenarioWorkbench() {
           {YEARS.map((year) => (
             <label className="wb-field" key={year}>
               <span className="wb-field-label">
-                {year}E <ClassificationPill classification={capexClassification(year)} />
+                {yearLabel(year)} <ClassificationPill classification={capexClassification(year)} />
               </span>
               <input
                 type="number"
@@ -457,12 +463,12 @@ export function RrcScenarioWorkbench() {
             </label>
           ))}
         </div>
-        <p className="muted panel-note">Evenly allocated across quarters internally; the quarterly engine is unchanged.</p>
+        <p className="muted panel-note">Evenly allocated across quarters internally; the quarterly engine is unchanged. For 2026, this is the full-year target -- Q1/Q2 use actual reported CapEx, and the remainder is split evenly across Q3/Q4.</p>
 
         <h3 className="wb-group-title">Realized pricing differentials</h3>
         {YEARS.map((year) => (
           <div className="wb-year-group" key={year}>
-            <p className="wb-year-label">{year}E</p>
+            <p className="wb-year-label">{yearLabel(year)}</p>
             <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
               <label className="wb-field">
                 <span className="wb-field-label">Gas differential vs. NYMEX $/Mcf <ClassificationPill classification={pricingClassification(year, "gasBasisPerMcf")} /></span>
@@ -540,7 +546,7 @@ export function RrcScenarioWorkbench() {
             <div style={{ overflowX: "auto" }}>
               <table className="forecast-table">
                 <thead>
-                  <tr><th align="left">Metric</th>{YEARS.map((year) => <th key={year} align="right">{year}E</th>)}</tr>
+                  <tr><th align="left">Metric</th>{YEARS.map((year) => <th key={year} align="right">{yearLabel(year)}</th>)}</tr>
                 </thead>
                 <tbody>
                   <tr><td>Production (Bcfe/d avg)</td>{YEARS.map((year) => <td key={year} align="right">{result.annual[year].production.totalMcfe === null ? "--" : num(result.annual[year].production.totalMcfe / 365 / 1000, 2)}</td>)}</tr>
@@ -553,6 +559,7 @@ export function RrcScenarioWorkbench() {
               </table>
             </div>
             <p className="muted panel-note">Production x realized commodity prices → Revenue → cash operating costs → EBITDAX → interest / cash taxes / CapEx → FCF.</p>
+            <p className="muted panel-note">2026E = Q1 2026 actual + Q2 2026 actual (immutable reported quarters) + Q3/Q4 2026 estimate. 2027E and 2028E are fully estimated years.</p>
           </section>
 
           <section className="wb-result-rows">

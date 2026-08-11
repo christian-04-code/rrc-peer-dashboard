@@ -1,7 +1,7 @@
 import managementGuidanceData from "@/data/management-guidance.json";
 import type { Ticker } from "./company-registry";
 
-type GuidanceRecord = {
+export type GuidanceRecord = {
   company: Ticker;
   metric: string;
   period: string;
@@ -77,6 +77,18 @@ function isCurrentRecord(record: GuidanceRecord): boolean {
 
 function currentRecords(ticker: Ticker): GuidanceRecord[] {
   return (data.companies[ticker]?.entries ?? []).filter(isCurrentRecord);
+}
+
+/**
+ * Raw structured guidance records (low/high/midpoint/unit/period/status/managementWording),
+ * filtered to the current reporting cycle -- the canonical source for anything that needs
+ * numeric guidance data rather than display-formatted strings (e.g. the forecast engine's
+ * guidance adapter at lib/forecast/guidance/rrc.ts). Reuses the same isCurrentRecord/
+ * currentRecords filtering as the rest of this module so a consumer never sees a stale
+ * cycle's row without also seeing the highlight/section views built from the same data.
+ */
+export function getCompanyGuidanceRecords(ticker: Ticker): GuidanceRecord[] {
+  return currentRecords(ticker);
 }
 
 function titleCase(value: string): string {

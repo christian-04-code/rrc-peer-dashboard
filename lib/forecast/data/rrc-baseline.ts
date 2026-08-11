@@ -55,6 +55,14 @@ function unavailable(unit: string, notes: string): SourcedValue {
  * explicitly identified in their source notes. Cash G&A and cash interest stay
  * unavailable because the filing line items include accrual/non-cash effects and
  * should not be silently treated as cash forecast inputs.
+ *
+ * Q2 2026 is now the latest reported quarter overall (see lib/forecast/data/
+ * rrc-actuals.ts), but the audited Q2 integration only carries six top-line metrics
+ * (revenue, EBITDAX, CapEx, free cash flow, net debt, total production) -- not the
+ * production mix, per-unit costs, or realized pricing captured here. This Q1 baseline
+ * therefore remains the latest FULLY DETAILED reported anchor: forward quarters still
+ * derive their gas/NGL/oil product mix from Q1 (the latest quarter that discloses it),
+ * scaled to whatever total production level is actually in effect for that period.
  */
 export const rrcQ1_2026Baseline: RrcOperatingBaseline = {
   company: "RRC",

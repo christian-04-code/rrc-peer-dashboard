@@ -1,28 +1,28 @@
 /**
  * Structured, numeric management guidance -- the reference layer described in the
- * Forecast product spec. Distinct from data/guidance.json (free-text bullets used by
- * the Overview GuidancePanel): each entry here is a single metric with an explicit
- * low/high/midpoint, period, and source citation, so it can both render as a reference
- * card and feed a forecast default. A company that only guides a single point value
- * (e.g. "~2.6 Bcfe/d") stores it as low = high = null, midpoint = the point value --
- * midpoint is never invented from a single point by pretending a range exists.
+ * Forecast product spec. Sourced from data/management-guidance.json via
+ * lib/dashboard/guidance.ts's getCompanyGuidanceRecords (the same canonical,
+ * reporting-cycle-filtered dataset the Overview GuidancePanel renders as display
+ * strings): each entry here is a single metric with an explicit low/high/midpoint,
+ * period, and source citation, so it can both render as a reference card and feed a
+ * forecast default. A company that only guides a single point value (e.g. "~2.6 Bcfe/d")
+ * stores it as low = high = null, midpoint = the point value -- midpoint is never
+ * invented from a single point by pretending a range exists.
  */
 
 export type GuidanceMetricKey =
   | "totalProductionBcfePerDay"
   | "capexTotalMillion"
-  | "capexMaintenanceDcMillion"
-  | "capexGrowthDcMillion"
-  | "capexLandLeaseholdMillion"
-  | "capexFacilitiesMillion"
   | "loePerMcfe"
+  | "gatheringTransportPerMcfe"
   | "cashGaPerMcfe"
+  | "cashInterestPerMcfe"
+  | "explorationMillion"
   | "cashTaxRate"
   | "gasBasisPerMcf"
   | "oilDifferentialPerBbl"
   | "nglDifferentialPerBbl"
-  | "henryHubPerMmbtu"
-  | "nglRealizationPerBbl";
+  | "productionTaxPerMcfe";
 
 export type GuidanceYear = "2026" | "2027" | "2028";
 
