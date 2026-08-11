@@ -22,7 +22,7 @@ const EXE_FCF_NOTE =
 const GPOR_FCF_NOTE =
   "FactSet E&P workbook per-cell fallback because the primary Codex quarterly template does not contain a GPOR free cash flow series. Values come from the historical quarterly Free Cash Flow row in the GPOR staging sheet, are standalone quarters in $MM, and remain source-tagged FactSet. They must be replaced rather than blended if a filing-verified Codex series is added later.";
 
-const rrc: Record<Quarter, SourcedValue> = {
+const rrc: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 137.898, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q2 2024": { value: 61.902, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q3 2024": { value: 94.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
@@ -31,10 +31,11 @@ const rrc: Record<Quarter, SourcedValue> = {
   "Q2 2025": { value: 147.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q3 2025": { value: 89.254, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
   "Q4 2025": { value: 169.532, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
-  "Q1 2026": { value: 406.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE }
+  "Q1 2026": { value: 406.0, source: "codex", basis: "derived", note: RRC_FCF_NOTE },
+  "Q2 2026": { value: 111.0, source: "codex", basis: "derived", note: `${RRC_FCF_NOTE} Exact underlying Q2 2026 derivation is $332.510MM less $222.000MM, or $110.510MM; stored as $111MM under the site's nearest-$MM convention.` }
 };
 
-const ar: Record<Quarter, SourcedValue> = {
+const ar: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 29.874, source: "factset", basis: "derived", note: AR_FCF_NOTE },
   "Q2 2024": { value: -42.8755, source: "factset", basis: "derived", note: AR_FCF_NOTE },
   "Q3 2024": { value: -6.0, source: "factset", basis: "derived", note: AR_FCF_NOTE },
@@ -46,7 +47,7 @@ const ar: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 464.55, source: "factset", basis: "derived", note: AR_FCF_NOTE }
 };
 
-const cnx: Record<Quarter, SourcedValue> = {
+const cnx: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 25.0, source: "factset", basis: "derived", note: CNX_FCF_NOTE },
   "Q2 2024": { value: 47.0, source: "factset", basis: "derived", note: CNX_FCF_NOTE },
   "Q3 2024": { value: 60.0, source: "factset", basis: "derived", note: CNX_FCF_NOTE },
@@ -58,7 +59,7 @@ const cnx: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 139.0, source: "factset", basis: "derived", note: CNX_FCF_NOTE }
 };
 
-const crk: Record<Quarter, SourcedValue> = {
+const crk: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: -73.536, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q2 2024": { value: -109.5855, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q3 2024": { value: -41.674, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
@@ -70,7 +71,7 @@ const crk: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: -151.4, source: "factset", basis: "derived", note: CRK_FCF_NOTE }
 };
 
-const eqt: Record<Quarter, SourcedValue> = {
+const eqt: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 401.554, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
   "Q2 2024": { value: -171.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
   "Q3 2024": { value: -47.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE },
@@ -82,7 +83,7 @@ const eqt: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 1832.0, source: "factset", basis: "derived", note: EQT_FCF_NOTE }
 };
 
-const exe: Record<Quarter, SourcedValue> = {
+const exe: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 112.0, source: "factset", basis: "derived", note: EXE_FCF_NOTE },
   "Q2 2024": { value: -119.0, source: "factset", basis: "derived", note: EXE_FCF_NOTE },
   "Q3 2024": { value: 98.0, source: "factset", basis: "derived", note: EXE_FCF_NOTE },
@@ -94,7 +95,7 @@ const exe: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 1704.0, source: "factset", basis: "derived", note: EXE_FCF_NOTE }
 };
 
-const gpor: Record<Quarter, SourcedValue> = {
+const gpor: Partial<Record<Quarter, SourcedValue>> = {
   "Q1 2024": { value: 53.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
   "Q2 2024": { value: 26.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
   "Q3 2024": { value: 58.0, source: "factset", basis: "derived", note: GPOR_FCF_NOTE },
@@ -106,7 +107,7 @@ const gpor: Record<Quarter, SourcedValue> = {
   "Q1 2026": { value: 124.2, source: "factset", basis: "derived", note: GPOR_FCF_NOTE }
 };
 
-export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>> = {
+export const freeCashFlowQuarterly: Record<Ticker, Partial<Record<Quarter, SourcedValue>>> = {
   RRC: rrc,
   AR: ar,
   CNX: cnx,
@@ -117,5 +118,7 @@ export const freeCashFlowQuarterly: Record<Ticker, Record<Quarter, SourcedValue>
 };
 
 export function getQuarterlyFreeCashFlow(ticker: Ticker, quarter: Quarter): SourcedValue {
-  return freeCashFlowQuarterly[ticker][quarter];
+  const row = freeCashFlowQuarterly[ticker][quarter];
+  if (!row) throw new Error(`No reported free cash flow for ${ticker} ${quarter}`);
+  return row;
 }

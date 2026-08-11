@@ -17,11 +17,11 @@ export function forecastQuarterLabel(period: string): string {
   return `${period.slice(4)} ${period.slice(0, 4)}`;
 }
 
-// 2026Q1 is excluded: it's the latest reported actual quarter, already covered by
-// financials-quarterly.ts, and must never be overwritten by a modeled value.
+// 2026Q1 and 2026Q2 are excluded: they are reported actual quarters already covered
+// by financials-quarterly.ts and must never be overwritten by modeled values.
 export const FORECAST_CHART_PERIODS: string[] = [2026, 2027, 2028]
   .flatMap((year) => [1, 2, 3, 4].map((quarter) => `${year}Q${quarter}`))
-  .filter((period) => period !== "2026Q1");
+  .filter((period) => period !== "2026Q1" && period !== "2026Q2");
 
 /**
  * Modeled Revenue/EBITDAX/FCF for the forecast/live portion of the main chart, driven by

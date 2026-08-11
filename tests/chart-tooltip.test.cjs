@@ -15,8 +15,19 @@ test("chart data points wire hover/focus handlers to a single reusable tooltip c
 
 test("tooltip content includes ticker, period, exact value, and unit", () => {
   assert.match(source, /\$\{point\.ticker\}[^`]*point\.period/s);
-  assert.match(source, /formatValue\(point\.value\)/);
+  assert.match(source, /formatSeriesValue\(point\.value, seriesPrecision\)/);
   assert.match(source, /unit/);
+});
+
+test("historical series tooltips preserve each metric's approved source precision", () => {
+  assert.match(source, /production:\s*\{[^}]*precision: 3/s);
+  assert.match(source, /revenue:\s*\{[^}]*precision: 3/s);
+  assert.match(source, /capex:\s*\{[^}]*precision: 0/s);
+  assert.match(source, /debt:\s*\{[^}]*precision: 3/s);
+  assert.match(source, /fcf:\s*\{[^}]*precision: 0/s);
+  assert.match(source, /ebitdax:\s*\{[^}]*precision: 3/s);
+  assert.match(source, /minimumFractionDigits: precision/);
+  assert.match(source, /maximumFractionDigits: precision/);
 });
 
 test("modeled/forecast points are labeled Modeled, while historical actuals are not", () => {

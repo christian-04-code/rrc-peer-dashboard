@@ -1,7 +1,7 @@
 {
   "meta": {
     "layer": "Layer 1 - Historical Truth",
-    "coverage": "Q1 2024 through Q1 2026 (9 standalone quarters)",
+    "coverage": "Q1 2024 through Q1 2026 for all peers, plus audited RRC-only Q2 2026 actuals",
     "quarters": [
       "Q1 2024",
       "Q2 2024",
@@ -11,7 +11,8 @@
       "Q2 2025",
       "Q3 2025",
       "Q4 2025",
-      "Q1 2026"
+      "Q1 2026",
+      "Q2 2026"
     ],
     "conflict_rule": "FactSet Actual (A)-tagged values from E&P_Facset_Company_Model.xlsx override Codex workbook values for the same company/metric/quarter. FactSet Estimate (E)-tagged values NEVER override Codex. Every override is logged in conflict_log.csv.",
     "sources": [
@@ -57,7 +58,8 @@
             "Q2 2025": 732.891,
             "Q3 2025": 717.621,
             "Q4 2025": 820.158,
-            "Q1 2026": 1034.17
+            "Q1 2026": 1034.17,
+            "Q2 2026": 833.571
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 645.456",
@@ -68,7 +70,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 856.275",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 748.528",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, revenue, p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, revenue, p. 4; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, revenue, p. 4; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC_Q2_2026_10Q.pdf, Q2 2026, Consolidated Statements of Income, p. 4; direct GAAP total revenues and other income for the three months ended June 30, 2026"
           },
           "notes": "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3.",
           "factset_overridden_quarters": [
@@ -93,7 +96,8 @@
             "Q2 2025": 329,
             "Q3 2025": 301,
             "Q4 2025": 379,
-            "Q1 2026": 569.7645
+            "Q1 2026": 569.7645,
+            "Q2 2026": 349.059
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 335.653",
@@ -104,7 +108,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 329.024",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 301.38",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 379.452",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 569.529"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 569.529",
+            "Q2 2026": "RRC_2Q26_ER.pdf, pp. 7 and 13; existing RRC series convention: $335.499mm cash margin + $13.587mm cash interest expense - $0.027mm interest income = $349.059mm"
           },
           "notes": "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -133,7 +138,8 @@
             "Q2 2025": 147,
             "Q3 2025": 89,
             "Q4 2025": 166,
-            "Q1 2026": 405.9665
+            "Q1 2026": 405.9665,
+            "Q2 2026": 111
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 137.898",
@@ -144,7 +150,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 146.511",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 89.254",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 169.532",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 405.933"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 405.933",
+            "Q2 2026": "RRC_2Q26_ER.pdf, pp. 1, 3 and 9; exact derivation $332.510mm adjusted operating cash flow before working-capital changes less $222.000mm all-in capital spending = $110.510mm, stored as $111mm under the site rounding convention"
           },
           "notes": "Calculated using AR-comparable FCF methodology: RRC discretionary cash flow / cash flow before working capital (Supplemental Table 1) less total all-in company capital spending. Standalone quarterly values; Q2/Q3/Q4 derived only from matching YTD/FY roll-forwards where needed.",
           "factset_overridden_quarters": [
@@ -172,7 +179,8 @@
             "Q2 2025": 154.0,
             "Q3 2025": 190.0,
             "Q4 2025": 167,
-            "Q1 2026": 139.0
+            "Q1 2026": 139.0,
+            "Q2 2026": 222
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, capex, p. 32 and supplemental cash-flow disclosure; direct three-month/quarter-end filing value",
@@ -183,9 +191,10 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, capex, p. 28 and supplemental cash-flow disclosure; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, capex, p. 28 and supplemental cash-flow disclosure; direct three-month/quarter-end filing value",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 183.0",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, capex, p. 26 and supplemental cash-flow disclosure; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, capex, p. 26 and supplemental cash-flow disclosure; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC_2Q26_ER.pdf, pp. 1 and 3; company-reported all-in capital spending for the three months ended June 30, 2026"
           },
-          "notes": "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards.",
+          "notes": "Range historical capital expenditures use company-reported all-in capital spending from quarterly earnings materials, consistent with the stored Q1 and Q2 2026 values; standalone quarters are in $MM at the company's reported nearest-$MM precision.",
           "factset_overridden_quarters": [
             "Q4 2025"
           ]
@@ -204,7 +213,8 @@
             "Q2 2025": 1225,
             "Q3 2025": 1229,
             "Q4 2025": 1218,
-            "Q1 2026": 826.5
+            "Q1 2026": 826.5,
+            "Q2 2026": 880.753
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1425.906",
@@ -215,7 +225,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1224.866",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1228.825",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1217.796",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 833.753"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 833.753",
+            "Q2 2026": "RRC_Q2_2026_10Q.pdf, pp. 3 and 9, corroborated by RRC_2Q26_ER.pdf p. 8; $881.000mm face-value debt less $0.247mm cash as of June 30, 2026"
           },
           "notes": "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note.",
           "factset_overridden_quarters": [
@@ -244,7 +255,8 @@
             "Q2 2025": 2197.317,
             "Q3 2025": 2227.833,
             "Q4 2025": 2316.483,
-            "Q1 2026": 2207.434
+            "Q1 2026": 2207.434,
+            "Q2 2026": 2296.399
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -255,7 +267,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2197.321",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2227.831",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2316.485",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2207.436"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2207.436",
+            "Q2 2026": "RRC_Q2_2026_10Q.pdf, Q2 2026 operating results, p. 20; direct reported average daily gas-equivalent production"
           },
           "notes": null,
           "factset_overridden_quarters": [

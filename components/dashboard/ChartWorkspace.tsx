@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { getAllQuartersForTicker, quarters, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
+import { getAllQuartersForTicker, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
 import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
 import { getCompanyColor } from "@/lib/dashboard/company-colors";
 import {
@@ -27,42 +27,49 @@ const FORECAST_AXIS_LABELS = FORECAST_CHART_PERIODS.map(forecastQuarterLabel);
 const metricConfig: Record<Metric, {
   label: string;
   unit: string;
+  precision: number;
   value: (row: QuarterlyFinancials) => number | null;
   comparable: boolean;
 }> = {
   production: {
     label: "Production",
     unit: "MMcfe/d",
+    precision: 3,
     value: (row) => row.production.total.value,
     comparable: true
   },
   revenue: {
     label: "Revenue",
     unit: "$MM",
+    precision: 3,
     value: (row) => row.revenue.value,
     comparable: true
   },
   capex: {
     label: "Capital expenditures",
     unit: "$MM",
+    precision: 0,
     value: (row) => row.capitalExpenditures.value,
     comparable: true
   },
   debt: {
     label: "Net debt",
     unit: "$MM",
+    precision: 3,
     value: (row) => row.netDebt.value,
     comparable: true
   },
   fcf: {
     label: "Free cash flow",
     unit: "$MM",
+    precision: 0,
     value: (row) => getQuarterlyFreeCashFlow(row.ticker, row.quarter).value,
     comparable: true
   },
   ebitdax: {
     label: "EBITDAX",
     unit: "$MM",
+    precision: 3,
     value: (row) => row.adjustedEbitdax.value,
     comparable: true
   }
@@ -110,6 +117,7 @@ export function ChartWorkspace({
   const config = metricConfig[metric];
   const showsForecast = FORECAST_METRICS.has(metric);
   const tickers = [ticker, ...comparisonTickers.filter((peer) => peer !== ticker)];
+  const tickerKey = tickers.join(",");
   const [hover, setHover] = useState<HoverPoint | null>(null);
   const [showManagementGuidance, setShowManagementGuidance] = useState(false);
 
@@ -119,11 +127,18 @@ export function ChartWorkspace({
   useEffect(() => {
     setHover(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metric, tickers.join(",")]);
+  }, [metric, tickerKey]);
+
+  const actualAxisQuarters = useMemo(() => Array.from(new Set(
+    tickers.flatMap((seriesTicker) => getAllQuartersForTicker(seriesTicker).map((row) => row.quarter))
+  )), [tickerKey]);
 
   const series: Series[] = useMemo(() => {
     return tickers.map((seriesTicker) => {
-      const actualValues = getAllQuartersForTicker(seriesTicker).map(config.value);
+      const actualByQuarter = new Map(
+        getAllQuartersForTicker(seriesTicker).map((row) => [row.quarter, config.value(row)])
+      );
+      const actualValues = actualAxisQuarters.map((quarter) => actualByQuarter.get(quarter) ?? null);
       if (!showsForecast) return { ticker: seriesTicker, values: actualValues };
 
       const forecastPoints = buildForecastChartSeries(seriesTicker, metric as ForecastChartMetric, currentMarketPrices);
@@ -131,15 +146,15 @@ export function ChartWorkspace({
       return { ticker: seriesTicker, values: [...actualValues, ...forecastValues] };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickers.join(","), metric, showsForecast, currentMarketPrices]);
+  }, [tickerKey, metric, showsForecast, currentMarketPrices, actualAxisQuarters]);
 
   const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.plotPeriod));
   const axisQuarters = Array.from(new Set([
-    ...quarters,
+    ...actualAxisQuarters,
     ...(showsForecast ? FORECAST_AXIS_LABELS : []),
     ...guidanceAxisPeriods
   ]));
-  const splitIndex = quarters.length;
+  const splitIndex = actualAxisQuarters.length;
   const numericValues = [
     ...series.flatMap((item) => item.values.filter((value): value is number => value !== null)),
     ...visibleGuidance.flatMap((point) => point.kind === "point" ? [point.chartValue] : [point.chartLow, point.chartHigh])
@@ -245,7 +260,7 @@ export function ChartWorkspace({
                     r={seriesIndex === 0 ? 3.5 : 2.5}
                     tabIndex={0}
                     role="img"
-                    aria-label={`${item.ticker} ${axisQuarters[index]} ${formatValue(value)} ${config.unit}${modeled ? " modeled" : ""}`}
+                  aria-label={`${item.ticker} ${axisQuarters[index]} ${formatSeriesValue(value, config.precision)} ${config.unit}${modeled ? " modeled" : ""}`}
                     onMouseEnter={() => setHover(point)}
                     onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
                     onFocus={() => setHover(point)}
@@ -306,7 +321,7 @@ export function ChartWorkspace({
             </g>
           );
         })}
-        {hover ? <ChartPointTooltip point={hover} unit={config.unit} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
+        {hover ? <ChartPointTooltip point={hover} unit={config.unit} seriesPrecision={config.precision} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
       </svg>
       <div className="chart-legend">
         {tickers.map((seriesTicker) => (
@@ -352,17 +367,19 @@ function buildGuidanceAxisPeriods(periods: string[]): string[] {
 function ChartPointTooltip({
   point,
   unit,
+  seriesPrecision,
   chartWidth,
   chartHeight
 }: {
   point: HoverPoint;
   unit: string;
+  seriesPrecision: number;
   chartWidth: number;
   chartHeight: number;
 }) {
   const lines = point.kind === "guidance" ? guidanceTooltipLines(point.point) : [
     `${point.ticker} · ${point.period}`,
-    `${formatValue(point.value)} ${unit}`,
+    `${formatSeriesValue(point.value, seriesPrecision)} ${unit}`,
     ...(point.modeled ? ["Modeled"] : [])
   ];
   const boxWidth = point.kind === "guidance" ? 250 : 140;
@@ -442,4 +459,11 @@ function formatAxis(value: number): string {
 
 function formatValue(value: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatSeriesValue(value: number, precision: number): string {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision
+  }).format(value);
 }

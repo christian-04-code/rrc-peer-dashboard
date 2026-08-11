@@ -20,15 +20,17 @@ test("only RRC is marked as forecast-engine supported; peers are not", () => {
   }
 });
 
-test("forecast chart periods start after the latest reported actual quarter (2026Q1) and never re-derive it", () => {
+test("forecast chart periods start after the latest RRC actual quarter (2026Q2) and never re-derive it", () => {
   assert.ok(!FORECAST_CHART_PERIODS.includes("2026Q1"));
-  assert.equal(FORECAST_CHART_PERIODS[0], "2026Q2");
+  assert.ok(!FORECAST_CHART_PERIODS.includes("2026Q2"));
+  assert.equal(FORECAST_CHART_PERIODS[0], "2026Q3");
   assert.equal(FORECAST_CHART_PERIODS[FORECAST_CHART_PERIODS.length - 1], "2028Q4");
-  assert.equal(FORECAST_CHART_PERIODS.length, 11);
+  assert.equal(FORECAST_CHART_PERIODS.length, 10);
 });
 
 test("forecastQuarterLabel matches the axis label style used for reported quarters", () => {
   assert.equal(forecastQuarterLabel("2026Q2"), "Q2 2026");
+  assert.equal(forecastQuarterLabel("2026Q3"), "Q3 2026");
   assert.equal(forecastQuarterLabel("2028Q4"), "Q4 2028");
 });
 
@@ -67,13 +69,18 @@ test("peer tickers unsupported by the forecast engine return an empty forecast s
   }
 });
 
-test("historical actual quarters (financials-quarterly.ts) are untouched by the forecast series -- Q1 2026 stays the reported actual", () => {
+test("Q1 and Q2 2026 stay historical actuals and neither can appear in the forecast series", () => {
   const reportedQ1_2026 = getAllQuartersForTicker("RRC").find((row) => row.quarter === "Q1 2026");
+  const reportedQ2_2026 = getAllQuartersForTicker("RRC").find((row) => row.quarter === "Q2 2026");
   assert.equal(reportedQ1_2026.revenue.source, "codex");
   assert.equal(reportedQ1_2026.revenue.basis, "actual");
-  // The forecast series intentionally excludes 2026Q1 so it can never overwrite this actual.
+  assert.equal(reportedQ2_2026.revenue.value, 833.571);
+  assert.equal(reportedQ2_2026.revenue.basis, "actual");
+  // The forecast series intentionally excludes both reported quarters so it can never overwrite either actual.
   const forecastPeriods = buildForecastChartSeries("RRC", "revenue").map((point) => point.period);
   assert.ok(!forecastPeriods.includes("Q1 2026"));
+  assert.ok(!forecastPeriods.includes("Q2 2026"));
+  assert.equal(forecastPeriods[0], "Q3 2026");
 });
 
 test("ChartWorkspace renders internal model forecasts with a non-dashed treatment", () => {

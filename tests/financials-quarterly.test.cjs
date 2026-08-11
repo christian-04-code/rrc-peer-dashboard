@@ -26,7 +26,7 @@ function load(relativePath) {
 
 const { getQuarterlyFinancials, getAllQuartersForTicker, quarters } = load("lib/dashboard/financials-quarterly.ts");
 
-test("RRC has netIncome, operatingCashFlow, cashAndEquivalents, and totalDebt populated for all 9 quarters", () => {
+test("RRC preserves its supporting balance-sheet fields for the original nine-quarter dataset", () => {
   for (const quarter of quarters) {
     const row = getQuarterlyFinancials("RRC", quarter);
     for (const field of ["netIncome", "operatingCashFlow", "cashAndEquivalents", "totalDebt"]) {
@@ -68,12 +68,29 @@ test("non-RRC tickers do not have the four new fields fabricated -- they remain 
   }
 });
 
-test("RRC still has exactly 9 quarters and existing metrics (revenue, EBITDAX, capex, netDebt) are untouched", () => {
+test("RRC adds only the accepted Q2 2026 actuals and preserves Q1 2026", () => {
   const rows = getAllQuartersForTicker("RRC");
-  assert.equal(rows.length, 9);
+  assert.equal(rows.length, 10);
   const q1_2026 = getQuarterlyFinancials("RRC", "Q1 2026");
   assert.equal(q1_2026.revenue.value, 1034.17);
   assert.equal(q1_2026.adjustedEbitdax.value, 569.529);
   assert.equal(q1_2026.capitalExpenditures.value, 139.0);
   assert.equal(q1_2026.netDebt.value, 833.753);
+
+  const q2_2026 = getQuarterlyFinancials("RRC", "Q2 2026");
+  assert.equal(q2_2026.quarter, "Q2 2026");
+  assert.equal(q2_2026.production.total.value, 2296.399);
+  assert.equal(q2_2026.revenue.value, 833.571);
+  assert.equal(q2_2026.adjustedEbitdax.value, 349.059);
+  assert.equal(q2_2026.capitalExpenditures.value, 222.0);
+  assert.equal(q2_2026.netDebt.value, 880.753);
+  assert.equal(q2_2026.production.total.basis, "actual");
+  assert.equal(q2_2026.revenue.basis, "actual");
+  assert.equal(q2_2026.adjustedEbitdax.basis, "actual");
+  assert.equal(q2_2026.capitalExpenditures.basis, "actual");
+
+  assert.notEqual(q2_2026.revenue.value, 1867.741, "six-month YTD revenue must not be stored as standalone Q2");
+  assert.notEqual(q2_2026.production.total.value, 2252.163, "six-month average production must not replace standalone Q2");
+  assert.match(q2_2026.capitalExpenditures.note, /company-reported all-in capital spending/);
+  assert.doesNotMatch(q2_2026.capitalExpenditures.note, /cash additions plus/);
 });

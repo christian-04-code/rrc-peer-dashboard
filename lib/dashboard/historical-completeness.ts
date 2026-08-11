@@ -81,6 +81,7 @@ export function getHistoricalCompletenessSummary(): HistoricalCompletenessSummar
 
     for (const quarter of quarters) {
       const row = financialsQuarterly[ticker][quarter];
+      if (!row) throw new Error(`Missing common-quarter financials for ${ticker} ${quarter}`);
       for (const metric of metricReaders) {
         const sourced = metric.read(row, ticker, quarter);
         if (sourced?.value === null || sourced?.value === undefined) {
