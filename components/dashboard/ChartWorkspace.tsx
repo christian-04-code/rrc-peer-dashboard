@@ -406,6 +406,7 @@ function ChartPointTooltip({
 
 function guidanceTooltipLines(point: ChartGuidancePoint): string[] {
   const lines = ["Management Guidance", `${point.ticker} · ${point.period}`, guidanceTypeLabel(point.guidanceType)];
+  if (point.status) lines.push(`Status: ${guidanceTypeLabel(point.status)}`);
   if (point.kind === "range") {
     lines.push(`Low: ${formatValue(point.low)} ${point.unit}`);
     if (point.midpoint !== null) lines.push(`Midpoint: ${formatValue(point.midpoint)} ${point.unit}`);
@@ -413,19 +414,19 @@ function guidanceTooltipLines(point: ChartGuidancePoint): string[] {
   } else {
     lines.push(`Value: ${formatValue(point.value)} ${point.unit}`);
   }
-  lines.push(`Source: ${point.sourceDate}`);
+  lines.push(`Source: ${point.sourceLocation ?? point.source} · ${point.sourceDate}`);
   return lines;
 }
 
 function guidanceTypeLabel(type: ChartGuidancePoint["guidanceType"]): string {
-  const labels = {
+  const labels: Record<string, string> = {
     range: "Range",
     approximate: "Approximate target",
     long_term_target: "Long-term target",
     conditional_target: "Conditional long-term target",
     minimum_growth: "Minimum growth target"
-  } as const;
-  return labels[type];
+  };
+  return labels[type] ?? type.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function buildPathSegments(

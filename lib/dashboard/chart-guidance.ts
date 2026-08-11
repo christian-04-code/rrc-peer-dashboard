@@ -2,11 +2,12 @@ import managementGuidanceData from "@/data/management-guidance.json";
 import type { Metric, Ticker } from "./types";
 
 export type GuidanceAuditStatus = "explicit_guidance" | "long_term_target" | "not_guided";
-export type GuidanceType = "range" | "approximate" | "long_term_target" | "conditional_target" | "minimum_growth";
+export type GuidanceType = string;
+export type GuidanceStatus = "new" | "raised" | "lowered" | "narrowed" | "reaffirmed" | "updated" | "current" | string;
 
 type GuidanceEntry = {
   company: Ticker;
-  metric: Metric;
+  metric: string;
   period: string;
   plotPeriod: string;
   low: number | null;
@@ -15,9 +16,16 @@ type GuidanceEntry = {
   unit: string;
   guidanceType: GuidanceType;
   source: string;
-  sourceUrl: string;
+  sourceUrl?: string;
   sourceDate: string;
   chartable: boolean;
+  reportingCycle?: string;
+  priorReportingCycle?: string;
+  status?: GuidanceStatus;
+  sourceLocation?: string;
+  managementWording?: string;
+  operator?: string;
+  reportedValue?: number;
   note?: string;
 };
 
@@ -27,7 +35,7 @@ type CompanyGuidance = {
 };
 
 type ManagementGuidanceFile = {
-  meta: { auditAsOf: string; note: string };
+  meta: { auditAsOf: string; note: string; reportingCycle?: string; ingestionSource?: string };
   companies: Record<Ticker, CompanyGuidance>;
 };
 
@@ -51,31 +59,45 @@ export type ChartGuidanceResult = {
 
 function toChartValue(value: number, unit: string): number | null {
   if (unit === "Bcfe/d") return value * 1_000;
-  if (unit === "MMcfe/d" || unit === "$MM") return value;
+  if (unit.toLowerCase() === "mmcfe/d" || unit === "$MM") return value;
   return null;
 }
 
 function normalizeEntry(entry: GuidanceEntry): ChartGuidancePoint | null {
   if (!entry.chartable) return null;
+  // Thresholds remain visible in the full guidance view, but are never treated as ordinary points.
+  if (entry.operator) return null;
+  // AR reaffirmed components in Q2 without independently restating a total; do not infer one for the chart.
+  if (entry.company === "AR" && entry.metric === "capex" && entry.note?.includes("not independently restated")) return null;
+
+  const normalizedMidpoint = entry.low !== null && entry.high !== null
+    ? (entry.midpoint !== null && entry.midpoint >= entry.low && entry.midpoint <= entry.high
+      ? entry.midpoint
+      : (entry.low + entry.high) / 2)
+    : entry.midpoint;
   const metadata: GuidanceMetadata = {
     ticker: entry.company,
-    metric: entry.metric,
+    metric: entry.metric as Metric,
     period: entry.period,
     plotPeriod: entry.plotPeriod,
-    midpoint: entry.midpoint,
+    midpoint: normalizedMidpoint,
     unit: entry.unit,
     guidanceType: entry.guidanceType,
     source: entry.source,
     sourceUrl: entry.sourceUrl,
     sourceDate: entry.sourceDate,
+    reportingCycle: entry.reportingCycle,
+    status: entry.status,
+    sourceLocation: entry.sourceLocation,
+    managementWording: entry.managementWording,
+    operator: entry.operator,
     note: entry.note
   };
 
   if (entry.low !== null && entry.high !== null) {
     const chartLow = toChartValue(entry.low, entry.unit);
     const chartHigh = toChartValue(entry.high, entry.unit);
-    const midpoint = entry.midpoint ?? (entry.low + entry.high) / 2;
-    const chartMidpoint = toChartValue(midpoint, entry.unit);
+    const chartMidpoint = toChartValue(normalizedMidpoint ?? (entry.low + entry.high) / 2, entry.unit);
     if (chartLow === null || chartHigh === null || chartMidpoint === null) return null;
     return { ...metadata, kind: "range", low: entry.low, high: entry.high, chartLow, chartHigh, chartMidpoint };
   }
@@ -90,7 +112,7 @@ export function getChartGuidance(ticker: Ticker, metric: Metric): ChartGuidanceR
   const company = data.companies[ticker];
   const auditStatus = company?.audit[metric] ?? "not_guided";
   const points = (company?.entries ?? [])
-    .filter((entry) => entry.metric === metric)
+    .filter((entry) => entry.metric === metric && entry.reportingCycle === data.meta.reportingCycle)
     .map(normalizeEntry)
     .filter((entry): entry is ChartGuidancePoint => entry !== null);
 
@@ -104,7 +126,7 @@ export function getManagementGuidanceAuditMatrix(): Record<Ticker, Record<Metric
   ) as Record<Ticker, Record<Metric, GuidanceAuditStatus>>;
 }
 
-export function getManagementGuidanceAuditMeta(): { auditAsOf: string; note: string } {
+export function getManagementGuidanceAuditMeta(): ManagementGuidanceFile["meta"] {
   return data.meta;
 }
 

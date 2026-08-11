@@ -63,11 +63,17 @@ export function DetailDrawer({
                     {section.rows.map((row, index) =>
                       row.kind === "pair" ? (
                         <div className="guidance-row" key={index}>
-                          <span className="guidance-label">{row.label}</span>
+                          <span className="guidance-label">
+                            {row.label}
+                            {row.detail ? <small className="muted guidance-row-detail">{row.detail}</small> : null}
+                          </span>
                           <span className="guidance-value">{row.value}</span>
                         </div>
                       ) : (
-                        <p className="guidance-row-note" key={index}>{row.text}</p>
+                        <p className="guidance-row-note" key={index}>
+                          {row.text}
+                          {row.detail ? <small className="muted guidance-row-detail">{row.detail}</small> : null}
+                        </p>
                       )
                     )}
                   </div>
