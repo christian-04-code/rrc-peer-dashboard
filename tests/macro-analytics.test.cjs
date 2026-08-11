@@ -24,6 +24,7 @@ const {
   buildStorageComparison,
   calculateFreshness,
   formatMetricValue,
+  monthlyMmcfToBcfd,
   periodChangePct
 } = loadAnalytics();
 
@@ -56,16 +57,27 @@ const storageHistory = [
   { period: "2021-08-13", value: 1000 }
 ];
 
-test("freshness uses the returned observation period with frequency-specific boundaries", () => {
+test("freshness distinguishes current, legitimate publication lag, and stale observations", () => {
   const now = new Date("2026-08-10T12:00:00.000Z");
   assert.equal(calculateFreshness("2026-08-07", "daily", now), "current");
-  assert.equal(calculateFreshness("2026-08-04", "daily", now), "stale");
+  assert.equal(calculateFreshness("2026-08-04", "daily", now), "lagged");
+  assert.equal(calculateFreshness("2026-07-20", "daily", now), "stale");
   assert.equal(calculateFreshness("2026-08-01", "weekly", now), "current");
-  assert.equal(calculateFreshness("2026-07-30", "weekly", now), "stale");
+  assert.equal(calculateFreshness("2026-07-30", "weekly", now), "lagged");
+  assert.equal(calculateFreshness("2026-07-10", "weekly", now), "stale");
   assert.equal(calculateFreshness("2026-06", "monthly", now), "current");
-  assert.equal(calculateFreshness("2026-05", "monthly", now), "stale");
+  assert.equal(calculateFreshness("2026-05", "monthly", now), "lagged");
+  assert.equal(calculateFreshness("2026-03", "monthly", now), "stale");
   assert.equal(calculateFreshness(null, "weekly", now), "unavailable");
   assert.equal(calculateFreshness("malformed", "weekly", now), "unavailable");
+});
+
+test("monthly MMcf converts to Bcf/d with the exact calendar-day denominator", () => {
+  assert.equal(monthlyMmcfToBcfd(3_100_000, "2026-05"), 100);
+  assert.equal(monthlyMmcfToBcfd(2_900_000, "2024-02"), 100, "leap February uses 29 days");
+  assert.equal(monthlyMmcfToBcfd(2_800_000, "2026-02"), 100, "non-leap February uses 28 days");
+  assert.equal(monthlyMmcfToBcfd(100, "2026-13"), null);
+  assert.equal(monthlyMmcfToBcfd(null, "2026-05"), null);
 });
 
 test("storage comparison uses exactly five same-week historical observations", () => {

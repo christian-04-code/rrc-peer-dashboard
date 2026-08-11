@@ -10,6 +10,7 @@ import {
   formatDelta,
   formatMetricValue,
   formatPct,
+  monthlyMmcfToBcfd,
   periodChange,
   periodChangePct
 } from "@/lib/market/macro-analytics";
@@ -49,7 +50,8 @@ function PulseMetric({ metric, label, current }: { metric?: NormalizedMarketMetr
   const hasCurrent = current?.status === "ok" && current.price !== null;
   const change = hasCurrent ? current.change24hAmount : metric ? periodChange(metric) : null;
   const value = hasCurrent ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(current.price as number) : formatMetricValue(metric);
-  const source = hasCurrent ? `OilPriceAPI current · sparkline: EIA official · ${current.asOf ? new Date(current.asOf).toLocaleString() : "--"}` : `${metric?.period ?? "--"} · ${sourceShort(metric)}`;
+  const currentSource = current?.dataStatus === "keyless-demo" ? "OilPriceAPI keyless current" : "OilPriceAPI current";
+  const source = hasCurrent ? `${currentSource} · sparkline: EIA official · ${current.asOf ? new Date(current.asOf).toLocaleString() : "--"}` : `${metric?.period ?? "--"} · ${sourceShort(metric)}`;
   return (
     <article className="macro-pulse-item">
       <div className="macro-pulse-label"><span>{metric?.label ?? label}</span><i className={`freshness-dot ${hasCurrent ? "current" : metric?.freshness ?? "unavailable"}`} aria-label={hasCurrent ? "current market" : metric?.freshness ?? "unavailable"} /></div>
@@ -121,13 +123,6 @@ function monthlyYoy(history: MarketObservation[]): number | null {
   return ((latest.value - prior.value) / Math.abs(prior.value)) * 100;
 }
 
-function monthlyMmcfToBcfd(metric?: NormalizedMarketMetric): number | null {
-  if (!metric || metric.value === null || !metric.period || !/^\d{4}-\d{2}$/.test(metric.period)) return null;
-  const [year, month] = metric.period.split("-").map(Number);
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return metric.value / days / 1000;
-}
-
 export function MacroPanel() {
   const market = useMarketData();
   const fundamentals = useMacroFundamentals();
@@ -154,7 +149,7 @@ export function MacroPanel() {
   });
   const rrcState = snapshot.find((item) => item.label === "Appalachia");
   const rrcSetup = rrcState?.tone === "positive" ? "Supportive" : rrcState?.tone === "negative" ? "Challenging" : rrcState?.state === "Unavailable" ? "Unavailable" : "Neutral";
-  const productionBcfd = monthlyMmcfToBcfd(productionMetric);
+  const productionBcfd = monthlyMmcfToBcfd(productionMetric?.value ?? null, productionMetric?.period ?? null);
   const currentQuotes = market.data?.currentMarket;
 
   return (
@@ -232,7 +227,7 @@ export function MacroPanel() {
         <div><strong>DATA FRESHNESS</strong><span>Observation period and retrieval timestamp are tracked separately; publication weekdays are not assumed.</span></div>
         <div className="macro-freshness-list">
           {metrics.map((metric) => <span key={metric.id}><i className={`freshness-dot ${metric.freshness}`} />EIA · {metric.label}: {observationLabel(metric.period, metric.frequency)} · {metric.frequency} · {metric.freshness} · retrieved {new Date(metric.fetchedAt).toLocaleString()}</span>)}
-          {currentQuotes ? Object.values(currentQuotes).map((quote) => <span key={quote.id}><i className={`freshness-dot ${quote.status === "ok" ? "current" : "unavailable"}`} />OilPriceAPI · {quote.label}: {quote.asOf ? new Date(quote.asOf).toLocaleString() : "--"} · current market · {quote.status}</span>) : null}
+          {currentQuotes ? Object.values(currentQuotes).map((quote) => <span key={quote.id}><i className={`freshness-dot ${quote.status === "ok" ? "current" : "unavailable"}`} />OilPriceAPI · {quote.label}: {quote.asOf ? new Date(quote.asOf).toLocaleString() : "--"} · current market · {quote.dataStatus ?? quote.status}</span>) : null}
           <span><i className={`freshness-dot ${east?.freshness ?? "unavailable"}`} />EIA · regional storage: {observationLabel(east?.period, "weekly")} · weekly · {east?.freshness ?? "unavailable"} · retrieved {fundamentals.data?.generatedAt ? new Date(fundamentals.data.generatedAt).toLocaleString() : "--"}</span>
         </div>
       </footer>

@@ -86,6 +86,46 @@ test("results are matched by code, not array position (batch response order is n
   assert.equal(result.quotesByCode.get("NATURAL_GAS_USD").price, 3.1);
 });
 
+test("an invalid configured credential falls back to OilPriceAPI's official keyless current-price endpoint", async () => {
+  const { fetchOilPriceApiQuotes } = loadClient();
+  process.env.OIL_PRICE_API = "expired-key";
+  const requests = [];
+  global.fetch = async (url) => {
+    requests.push(new URL(url.toString()).pathname);
+    if (requests.length === 1) return new Response("unauthorized", { status: 401 });
+    return new Response(JSON.stringify({ status: "success", data: { prices: [
+      { code: "WTI_USD", price: 83.23, currency: "USD", updated_at: "2026-08-11T21:22:26Z" },
+      { code: "NATURAL_GAS_USD", price: 2.75, currency: "USD", updated_at: "2026-08-11T21:40:40Z" }
+    ] } }), { status: 200 });
+  };
+
+  const result = await fetchOilPriceApiQuotes(["WTI_USD", "NATURAL_GAS_USD"]);
+  assert.deepEqual(requests, ["/v1/prices/latest", "/v1/demo/prices"]);
+  assert.equal(result.accessMode, "keyless-demo");
+  assert.equal(result.quotesByCode.get("WTI_USD").price, 83.23);
+  assert.equal(result.quotesByCode.get("WTI_USD").unit, "bbl");
+  assert.equal(result.quotesByCode.get("NATURAL_GAS_USD").unit, "MMBtu");
+  assert.equal(result.quotesByCode.get("NATURAL_GAS_USD").dataStatus, "keyless-demo");
+  assert.equal(result.quotesByCode.get("NATURAL_GAS_USD").asOf, "2026-08-11T21:40:40Z");
+  assert.equal(result.quotesByCode.get("WTI_USD").change24hAmount, null, "ambiguous demo change is not guessed");
+});
+
+test("a missing credential also uses the official keyless endpoint without fabricating unavailable values", async () => {
+  const { fetchOilPriceApiQuotes } = loadClient();
+  delete process.env.OIL_PRICE_API;
+  let requestedPath;
+  global.fetch = async (url) => {
+    requestedPath = new URL(url.toString()).pathname;
+    return new Response(JSON.stringify({ status: "success", data: { prices: [
+      { code: "WTI_USD", price: 83.23, currency: "USD", updated_at: "2026-08-11T21:22:26Z" }
+    ] } }), { status: 200 });
+  };
+
+  const result = await fetchOilPriceApiQuotes(["WTI_USD"]);
+  assert.equal(requestedPath, "/v1/demo/prices");
+  assert.equal(result.quotesByCode.get("WTI_USD").price, 83.23);
+});
+
 test("24h change is mapped from the confirmed price.changes['24h'].{amount,percent} path -- WTI fixture", async () => {
   const { fetchOilPriceApiQuotes } = loadClient();
   process.env.OIL_PRICE_API = "test-key";
