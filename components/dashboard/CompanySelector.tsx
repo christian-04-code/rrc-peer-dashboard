@@ -12,7 +12,7 @@ export function CompanySelector({
 }) {
   return (
     <div className="selector-block">
-      <span className="selector-label">Primary company</span>
+      <span className="selector-label">Company</span>
       <div>{companies.map((entry) => <button key={entry.ticker} className={ticker === entry.ticker ? "active" : ""} onClick={() => onSelect(entry.ticker)}>{entry.selectorLabel}</button>)}</div>
     </div>
   );

@@ -10,6 +10,12 @@ import {
   getCompany,
   selectableCompanies
 } from "@/lib/dashboard/company-registry";
+import {
+  MAX_SELECTED_COMPANIES,
+  focusSelectedCompany,
+  updateCompanyComparison,
+  type CompanyComparisonState
+} from "@/lib/dashboard/company-comparison";
 import type { Metric, Ticker, View } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
@@ -17,7 +23,6 @@ import { buildCurrentMarketPricesFromMarketResponse } from "@/lib/forecast/live-
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
-import { CompanySelector } from "@/components/dashboard/CompanySelector";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
 import { GuidancePanel } from "@/components/dashboard/GuidancePanel";
@@ -26,14 +31,16 @@ import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { ForecastWorkspacePanel } from "@/components/dashboard/ForecastWorkspacePanel";
 import { DetailDrawer, type DrawerContent } from "@/components/dashboard/DetailDrawer";
 
-const MAX_COMPARISONS = comparisonPreferences.maxComparisonPeers;
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
+const DEFAULT_SELECTED_TICKERS = [defaultTicker, ...DEFAULT_COMPARISONS.filter((ticker) => ticker !== defaultTicker)];
 
 export function HomeDashboard() {
-  const [ticker, setTicker] = useState<Ticker>(defaultTicker);
+  const [companyComparison, setCompanyComparison] = useState<CompanyComparisonState>({
+    selectedTickers: DEFAULT_SELECTED_TICKERS,
+    focusedTicker: defaultTicker
+  });
   const [metric, setMetric] = useState<Metric>("production");
   const [view, setView] = useState<View>("dashboard");
-  const [comparisonTickers, setComparisonTickers] = useState<Ticker[]>(DEFAULT_COMPARISONS);
   const [activity, setActivity] = useState("Market ribbon initialized");
   const [drawer, setDrawer] = useState<DrawerContent | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -42,14 +49,15 @@ export function HomeDashboard() {
   const market = useMarketData();
   const finnhubQuotes = useFinnhubQuotes();
 
-  const company = getCompany(ticker);
+  const { selectedTickers, focusedTicker } = companyComparison;
+  const company = getCompany(focusedTicker);
   const brandCompany = getCompany("RRC");
   const liveSharePrice = useMemo(() => {
-    const quote = finnhubQuotes.data?.equities[ticker];
+    const quote = finnhubQuotes.data?.equities[focusedTicker];
     if (!quote || quote.status !== "ok" || quote.price === null) return null;
     return { value: quote.price, note: `Finnhub · current market (${quote.symbol})` };
-  }, [finnhubQuotes.data, ticker]);
-  const metrics = useMemo(() => getOverviewSummaryCards(ticker, liveSharePrice), [ticker, liveSharePrice]);
+  }, [finnhubQuotes.data, focusedTicker]);
+  const metrics = useMemo(() => getOverviewSummaryCards(focusedTicker, liveSharePrice), [focusedTicker, liveSharePrice]);
 
   useEffect(() => {
     let index = 0;
@@ -86,18 +94,12 @@ export function HomeDashboard() {
     [market.data]
   );
 
-  function selectPrimaryCompany(nextTicker: Ticker) {
-    setTicker(nextTicker);
-    setComparisonTickers((current) => current.filter((peer) => peer !== nextTicker));
+  function activateCompany(nextTicker: Ticker) {
+    setCompanyComparison((current) => updateCompanyComparison(current, nextTicker));
   }
 
-  function toggleComparison(peer: Ticker) {
-    if (peer === ticker) return;
-    setComparisonTickers((current) => {
-      if (current.includes(peer)) return current.filter((item) => item !== peer);
-      if (current.length >= MAX_COMPARISONS) return current;
-      return [...current, peer];
-    });
+  function focusCompany(nextTicker: Ticker) {
+    setCompanyComparison((current) => focusSelectedCompany(current, nextTicker));
   }
 
   const activeFeedCount = market.data?.metrics.filter((item) => item.status === "ok").length ?? 0;
@@ -138,15 +140,14 @@ export function HomeDashboard() {
 
               <MetricStrip metrics={metrics} companyShortName={company.shortName} />
 
-              <section className="company-selector" aria-label="Company and peer selection">
-                <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={selectPrimaryCompany} />
+              <section className="company-selector" aria-label="Company comparison selection">
                 <CompanyComparisonSelector
                   companies={selectableCompanies}
-                  ticker={ticker}
-                  comparisonTickers={comparisonTickers}
-                  maxComparisons={MAX_COMPARISONS}
-                  onToggle={toggleComparison}
-                  onClear={() => setComparisonTickers([])}
+                  selectedTickers={selectedTickers}
+                  focusedTicker={focusedTicker}
+                  maxSelections={MAX_SELECTED_COMPANIES}
+                  onActivate={activateCompany}
+                  onFocusChange={focusCompany}
                 />
               </section>
 
@@ -156,12 +157,12 @@ export function HomeDashboard() {
                     <div className="tabs">{(["production", "revenue", "fcf", "capex", "debt", "ebitdax"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
                   </div>
 
-                  <ChartWorkspace ticker={ticker} comparisonTickers={comparisonTickers} title={`${company.shortName} ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} />
+                  <ChartWorkspace selectedTickers={selectedTickers} title={`Company comparison · ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} />
                 </div>
 
                 <aside>
-                  <GuidancePanel ticker={ticker} onOpenDetail={openDrawer} />
-                  <ValuationsPanel ticker={ticker} />
+                  <GuidancePanel ticker={focusedTicker} onOpenDetail={openDrawer} />
+                  <ValuationsPanel ticker={focusedTicker} />
                 </aside>
               </section>
             </>
