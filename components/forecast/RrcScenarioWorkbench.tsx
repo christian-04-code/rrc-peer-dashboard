@@ -58,6 +58,8 @@ type ValuationResult = {
   forwardYear: RrcForecastYear;
   forwardEbitdaxMillion: number | null;
   netDebtMillion: number | null;
+  forecastEndingNetDebtMillion: number | null;
+  valuationNetDebtFloorApplied: boolean;
   netDebtPeriod: string;
   ebitdaxPeriod: string;
   dilutedSharesMillion: number | null;
@@ -572,6 +574,10 @@ export function RrcScenarioWorkbench() {
             <p className="muted panel-note">
               EV = {result.valuation.ebitdaxPeriod} EBITDAX x target multiple. Equity value = EV - net debt at {result.valuation.netDebtPeriod} ({money(result.valuation.netDebtMillion)}).
               Implied share price = equity value / {num(result.valuation.dilutedSharesMillion, 3)}mm diluted shares. Net debt and EBITDAX are read from the same period end.
+            </p>
+            <p className="muted panel-note">
+              Forecast ending net debt/net cash at {result.valuation.netDebtPeriod}: {money(result.valuation.forecastEndingNetDebtMillion)} (negative = net cash; unaffected by the convention below).
+              {result.valuation.valuationNetDebtFloorApplied ? " Valuation net debt is floored at $0; unallocated forecast excess cash is not credited to implied equity value, since this model does not simulate buybacks, special dividends, acquisitions, or other capital allocation of unmodeled excess free cash flow." : null}
             </p>
             {result.valuation.warnings.length > 0 ? <p className="muted panel-note">{result.valuation.warnings.join(" ")}</p> : null}
           </section>

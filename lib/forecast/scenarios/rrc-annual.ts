@@ -36,7 +36,7 @@ import {
   type ProductionOverrideInput
 } from "@/lib/forecast/production-engine";
 import { runRrcHedgedScenario } from "@/lib/forecast/scenarios/rrc-hedged";
-import { latestReportedProduction, quarterDays } from "@/lib/forecast/scenarios/rrc-complete";
+import { latestReportedProduction, modeledCashTaxRateForYear, quarterDays } from "@/lib/forecast/scenarios/rrc-complete";
 import type {
   RrcAnnualOverride,
   RrcAnnualOverrides,
@@ -105,7 +105,23 @@ export type RrcAnnualPeriodSummary = {
 export type RrcAnnualValuationResult = MultipleValuationResult & {
   forwardYear: RrcForecastYear;
   forwardEbitdaxMillion: number | null;
+  /**
+   * Net debt actually used in the EV/EBITDAX equity-value bridge above (equityValueMillion
+   * = enterpriseValueMillion - netDebtMillion). Floored at $0 -- see
+   * valuationNetDebtFloorApplied and forecastEndingNetDebtMillion below -- unless the
+   * caller supplied an explicit netDebtMillionOverride, which is never floored.
+   */
   netDebtMillion: number | null;
+  /** The TRUE forecast ending net debt (negative = net cash) at netDebtPeriod, exactly as the balance-sheet roll-forward produced it -- never floored, never hidden. This is what the forecast actually projects; netDebtMillion above is a separate, deliberately conservative valuation convention layered on top of it. */
+  forecastEndingNetDebtMillion: number | null;
+  /**
+   * True when forecastEndingNetDebtMillion was negative (net cash) and therefore floored to
+   * $0 for the EV/EBITDAX bridge, because this model does not simulate buybacks, special
+   * dividends, acquisitions, or other capital allocation of unmodeled excess free cash flow.
+   * Valuation net debt is floored at $0; unallocated forecast excess cash is not credited to
+   * implied equity value. Always false when a netDebtMillionOverride was supplied.
+   */
+  valuationNetDebtFloorApplied: boolean;
   netDebtPeriod: string;
   ebitdaxPeriod: string;
   dilutedSharesMillion: number | null;
@@ -169,8 +185,12 @@ function resolveFlatGuidanceAcrossYears(metric: "loePerMcfe" | "cashGaPerMcfe"):
 function resolveCashTaxRateDefault(year: RrcForecastYear): ResolvedAnnualValue {
   const guidance = findGuidance(rrcManagementGuidance, "cashTaxRate", year);
   if (guidance && guidance.midpoint !== null) return guidanceToResolved(guidance);
+  // Shared with rrc-complete.ts's own periodAssumptions via modeledCashTaxRateForYear so
+  // this reference-panel default can never silently diverge from what the engine actually
+  // computes with (a numeric-year comparison, not a "2026"-string one that can typo-match
+  // the wrong branch).
   return {
-    value: year === "2027" ? 0.06 : 0.08,
+    value: modeledCashTaxRateForYear(Number(year)),
     classification: "modeled",
     sourceName: "RRC Peer Dashboard",
     sourceReference: "Scenario convention",
@@ -597,7 +617,25 @@ export function runRrcAnnualForecast(request: RrcAnnualForecastRequest): RrcAnnu
   const forwardEbitdaxMillion = sumQuarterly(periodsByYear(forwardYear), (p) => p.ebitdaxMillion);
   const netDebtPeriod = `${forwardYear}Q4`;
   const balanceSheetAtForwardYearEnd = balanceSheet.find((b) => b.period === netDebtPeriod) ?? null;
-  const netDebtMillion = request.valuation.netDebtMillionOverride ?? balanceSheetAtForwardYearEnd?.netDebtMillion ?? null;
+  // The TRUE forecast ending net debt/net cash, exactly as the balance-sheet roll-forward
+  // produced it -- always shown to the user, never floored, never suppressed.
+  const forecastEndingNetDebtMillion = balanceSheetAtForwardYearEnd?.netDebtMillion ?? null;
+  // Valuation net debt: floored at $0 for the PRIMARY EV/EBITDAX bridge only, because this
+  // model does not simulate buybacks, special dividends, acquisitions, or other capital
+  // allocation of unmodeled excess free cash flow -- once forecast net debt reaches zero,
+  // hypothetical accumulated cash beyond that is not credited to implied equity value. An
+  // explicit user override bypasses the floor entirely (it is not "unmodeled" cash; it is a
+  // deliberate input). FCF, the balance-sheet roll-forward, and forecastEndingNetDebtMillion
+  // above are all completely unaffected by this convention.
+  const userNetDebtOverride = request.valuation.netDebtMillionOverride;
+  const netDebtMillion =
+    userNetDebtOverride !== undefined
+      ? userNetDebtOverride
+      : forecastEndingNetDebtMillion === null
+        ? null
+        : Math.max(0, forecastEndingNetDebtMillion);
+  const valuationNetDebtFloorApplied =
+    userNetDebtOverride === undefined && forecastEndingNetDebtMillion !== null && forecastEndingNetDebtMillion < 0;
   const dilutedSharesMillion = request.valuation.dilutedSharesMillionOverride ?? rrcQ1_2026Baseline.dilutedSharesMillion.value;
 
   const multiple = calculateMultipleValuation({
@@ -612,6 +650,8 @@ export function runRrcAnnualForecast(request: RrcAnnualForecastRequest): RrcAnnu
     forwardYear,
     forwardEbitdaxMillion,
     netDebtMillion,
+    forecastEndingNetDebtMillion,
+    valuationNetDebtFloorApplied,
     netDebtPeriod,
     ebitdaxPeriod: `${forwardYear} (Q1-Q4)`,
     dilutedSharesMillion
@@ -650,6 +690,7 @@ export function runRrcAnnualForecast(request: RrcAnnualForecastRequest): RrcAnnu
     notes: [
       ...notes,
       `Valuation uses ${forwardYear} EBITDAX (sum of ${forwardYear} Q1-Q4) against net debt at ${netDebtPeriod} -- the same period's ending balance sheet, not a later or earlier year's.`,
+      "Valuation net debt is floored at $0; unallocated forecast excess cash is not credited to implied equity value. This model does not simulate buybacks, special dividends, acquisitions, or other capital allocation of unmodeled excess free cash flow, so the primary EV/EBITDAX bridge stops crediting equity value for hypothetical accumulated cash once forecast net debt reaches zero. The forecast's true ending net debt/net cash figure is unaffected and always reported separately (forecastEndingNetDebtMillion).",
       "The secondary DCF output uses today's reported net debt, not a future ending net debt, to avoid double-counting FCF-funded debt paydown."
     ]
   };

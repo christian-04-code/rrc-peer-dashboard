@@ -145,6 +145,20 @@ function guidedAnnualValue(metric: GuidanceMetricKey, year: GuidanceYear, unit: 
   });
 }
 
+/**
+ * Modeled cash tax rate fallback when no current-cycle guidance exists, by year: 2%
+ * (2026) -> 6% (2027) -> 8% (2028), as NOL shelter is used up. Single source of truth for
+ * this scenario assumption -- both the engine's own periodAssumptions (below) and
+ * rrc-annual.ts's reference-panel default (resolveAnnualCostDefaults) call this function
+ * rather than each hardcoding the by-year values separately, so the displayed default and
+ * the value the engine actually computes with can never silently diverge again. Always
+ * takes a numeric year (not a "2026"-style string) to avoid the string-comparison bug this
+ * replaced.
+ */
+export function modeledCashTaxRateForYear(year: number): number {
+  return year === 2026 ? 0.02 : year === 2027 ? 0.06 : 0.08;
+}
+
 export function quarterDays(period: string): number {
   const year = Number(period.slice(0, 4));
   const quarter = Number(period.slice(-1));
@@ -528,7 +542,7 @@ function periodAssumptions(
         : annualOverride?.cashTaxRate ??
           guidedAnnualValue("cashTaxRate", yearKey, "decimal", period) ??
           value({
-            value: year === 2026 ? 0.02 : year === 2027 ? 0.06 : 0.08,
+            value: modeledCashTaxRateForYear(year),
             unit: "decimal",
             period,
             classification: "modeled",

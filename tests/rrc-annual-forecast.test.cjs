@@ -224,7 +224,11 @@ test("valuation net debt is read from the SAME year-end as the forward EBITDAX y
   assert.equal(result2027.valuation.netDebtPeriod, "2027Q4");
   const result2028 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2028" } }));
   assert.equal(result2028.valuation.netDebtPeriod, "2028Q4");
-  assert.notEqual(result2027.valuation.netDebtMillion, result2028.valuation.netDebtMillion);
+  // Compare the TRUE (unfloored) forecast ending net debt for each date -- the EV/EBITDAX
+  // bridge's netDebtMillion is deliberately floored at $0 (see the net-debt-floor tests
+  // below) and both 2027 and 2028 happen to be net-cash years, so it floors to 0 for both;
+  // that must not be mistaken for the two dates reading the same balance-sheet period.
+  assert.notEqual(result2027.valuation.forecastEndingNetDebtMillion, result2028.valuation.forecastEndingNetDebtMillion);
   assert.equal(result2027.valuation.forwardEbitdaxMillion, result2027.annual["2027"].ebitdaxMillion);
 });
 
@@ -394,4 +398,94 @@ test("live-market-prices.ts's OilPriceAPI-first/EIA-fallback resolution logic is
   );
   assert.match(liveMarketPrices, /OilPriceAPI.*wins per commodity/s);
   assert.match(liveMarketPrices, /extractLiveMarketMetricsFromMarketResponse/);
+});
+
+// --- Regression: 2026 cash-tax display bug fix ---
+
+test("the displayed/API default cash-tax assumption (resolveAnnualCostDefaults) matches the assumption actually consumed by the engine (rrc-complete.ts periodAssumptions), for all three years -- can never silently diverge again", () => {
+  const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
+  const expectedByYear = { "2026": 0.02, "2027": 0.06, "2028": 0.08 };
+  for (const year of ["2026", "2027", "2028"]) {
+    const displayed = rrcAnnual.resolveAnnualCostDefaults(year).cashTaxRate.value;
+    // A non-Q1 quarter of that year, so it exercises the same modeled-fallback branch the
+    // reference panel's default is meant to describe (Q1 2026 is a separate, immutable,
+    // always-2% reported quarter and would trivially match by coincidence).
+    const engineQuarter = year === "2026" ? "2026Q3" : `${year}Q1`;
+    const engineValue = scenario.periods.find((p) => p.period === engineQuarter).costs.cashTaxRate.value;
+    assert.equal(displayed, expectedByYear[year], `displayed ${year} cash tax rate should be ${expectedByYear[year] * 100}%`);
+    assert.equal(engineValue, expectedByYear[year], `engine ${year} cash tax rate should be ${expectedByYear[year] * 100}%`);
+    assert.equal(displayed, engineValue, `${year}: displayed default (${displayed}) must equal what the engine actually uses (${engineValue})`);
+  }
+});
+
+test("modeledCashTaxRateForYear is the single shared source of truth: both rrc-complete.ts's engine and rrc-annual.ts's reference default call it (a numeric-year comparison, not the prior string-comparison bug)", () => {
+  assert.equal(rrcComplete.modeledCashTaxRateForYear(2026), 0.02);
+  assert.equal(rrcComplete.modeledCashTaxRateForYear(2027), 0.06);
+  assert.equal(rrcComplete.modeledCashTaxRateForYear(2028), 0.08);
+});
+
+// --- Net-debt floor for the primary EV/EBITDAX valuation only ---
+
+test("positive forecast net debt is deducted normally (not floored) in the EV/EBITDAX bridge", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2026" } }));
+  assert.ok(result.valuation.forecastEndingNetDebtMillion > 0, "2026 year-end should be a positive net debt position in the default scenario");
+  assert.equal(result.valuation.netDebtMillion, result.valuation.forecastEndingNetDebtMillion, "positive net debt must flow through to the valuation unchanged");
+  assert.equal(result.valuation.valuationNetDebtFloorApplied, false);
+  assert.ok(Math.abs(result.valuation.equityValueMillion - (result.valuation.enterpriseValueMillion - result.valuation.forecastEndingNetDebtMillion)) < 1e-6);
+});
+
+test("negative forecast net debt (net cash) is floored to $0 for the EV/EBITDAX valuation, but the true figure is still reported", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
+  assert.ok(result.valuation.forecastEndingNetDebtMillion < 0, "2027 year-end should be a net-cash position in the default scenario");
+  assert.equal(result.valuation.netDebtMillion, 0, "valuation net debt must be floored at $0, not the negative (net cash) figure");
+  assert.equal(result.valuation.valuationNetDebtFloorApplied, true);
+  // Floored net debt means equity value equals enterprise value exactly.
+  assert.ok(Math.abs(result.valuation.equityValueMillion - result.valuation.enterpriseValueMillion) < 1e-6);
+});
+
+test("operating forecast outputs (production/revenue/EBITDAX/CapEx/FCF) are completely unaffected by the net-debt floor", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
+  assert.equal(result.annual["2027"].revenueMillion, 3894.8527991640967);
+  assert.equal(result.annual["2027"].ebitdaxMillion, 2021.853224355502);
+  assert.equal(result.annual["2027"].capexMillion, 675);
+  assert.equal(result.annual["2027"].freeCashFlowMillion, 1152.5265908941722);
+});
+
+test("displayed forecast net cash (forecastEndingNetDebtMillion) is identical whether or not the floor binds elsewhere -- the floor never touches the reported balance-sheet figure", () => {
+  const result2026 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2026" } }));
+  const result2027 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
+  // 2026 (floor does not bind) and 2027 (floor binds) both report their own true ending net
+  // debt figure unmodified -- confirms the floor is scoped to the valuation bridge only.
+  assert.equal(result2026.valuation.forecastEndingNetDebtMillion, 226.8386792994055);
+  assert.equal(result2027.valuation.forecastEndingNetDebtMillion, -830.4879115947667);
+});
+
+test("implied share price no longer increases solely because unallocated forecast cash accumulates beyond zero net debt (2027 vs. 2028, both net-cash years, same multiple)", () => {
+  const result2027 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
+  const result2028 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2028" } }));
+  // Both years are net-cash (floor binds for both), and 2028's true net cash position is far
+  // larger in magnitude than 2027's -- confirm that extra unallocated cash is NOT credited:
+  // both floor to the same $0 valuation net debt.
+  assert.ok(result2028.valuation.forecastEndingNetDebtMillion < result2027.valuation.forecastEndingNetDebtMillion, "2028 should show more accumulated net cash than 2027");
+  assert.equal(result2027.valuation.netDebtMillion, 0);
+  assert.equal(result2028.valuation.netDebtMillion, 0);
+  // With floored net debt at $0 for both, the ONLY driver of a different implied share price
+  // between the two is each year's own forward EBITDAX, not the size of the (unmodeled) cash
+  // pile -- i.e., equity value == enterprise value == forward EBITDAX x multiple for both.
+  assert.ok(Math.abs(result2027.valuation.equityValueMillion - result2027.valuation.forwardEbitdaxMillion * 5.5) < 1e-6);
+  assert.ok(Math.abs(result2028.valuation.equityValueMillion - result2028.valuation.forwardEbitdaxMillion * 5.5) < 1e-6);
+});
+
+test("an explicit user net-debt override bypasses the floor entirely, even when negative -- it is a deliberate input, not unmodeled excess cash", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(
+    baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027", netDebtMillionOverride: -500 } })
+  );
+  assert.equal(result.valuation.netDebtMillion, -500);
+  assert.equal(result.valuation.valuationNetDebtFloorApplied, false);
+});
+
+test("the net-debt-floor convention is documented in the forecast's notes output", () => {
+  const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
+  assert.ok(result.notes.some((n) => n.includes("Valuation net debt is floored at $0")), "notes should clearly document the floor convention");
+  assert.ok(result.notes.some((n) => n.includes("unallocated forecast excess cash is not credited")));
 });
