@@ -27,6 +27,7 @@ export function GuidancePanel({
             <div className="insight-row" key={`${item.section}-${item.label}`}>
               <b>{item.label}: </b>
               {item.value}
+              {item.status ? <small className="muted"> · {item.status}</small> : null}
             </div>
           ))}
         </div>
@@ -43,7 +44,7 @@ export function GuidancePanel({
       ) : null}
 
       <p className="muted panel-note">
-        Company guidance · {meta.source.replace(/^.*\//, "")} · {meta.generated}
+        Management guidance · {meta.source} · {meta.generated}
       </p>
     </div>
   );

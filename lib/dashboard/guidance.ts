@@ -1,90 +1,64 @@
-import guidanceData from "@/data/guidance.json";
+import managementGuidanceData from "@/data/management-guidance.json";
 import type { Ticker } from "./company-registry";
 
-type GuidanceItem = { text: string; label?: string; value?: string };
-type CompanyGuidance = { sections: Record<string, GuidanceItem[]>; heading?: string };
-type GuidanceFile = {
-  meta: { source: string; generated: string };
-  companies: Record<string, CompanyGuidance>;
+type GuidanceRecord = {
+  company: Ticker;
+  metric: string;
+  period: string;
+  plotPeriod: string;
+  low: number | null;
+  midpoint: number | null;
+  high: number | null;
+  unit: string;
+  guidanceType: string;
+  source: string;
+  sourceUrl?: string;
+  sourceDate: string;
+  sourceLocation?: string;
+  reportingCycle?: string;
+  priorReportingCycle?: string;
+  status?: string;
+  operator?: string;
+  reportedValue?: number;
+  managementWording?: string;
+  note?: string;
+  chartable: boolean;
 };
 
-const data = guidanceData as GuidanceFile;
+type ManagementGuidanceFile = {
+  meta: {
+    auditAsOf: string;
+    note: string;
+    reportingCycle: string;
+    ingestionSource?: string;
+  };
+  companies: Record<string, { entries: GuidanceRecord[] }>;
+};
 
-// Sections present across all core peers, in priority order for the compact widget.
-const HIGHLIGHT_SECTIONS = ["Production", "Capital Expenditures", "Operating Costs"];
-const MAX_PER_SECTION = 2;
+const data = managementGuidanceData as ManagementGuidanceFile;
 const MAX_TOTAL = 6;
 
-export type GuidanceHighlight = { section: string; label: string; value: string };
+const SECTION_ORDER = [
+  "Production",
+  "Capital Expenditures",
+  "Cash Flow & Earnings",
+  "Debt & Leverage",
+  "Operating Costs & Pricing",
+  "Wells & Development",
+  "Infrastructure & Commercial",
+  "Other"
+];
 
-export function hasGuidance(ticker: Ticker): boolean {
-  return Boolean(data.companies[ticker]);
-}
-
-export function getGuidanceMeta(): { source: string; generated: string } {
-  return data.meta;
-}
-
-// Some companies' source bullets already come through as one label/value item
-// ("Q1 2026 Actual: 2.2 Bcfe/d"); others are two consecutive plain-text lines (a header,
-// then its value on the next line, e.g. "2026 Total Capital Budget" / "$556-$586MM").
-// This recognizes the second pattern by shape rather than treating it as unavailable.
-function looksLikeValueLine(text: string): boolean {
-  const trimmed = text.trim();
-  if (/^[~$(]/.test(trimmed)) return true;
-  return /\d/.test(trimmed) && /(%|Bcfe|MMcf|Mcf|Mbbl|Bbl|MM\b|\$|x\b|–)/.test(trimmed);
-}
-
-function extractSectionHighlights(sectionName: string, items: GuidanceItem[]): GuidanceHighlight[] {
-  const highlights: GuidanceHighlight[] = [];
-  for (let index = 0; index < items.length && highlights.length < MAX_PER_SECTION; index += 1) {
-    const item = items[index];
-    if (item.label && item.value) {
-      highlights.push({ section: sectionName, label: item.label, value: item.value });
-      continue;
-    }
-    if (item.label || item.value || looksLikeValueLine(item.text)) continue;
-    const next = items[index + 1];
-    if (next && !next.label && !next.value && looksLikeValueLine(next.text)) {
-      highlights.push({ section: sectionName, label: item.text, value: next.text });
-      index += 1;
-    }
-  }
-  return highlights;
-}
-
-/** Most decision-useful guidance fields for the compact right-side widget: the first label/value pairs from Production, Capital Expenditures, and Operating Costs, capped so the widget stays compact. */
-export function getCompanyGuidanceHighlights(ticker: Ticker): GuidanceHighlight[] {
-  const company = data.companies[ticker];
-  if (!company) return [];
-
-  const highlights: GuidanceHighlight[] = [];
-  for (const sectionName of HIGHLIGHT_SECTIONS) {
-    const items = company.sections[sectionName] ?? [];
-    highlights.push(...extractSectionHighlights(sectionName, items));
-    if (highlights.length >= MAX_TOTAL) return highlights.slice(0, MAX_TOTAL);
-  }
-  return highlights;
-}
-
-/** Full normalized guidance text for the detail drawer ("View full guidance"). */
-export function getCompanyGuidanceFullText(ticker: Ticker): string {
-  const company = data.companies[ticker];
-  if (!company) return `No normalized guidance is available for ${ticker}.`;
-
-  const lines: string[] = [];
-  for (const [sectionName, items] of Object.entries(company.sections)) {
-    lines.push(sectionName);
-    for (const item of items) {
-      lines.push(item.label && item.value ? `${item.label}: ${item.value}` : item.text);
-    }
-  }
-  return lines.join(" · ");
-}
+export type GuidanceHighlight = {
+  section: string;
+  label: string;
+  value: string;
+  status?: string;
+};
 
 export type GuidanceRow =
-  | { kind: "pair"; label: string; value: string }
-  | { kind: "note"; text: string };
+  | { kind: "pair"; label: string; value: string; detail?: string }
+  | { kind: "note"; text: string; detail?: string };
 
 export type GuidanceSectionData = { section: string; rows: GuidanceRow[] };
 
@@ -95,38 +69,154 @@ export type GuidanceDrawerContent = {
   meta: { source: string; generated: string };
 };
 
-// Same header-line/value-line pairing heuristic as extractSectionHighlights, generalized to
-// walk every item in a section (no cap) so the full drawer preserves all source content —
-// items that don't pair cleanly are kept as standalone notes rather than dropped.
-function parseGuidanceSection(items: GuidanceItem[]): GuidanceRow[] {
-  const rows: GuidanceRow[] = [];
-  let index = 0;
-  while (index < items.length) {
-    const item = items[index];
-    if (item.label && item.value) {
-      rows.push({ kind: "pair", label: item.label, value: item.value });
-      index += 1;
-      continue;
-    }
-    const next = items[index + 1];
-    const isHeaderLine = !item.label && !item.value && !looksLikeValueLine(item.text);
-    if (isHeaderLine && next && !next.label && !next.value && looksLikeValueLine(next.text)) {
-      rows.push({ kind: "pair", label: item.text, value: next.text });
-      index += 2;
-      continue;
-    }
-    rows.push({ kind: "note", text: item.text });
-    index += 1;
-  }
-  return rows;
+function isCurrentRecord(record: GuidanceRecord): boolean {
+  if (record.reportingCycle !== data.meta.reportingCycle) return false;
+  // Q2 AR materials reaffirmed three components but did not independently restate a total.
+  return !(record.company === "AR" && record.metric === "capex" && record.note?.includes("not independently restated"));
 }
 
-/** Full normalized guidance, grouped by section, for the "View full guidance" drawer. */
+function currentRecords(ticker: Ticker): GuidanceRecord[] {
+  return (data.companies[ticker]?.entries ?? []).filter(isCurrentRecord);
+}
+
+function titleCase(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .replace(/Fcf/g, "FCF")
+    .replace(/Ebitdax/g, "EBITDAX")
+    .replace(/Capex/g, "CapEx")
+    .replace(/Loe/g, "LOE")
+    .replace(/Gptc?/g, (match) => match.toUpperCase())
+    .replace(/Dc\b/g, "D&C")
+    .replace(/Ga\b/g, "G&A");
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(value);
+}
+
+function formatValue(value: number, unit: string): string {
+  if (unit === "$MM") return `$${formatNumber(value)}MM`;
+  return `${formatNumber(value)}${unit === "%" ? "%" : ` ${unit}`}`;
+}
+
+function operatorSymbol(operator: string): string {
+  return operator === ">=" ? "≥" : operator === "<=" ? "≤" : operator;
+}
+
+function formattedRecordValue(record: GuidanceRecord): string {
+  if (record.operator) {
+    const threshold = record.reportedValue ?? record.midpoint ?? record.high ?? record.low;
+    if (threshold !== null && threshold !== undefined) {
+      return `${operatorSymbol(record.operator)}${formatValue(threshold, record.unit)}`;
+    }
+  }
+  if (record.low !== null && record.high !== null) {
+    if (record.unit === "$MM") return `$${formatNumber(record.low)}–$${formatNumber(record.high)}MM`;
+    return `${formatNumber(record.low)}–${formatNumber(record.high)} ${record.unit}`;
+  }
+  const point = record.midpoint ?? record.reportedValue ?? record.high ?? record.low;
+  if (point !== null && point !== undefined) {
+    const prefix = record.guidanceType.includes("approximate") ? "~" : "";
+    return `${prefix}${formatValue(point, record.unit)}`;
+  }
+  return record.managementWording ?? record.note ?? "Qualitative guidance";
+}
+
+function sectionFor(record: GuidanceRecord): string {
+  const metric = record.metric;
+  if (/production|liquids|curtailment/.test(metric)) return "Production";
+  if (/capex|capital|acreage/.test(metric)) return "Capital Expenditures";
+  if (/fcf|ebitda|ebitdax|cash_flow|tax|interest/.test(metric)) return "Cash Flow & Earnings";
+  if (/debt|leverage/.test(metric)) return "Debt & Leverage";
+  if (/opex|cost|expense|differential|price|breakeven|margin/.test(metric)) return "Operating Costs & Pricing";
+  if (/well|til|lateral|rig|frac|completion|proppant|development/.test(metric)) return "Wells & Development";
+  if (/capacity|takeaway|lng|midstream|pipeline|offtake|commercial|supply|infrastructure|twin_eagle|pinnacle|mvp/.test(metric)) return "Infrastructure & Commercial";
+  return "Other";
+}
+
+function recordLabel(record: GuidanceRecord): string {
+  return `${titleCase(record.metric)} · ${record.period}`;
+}
+
+function recordDetail(record: GuidanceRecord): string {
+  const location = record.sourceLocation ? `${record.sourceLocation} · ` : "";
+  const status = record.status ? ` · ${titleCase(record.status)}` : "";
+  return `${record.source} · ${location}${record.sourceDate}${status}`;
+}
+
+function highlightRank(record: GuidanceRecord): number {
+  const ranks: Record<string, number> = {
+    production: 0,
+    capex: 10,
+    capex_base_operated: 11,
+    capex_dc: 12,
+    capex_dc_maintenance: 12,
+    capex_discretionary_acreage_program: 13,
+    fcf: 20,
+    ebitdax: 21,
+    net_debt_target: 30,
+    debt_target: 31,
+    leverage_target: 32,
+    opex_total: 40,
+    cash_operating_cost_target: 41,
+    opex_loe: 42,
+    gas_differential: 43
+  };
+  const metricRank = ranks[record.metric] ?? 100;
+  const periodRank = record.period === "FY 2026" ? 0 : record.period.startsWith("Q3 2026") ? 1 : record.period.startsWith("Q4 2026") ? 2 : 3;
+  return metricRank + periodRank / 10;
+}
+
+export function hasGuidance(ticker: Ticker): boolean {
+  return currentRecords(ticker).length > 0;
+}
+
+export function getGuidanceMeta(): { source: string; generated: string } {
+  return {
+    source: `Official company disclosures · ${data.meta.reportingCycle} cycle`,
+    generated: data.meta.auditAsOf
+  };
+}
+
+/** Highest-value current-cycle items for the compact right-side widget. */
+export function getCompanyGuidanceHighlights(ticker: Ticker): GuidanceHighlight[] {
+  return currentRecords(ticker)
+    .slice()
+    .sort((left, right) => highlightRank(left) - highlightRank(right))
+    .slice(0, MAX_TOTAL)
+    .map((record) => ({
+      section: sectionFor(record),
+      label: recordLabel(record),
+      value: formattedRecordValue(record),
+      status: record.status ? titleCase(record.status) : undefined
+    }));
+}
+
+/** Full current-cycle guidance text retained for non-drawer consumers. */
+export function getCompanyGuidanceFullText(ticker: Ticker): string {
+  return currentRecords(ticker)
+    .map((record) => `${recordLabel(record)}: ${formattedRecordValue(record)} · ${recordDetail(record)}`)
+    .join(" · ") || `No current ${data.meta.reportingCycle} management guidance is available for ${ticker}.`;
+}
+
+/** Full current-cycle guidance, including non-chartable records, grouped for the detail drawer. */
 export function getCompanyGuidanceSections(ticker: Ticker): GuidanceSectionData[] {
-  const company = data.companies[ticker];
-  if (!company) return [];
-  return Object.entries(company.sections).map(([sectionName, items]) => ({
-    section: sectionName,
-    rows: parseGuidanceSection(items)
-  }));
+  const grouped = new Map<string, GuidanceRow[]>();
+  for (const record of currentRecords(ticker)) {
+    const section = sectionFor(record);
+    const rows = grouped.get(section) ?? [];
+    rows.push({
+      kind: "pair",
+      label: recordLabel(record),
+      value: formattedRecordValue(record),
+      detail: recordDetail(record)
+    });
+    grouped.set(section, rows);
+  }
+
+  return SECTION_ORDER
+    .filter((section) => grouped.has(section))
+    .map((section) => ({ section, rows: grouped.get(section) ?? [] }));
 }

@@ -1,6 +1,7 @@
 /**
  * Quarterly financial and operating fixture for the 7 core RRC peer companies
- * (RRC, AR, CNX, CRK, EQT, EXE, GPOR), covering Q1 2024 through Q1 2026.
+ * (RRC, AR, CNX, CRK, EQT, EXE, GPOR), covering Q1 2024 through the audited
+ * Q2 2026 actual for every peer.
  *
  * SOURCE (priority 1 -- used for all cells below unless flagged otherwise):
  *   "Peer Comparsion site/Peer_Comp_Site_Data/Codex/
@@ -67,8 +68,9 @@ import type { Ticker } from "./company-registry";
 export type Quarter =
   | "Q1 2024" | "Q2 2024" | "Q3 2024" | "Q4 2024"
   | "Q1 2025" | "Q2 2025" | "Q3 2025" | "Q4 2025"
-  | "Q1 2026";
+  | "Q1 2026" | "Q2 2026";
 
+/** Quarters shared by the complete auxiliary datasets (EPS, market cap, and other nine-quarter fixtures). */
 export const quarters: Quarter[] = [
   "Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024",
   "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025",
@@ -128,14 +130,80 @@ export type QuarterlyFinancials = {
   };
 };
 
-const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
+const RRC_CAPEX_NOTE =
+  "Range historical capital expenditures use company-reported all-in capital spending from quarterly earnings materials, consistent with the stored Q1 and Q2 2026 values; standalone quarters are in $MM at the company's reported nearest-$MM precision.";
+
+type AuditedPeerQ2Actual = {
+  ticker: Exclude<Ticker, "RRC">;
+  production: number;
+  revenue: number;
+  adjustedEbitdax: number;
+  capitalExpenditures: number;
+  capitalExpendituresBasis?: ValueBasis;
+  netDebt: number;
+};
+
+function auditedPeerQ2Actual({
+  ticker,
+  production,
+  revenue,
+  adjustedEbitdax,
+  capitalExpenditures,
+  capitalExpendituresBasis = "actual",
+  netDebt
+}: AuditedPeerQ2Actual): QuarterlyFinancials {
+  const unresolved = (basis: ValueBasis = "actual"): SourcedValue => ({
+    value: null,
+    source: "codex",
+    basis,
+    note: `Outside the accepted ${ticker} Q2 2026 six-metric actuals integration scope; left unresolved rather than estimated.`
+  });
+
+  return {
+    ticker,
+    quarter: "Q2 2026",
+    revenue: { value: revenue, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 revenue for the three months ended June 30, 2026.` },
+    adjustedEbitdax: { value: adjustedEbitdax, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 Adjusted EBITDAX or existing dashboard equivalent.` },
+    capitalExpenditures: { value: capitalExpenditures, source: "codex", basis: capitalExpendituresBasis, note: `Approved audited ${ticker} standalone Q2 2026 capital expenditures under the existing live-series definition.` },
+    netDebt: { value: netDebt, source: "codex", basis: "derived", note: `Approved audited ${ticker} quarter-end net debt as of June 30, 2026, under the existing live-series definition.` },
+    production: {
+      total: { value: production, source: "codex", basis: "actual", note: `Approved audited ${ticker} Q2 2026 average daily production in MMcfe/d.` },
+      naturalGas: unresolved(),
+      ngl: unresolved(),
+      oilCondensate: unresolved()
+    },
+    commodityMix: {
+      naturalGasPct: unresolved("derived"),
+      nglPct: unresolved("derived"),
+      oilCondensatePct: unresolved("derived")
+    },
+    realizedPrices: {
+      naturalGas: unresolved(),
+      ngl: unresolved(),
+      oilCondensate: unresolved()
+    },
+    costs: {
+      leaseOperatingExpense: unresolved(),
+      gatheringProcessingTransportation: unresolved(),
+      cashGA: unresolved(),
+      totalCashUnitCosts: unresolved("derived")
+    },
+    wells: {
+      drilled: unresolved(),
+      turnedInLine: unresolved(),
+      ducInventory: unresolved()
+    }
+  };
+}
+
+const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
   RRC: {
     "Q1 2024": {
       ticker: "RRC",
       quarter: "Q1 2024",
       revenue: { value: 645.456, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 335.653, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 170.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 170.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1425.906, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 92.138, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 331.93, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -174,7 +242,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q2 2024",
       revenue: { value: 530.109, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 264.281, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 175.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 175.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1470.084, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 28.704, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 148.775, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -213,7 +281,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q3 2024",
       revenue: { value: 615.102, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 276.225, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 156.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 156.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1440.69, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 50.656, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 245.919, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -252,7 +320,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q4 2024",
       revenue: { value: 626.417, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 339.273, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 153.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 153.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1404.212, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 94.842, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 217.89, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -291,7 +359,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q1 2025",
       revenue: { value: 690.554, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 424.123, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 147.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 147.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1361.968, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 97.052, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 330.083, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -330,7 +398,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q2 2025",
       revenue: { value: 856.275, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 329.024, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 154.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 154.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1224.866, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 237.578, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 336.19, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -369,7 +437,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q3 2025",
       revenue: { value: 748.528, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 301.38, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 190.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 190.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1228.825, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 144.307, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 247.545, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -408,7 +476,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q4 2025",
       revenue: { value: 820.158, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 379.452, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 183.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 183.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 1217.796, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 179.087, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 257.506, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -447,7 +515,7 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
       quarter: "Q1 2026",
       revenue: { value: 1034.17, source: "codex", basis: "actual", note: "GAAP total revenues and other income. Q1-Q3 2024 uses the consistently reclassified comparative presentation in the corresponding 2025 Form 10-Q; Q4 is exact FY less Q1-Q3." },
       adjustedEbitdax: { value: 569.529, source: "codex", basis: "actual", note: "Company-reported EBITDAX excluding certain items from RRC supplemental Table 2; standalone quarterly values in $MM." },
-      capitalExpenditures: { value: 139.0, source: "codex", basis: "derived", note: "Total company capital spending derived from filing cash additions plus the exact change in accrued capital expenditures; standalone quarters use matching YTD/FY roll-forwards." },
+      capitalExpenditures: { value: 139.0, source: "codex", basis: "derived", note: RRC_CAPEX_NOTE },
       netDebt: { value: 833.753, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents, in $MM, from the balance sheet and debt note." },
       netIncome: { value: 341.63, source: "factset", basis: "actual", note: "FactSet-reported quarterly net income (as-reported/GAAP basis, not a consensus or estimated figure); the Codex workbook does not carry net income as a standalone line, only as an unstored input inside the Normalized EBITDAX bridge methodology note, so FactSet is used per the documented source-priority fallback." },
       operatingCashFlow: { value: 619.136, source: "codex", basis: "actual", note: "GAAP net cash provided by operating activities from the Consolidated Statements of Cash Flows. Q1 of each year is the exact reported standalone quarter; other quarters are exact YTD-less-prior-YTD roll-forwards from the same filings." },
@@ -479,6 +547,41 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         drilled: { value: 9.0, source: "codex", basis: "actual", note: "Unavailable quarterly: RRC 10-K drilling table reports annual gross productive development wells (52 in 2024; 54 in 2025), but reviewed quarterly materials do not disclose comparable unique wells drilled by quarter. Quarterly activity-across-wells language was not used because it does not reconcile to the 10-K definition." },
         turnedInLine: { value: 17.0, source: "codex", basis: "actual", note: "Wells turned to sales / wells TIL. Standalone quarters from RRC Wells TIL tables; Q2/Q3/Q4 derived from 1H/YTD/FY totals only when definitions match." },
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Unavailable on workbook unit basis: RRC disclosed DUC inventory in lateral feet at year-end 2025, not a comparable quarter-end DUC well count. Wells waiting on sales/completion/infrastructure were not used as DUC inventory." }
+      }
+    },
+    "Q2 2026": {
+      ticker: "RRC",
+      quarter: "Q2 2026",
+      revenue: { value: 833.571, source: "codex", basis: "actual", note: "Direct GAAP total revenues and other income for the three months ended June 30, 2026." },
+      adjustedEbitdax: { value: 349.059, source: "codex", basis: "actual", note: "RRC historical-series convention: company-reported cash margin plus cash interest expense less interest income; standalone quarter in $MM." },
+      capitalExpenditures: { value: 222.0, source: "codex", basis: "actual", note: RRC_CAPEX_NOTE },
+      netDebt: { value: 880.753, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents as of June 30, 2026, in $MM." },
+      production: {
+        total: { value: 2296.399, source: "codex", basis: "actual", note: "Direct reported average daily gas-equivalent production for the three months ended June 30, 2026." },
+        naturalGas: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." },
+        ngl: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." },
+        oilCondensate: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." }
+      },
+      commodityMix: {
+        naturalGasPct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." },
+        nglPct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." },
+        oilCondensatePct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." }
+      },
+      realizedPrices: {
+        naturalGas: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        ngl: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        oilCondensate: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." }
+      },
+      costs: {
+        leaseOperatingExpense: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        gatheringProcessingTransportation: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        cashGA: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        totalCashUnitCosts: { value: null, source: "codex", basis: "derived", note: "Outside the accepted RRC Q2 2026 integration scope." }
+      },
+      wells: {
+        drilled: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        turnedInLine: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        ducInventory: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." }
       }
     },
   },
@@ -798,6 +901,15 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Unavailable: no consistent quarter-end DUC inventory disclosure found; wells in process/completion backlog not used as DUC inventory." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "AR",
+      production: 4144.0,
+      revenue: 1559.842,
+      adjustedEbitdax: 595.437,
+      capitalExpenditures: 326.0,
+      capitalExpendituresBasis: "derived",
+      netDebt: 2634.7
+    })
   },
   CNX: {
     "Q1 2024": {
@@ -1115,6 +1227,14 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Only true quarter-end drilled-but-uncompleted count populated: 2024 and 2025 year-end net development DUC wells from 10-K. Interim quarters left blank." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "CNX",
+      production: 1664.8,
+      revenue: 618.484,
+      adjustedEbitdax: 290.0,
+      capitalExpenditures: 142.0,
+      netDebt: 2239.488
+    })
   },
   CRK: {
     "Q1 2024": {
@@ -1432,6 +1552,14 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "CRK",
+      production: 1242.879,
+      revenue: 470.262,
+      adjustedEbitdax: 244.811,
+      capitalExpenditures: 446.869,
+      netDebt: 3088.872
+    })
   },
   EQT: {
     "Q1 2024": {
@@ -1749,6 +1877,14 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "EQT",
+      production: 6972.242,
+      revenue: 1809.94,
+      adjustedEbitdax: 1202.99,
+      capitalExpenditures: 666.258,
+      netDebt: 5542.851
+    })
   },
   EXE: {
     "Q1 2024": {
@@ -2066,6 +2202,14 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "EXE",
+      production: 7482.0,
+      revenue: 2960.0,
+      adjustedEbitdax: 1183.0,
+      capitalExpenditures: 851.0,
+      netDebt: 3075.0
+    })
   },
   GPOR: {
     "Q1 2024": {
@@ -2383,15 +2527,25 @@ const data: Record<Ticker, Record<Quarter, QuarterlyFinancials>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "GPOR",
+      production: 962.8,
+      revenue: 323.228,
+      adjustedEbitdax: 179.1,
+      capitalExpenditures: 148.6,
+      netDebt: 928.946
+    })
   },
 };
 
 export function getQuarterlyFinancials(ticker: Ticker, quarter: Quarter): QuarterlyFinancials {
-  return data[ticker][quarter];
+  const row = data[ticker][quarter];
+  if (!row) throw new Error(`No reported financials for ${ticker} ${quarter}`);
+  return row;
 }
 
 export function getAllQuartersForTicker(ticker: Ticker): QuarterlyFinancials[] {
-  return quarters.map((q) => data[ticker][q]);
+  return Object.values(data[ticker]);
 }
 
 export const financialsQuarterly = data;

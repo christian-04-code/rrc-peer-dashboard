@@ -15,7 +15,7 @@ import type { Ticker } from "./company-registry";
 export type SourceTag = "macrotrends" | "yahoo-finance";
 export type MarketCapValue = { value: number; source: SourceTag; note: string };
 
-const data: Record<Ticker, Record<Quarter, MarketCapValue>> = {
+const data: Record<Ticker, Partial<Record<Quarter, MarketCapValue>>> = {
   RRC: {
     "Q1 2024": { value: 8170.0, source: "macrotrends", note: "Macrotrends RRC historical market cap for 2024-03-31 quarter-end: $8.17B; share-count cross-check from 2024_Q1_RRC_10-Q balance sheet/SE." },
     "Q2 2024": { value: 7990.0, source: "macrotrends", note: "Macrotrends RRC historical market cap for 2024-06-30 quarter-end: $7.99B." },
