@@ -16,7 +16,7 @@ test("ChartWorkspace's fcf metric reads the real normalized dataset instead of a
   assert.match(fcfBlock, /comparable: true/);
 });
 
-test("historical FCF is present for every core peer across all nine reported quarters, including negative values", () => {
+test("historical FCF remains numeric across the shared nine-quarter auxiliary range", () => {
   const tickers = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
   let sawNegative = false;
   for (const ticker of tickers) {
@@ -28,6 +28,28 @@ test("historical FCF is present for every core peer across all nine reported qua
     }
   }
   assert.ok(sawNegative, "at least one historical quarter (e.g. CRK) should be negative and render correctly, not get dropped");
+});
+
+test("remaining priority peers store the approved Q2 2026 FCF values without inventing CRK FCF", () => {
+  const approved = {
+    AR: 219.759,
+    CNX: 138,
+    CRK: null,
+    EQT: 329.666,
+    EXE: 343,
+    GPOR: 6.4
+  };
+  for (const [ticker, value] of Object.entries(approved)) {
+    assert.equal(getQuarterlyFreeCashFlow(ticker, "Q2 2026").value, value);
+  }
+});
+
+test("RRC Q2 2026 FCF preserves the site's approved nearest-$MM rounding", () => {
+  const q2 = getQuarterlyFreeCashFlow("RRC", "Q2 2026");
+  assert.equal(q2.value, 111);
+  assert.notEqual(q2.value, 110.510);
+  assert.match(q2.note, /\$110\.510MM/);
+  assert.match(q2.note, /stored as \$111MM/);
 });
 
 test("RRC modeled quarterly FCF is available directly from the deterministic engine (no annual-to-quarterly allocation)", () => {
@@ -54,6 +76,7 @@ test("freeCashFlowQuarterly source data itself is untouched/unblended (still $MM
   for (const ticker of Object.keys(freeCashFlowQuarterly)) {
     for (const quarter of quarters) {
       const point = freeCashFlowQuarterly[ticker][quarter];
+      assert.ok(point, `${ticker} ${quarter} should use an explicit historical point or missing state`);
       assert.ok(point.source === "codex" || point.source === "factset");
     }
   }

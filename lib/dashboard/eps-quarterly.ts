@@ -15,7 +15,7 @@ import type { Ticker } from "./company-registry";
 
 export type EpsValue = { value: number; source: "factset"; note: string };
 
-const RRC_EPS: Record<Quarter, EpsValue> = {
+const RRC_EPS: Partial<Record<Quarter, EpsValue>> = {
   "Q1 2024": { value: 0.69, source: "factset", note: "FactSet E&P model, RRC sheet, EPS ($/share) row, Q1 2024A." },
   "Q2 2024": { value: 0.46, source: "factset", note: "FactSet E&P model, RRC sheet, EPS ($/share) row, Q2 2024A." },
   "Q3 2024": { value: 0.48, source: "factset", note: "FactSet E&P model, RRC sheet, EPS ($/share) row, Q3 2024A." },
@@ -27,7 +27,7 @@ const RRC_EPS: Record<Quarter, EpsValue> = {
   "Q1 2026": { value: 1.52, source: "factset", note: "FactSet E&P model, RRC sheet, EPS ($/share) row, Q1 2026A." }
 };
 
-const data: Partial<Record<Ticker, Record<Quarter, EpsValue>>> = {
+const data: Partial<Record<Ticker, Partial<Record<Quarter, EpsValue>>>> = {
   RRC: RRC_EPS
 };
 
