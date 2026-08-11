@@ -10,7 +10,7 @@ import {
   forecastQuarterLabel,
   type ForecastChartMetric
 } from "@/lib/dashboard/chart-forecast";
-import { getChartGuidance, getVisibleChartGuidance } from "@/lib/dashboard/chart-guidance";
+import { getChartGuidance, getVisibleChartGuidance, type ChartGuidancePoint } from "@/lib/dashboard/chart-guidance";
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
@@ -75,7 +75,8 @@ type Series = {
   values: Array<number | null>;
 };
 
-type HoverPoint = {
+type SeriesHoverPoint = {
+  kind: "series";
   key: string;
   x: number;
   y: number;
@@ -84,6 +85,16 @@ type HoverPoint = {
   value: number;
   modeled: boolean;
 };
+
+type GuidanceHoverPoint = {
+  kind: "guidance";
+  key: string;
+  x: number;
+  y: number;
+  point: ChartGuidancePoint;
+};
+
+type HoverPoint = SeriesHoverPoint | GuidanceHoverPoint;
 
 export function ChartWorkspace({
   ticker,
@@ -124,7 +135,7 @@ export function ChartWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickers.join(","), metric, showsForecast, currentMarketPrices]);
 
-  const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.period));
+  const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.plotPeriod));
   const axisQuarters = Array.from(new Set([
     ...quarters,
     ...(showsForecast ? FORECAST_AXIS_LABELS : []),
@@ -133,7 +144,7 @@ export function ChartWorkspace({
   const splitIndex = quarters.length;
   const numericValues = [
     ...series.flatMap((item) => item.values.filter((value): value is number => value !== null)),
-    ...visibleGuidance.flatMap((point) => point.kind === "point" ? [point.value] : [point.low, point.high])
+    ...visibleGuidance.flatMap((point) => point.kind === "point" ? [point.chartValue] : [point.chartLow, point.chartHigh])
   ];
 
   if (!config.comparable || numericValues.length === 0) {
@@ -162,27 +173,26 @@ export function ChartWorkspace({
     <div className="chart-area">
       <div>
         <h2>{title}</h2>
-        <p>
-          Reported actuals are shown through the latest reported quarter. Internal model forecasts are shown separately.
-          Dashed overlays represent management guidance where publicly provided; missing guidance is left blank.
-        </p>
         {config.caveat ? <p className="muted">{config.caveat}</p> : null}
       </div>
-      <div className="chart-guidance-controls">
-        <button
-          type="button"
-          className="chart-guidance-toggle"
-          aria-pressed={showManagementGuidance}
-          onClick={() => setShowManagementGuidance((current) => !current)}
-        >
-          {showManagementGuidance ? "Hide" : "Show"} Management Guidance
-        </button>
-        {guidance.status === "not_provided" ? (
-          <span>No public management guidance provided for this metric</span>
-        ) : guidance.status === "partial" ? (
+      {guidance.status === "provided" ? (
+        <div className="chart-guidance-controls">
+          <button
+            type="button"
+            className="chart-guidance-toggle"
+            aria-pressed={showManagementGuidance}
+            aria-label={`Management Guidance ${showManagementGuidance ? "on" : "off"}`}
+            onClick={() => setShowManagementGuidance((current) => !current)}
+          >
+            <span className="chart-guidance-toggle-label">Management Guidance</span>
+            <span className="chart-guidance-toggle-state" aria-hidden="true">
+              <span className="chart-guidance-toggle-knob" />
+              <span>{showManagementGuidance ? "ON" : "OFF"}</span>
+            </span>
+          </button>
           <span>Only explicitly disclosed periods are shown</span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${tickers.join(", ")} from Q1 2024 through ${axisQuarters[axisQuarters.length - 1]}.`}>
         <g className="grid-lines">
           {yTicks.map((value) => {
@@ -221,7 +231,8 @@ export function ChartWorkspace({
                 if (value === null) return null;
                 const modeled = index >= splitIndex;
                 const pointKey = `${item.ticker}-${axisQuarters[index]}`;
-                const point: HoverPoint = {
+                const point: SeriesHoverPoint = {
+                  kind: "series",
                   key: pointKey,
                   x: xFor(index),
                   y: yFor(value),
@@ -252,17 +263,29 @@ export function ChartWorkspace({
           );
         })}
         {visibleGuidance.map((point) => {
-          const index = axisQuarters.indexOf(point.period);
+          const index = axisQuarters.indexOf(point.plotPeriod);
           if (index < 0) return null;
           const x = xFor(index);
           const color = getCompanyColor(ticker);
-          const label = `${ticker} management guidance · ${point.disclosure}`;
+          const label = `${ticker} Management Guidance · ${point.period}`;
+          const pointKey = `guidance-${point.plotPeriod}-${point.metric}-${point.period}`;
 
           if (point.kind === "range") {
-            const yLow = yFor(point.low);
-            const yHigh = yFor(point.high);
+            const yLow = yFor(point.chartLow);
+            const yHigh = yFor(point.chartHigh);
+            const guidanceHover: GuidanceHoverPoint = { kind: "guidance", key: pointKey, x, y: yFor(point.chartMidpoint), point };
             return (
-              <g key={`guidance-${point.period}-${point.disclosure}`} role="img" aria-label={`${label}, range ${formatValue(point.low)} to ${formatValue(point.high)} ${config.unit}`}>
+              <g
+                key={pointKey}
+                role="img"
+                tabIndex={0}
+                aria-label={`${label}, low ${formatValue(point.low)}, high ${formatValue(point.high)} ${point.unit}; source ${point.source}, ${point.sourceDate}`}
+                onMouseEnter={() => setHover(guidanceHover)}
+                onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
+                onFocus={() => setHover(guidanceHover)}
+                onBlur={() => setHover((current) => (current?.key === pointKey ? null : current))}
+              >
+                <line className="management-guidance-hit-area" x1={x} y1={yHigh} x2={x} y2={yLow} />
                 <line className="management-guidance-range" style={{ stroke: color }} x1={x} y1={yHigh} x2={x} y2={yLow} />
                 <line className="management-guidance-cap" style={{ stroke: color }} x1={x - 7} y1={yHigh} x2={x + 7} y2={yHigh} />
                 <line className="management-guidance-cap" style={{ stroke: color }} x1={x - 7} y1={yLow} x2={x + 7} y2={yLow} />
@@ -270,9 +293,20 @@ export function ChartWorkspace({
             );
           }
 
-          const y = yFor(point.value);
+          const y = yFor(point.chartValue);
+          const guidanceHover: GuidanceHoverPoint = { kind: "guidance", key: pointKey, x, y, point };
           return (
-            <g key={`guidance-${point.period}-${point.disclosure}`} role="img" aria-label={`${label}, ${formatValue(point.value)} ${config.unit}`}>
+            <g
+              key={pointKey}
+              role="img"
+              tabIndex={0}
+              aria-label={`${label}, ${formatValue(point.value)} ${point.unit}; source ${point.source}, ${point.sourceDate}`}
+              onMouseEnter={() => setHover(guidanceHover)}
+              onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
+              onFocus={() => setHover(guidanceHover)}
+              onBlur={() => setHover((current) => (current?.key === pointKey ? null : current))}
+            >
+              <circle className="management-guidance-point-hit-area" cx={x} cy={y} r={12} />
               <line className="management-guidance-line" style={{ stroke: color }} x1={x - 9} y1={y} x2={x + 9} y2={y} />
               <circle className="management-guidance-point" style={{ stroke: color }} cx={x} cy={y} r={5} />
             </g>
@@ -292,7 +326,7 @@ export function ChartWorkspace({
         ))}
         <span className="chart-semantic-legend actual-legend">Actual</span>
         {showsForecast ? <span className="chart-semantic-legend model-legend">Internal Model Forecast</span> : null}
-        <span className="chart-semantic-legend guidance-legend">Management Guidance — dashed</span>
+        {guidance.status === "provided" ? <span className="chart-semantic-legend guidance-legend">Management Guidance — dashed</span> : null}
       </div>
     </div>
   );
@@ -332,11 +366,15 @@ function ChartPointTooltip({
   chartWidth: number;
   chartHeight: number;
 }) {
-  const lines = [`${point.ticker} · ${point.period}`, `${formatValue(point.value)} ${unit}`];
-  const boxWidth = 140;
+  const lines = point.kind === "guidance" ? guidanceTooltipLines(point.point) : [
+    `${point.ticker} · ${point.period}`,
+    `${formatValue(point.value)} ${unit}`,
+    ...(point.modeled ? ["Modeled"] : [])
+  ];
+  const boxWidth = point.kind === "guidance" ? 250 : 140;
   const lineHeight = 15;
   const padding = 8;
-  const boxHeight = padding * 2 + lineHeight * lines.length + (point.modeled ? lineHeight : 0);
+  const boxHeight = padding * 2 + lineHeight * lines.length;
 
   const left = Math.min(Math.max(point.x - boxWidth / 2, 4), chartWidth - boxWidth - 4);
   const above = point.y - boxHeight - 12;
@@ -347,21 +385,36 @@ function ChartPointTooltip({
     <g className="chart-tooltip" pointerEvents="none">
       <rect x={left} y={clampedTop} width={boxWidth} height={boxHeight} rx={6} />
       {lines.map((line, index) => (
-        <text key={line} x={left + padding} y={clampedTop + padding + lineHeight * (index + 1) - 4}>
+        <text key={`${line}-${index}`} className={line === "Modeled" ? "chart-tooltip-modeled" : undefined} x={left + padding} y={clampedTop + padding + lineHeight * (index + 1) - 4}>
           {line}
         </text>
       ))}
-      {point.modeled ? (
-        <text
-          className="chart-tooltip-modeled"
-          x={left + padding}
-          y={clampedTop + padding + lineHeight * (lines.length + 1) - 4}
-        >
-          Modeled
-        </text>
-      ) : null}
     </g>
   );
+}
+
+function guidanceTooltipLines(point: ChartGuidancePoint): string[] {
+  const lines = ["Management Guidance", `${point.ticker} · ${point.period}`, guidanceTypeLabel(point.guidanceType)];
+  if (point.kind === "range") {
+    lines.push(`Low: ${formatValue(point.low)} ${point.unit}`);
+    if (point.midpoint !== null) lines.push(`Midpoint: ${formatValue(point.midpoint)} ${point.unit}`);
+    lines.push(`High: ${formatValue(point.high)} ${point.unit}`);
+  } else {
+    lines.push(`Value: ${formatValue(point.value)} ${point.unit}`);
+  }
+  lines.push(`Source: ${point.sourceDate}`);
+  return lines;
+}
+
+function guidanceTypeLabel(type: ChartGuidancePoint["guidanceType"]): string {
+  const labels = {
+    range: "Range",
+    approximate: "Approximate target",
+    long_term_target: "Long-term target",
+    conditional_target: "Conditional long-term target",
+    minimum_growth: "Minimum growth target"
+  } as const;
+  return labels[type];
 }
 
 function buildPathSegments(

@@ -1,75 +1,111 @@
-import { getCompanyGuidanceSections } from "./guidance";
+import managementGuidanceData from "@/data/management-guidance.json";
 import type { Metric, Ticker } from "./types";
 
+export type GuidanceAuditStatus = "explicit_guidance" | "long_term_target" | "not_guided";
+export type GuidanceType = "range" | "approximate" | "long_term_target" | "conditional_target" | "minimum_growth";
+
+type GuidanceEntry = {
+  company: Ticker;
+  metric: Metric;
+  period: string;
+  plotPeriod: string;
+  low: number | null;
+  midpoint: number | null;
+  high: number | null;
+  unit: string;
+  guidanceType: GuidanceType;
+  source: string;
+  sourceUrl: string;
+  sourceDate: string;
+  chartable: boolean;
+  note?: string;
+};
+
+type CompanyGuidance = {
+  audit: Record<Metric, GuidanceAuditStatus>;
+  entries: GuidanceEntry[];
+};
+
+type ManagementGuidanceFile = {
+  meta: { auditAsOf: string; note: string };
+  companies: Record<Ticker, CompanyGuidance>;
+};
+
+const data = managementGuidanceData as ManagementGuidanceFile;
+
+type GuidanceMetadata = Omit<GuidanceEntry, "chartable" | "company" | "metric" | "low" | "midpoint" | "high"> & {
+  ticker: Ticker;
+  metric: Metric;
+  midpoint: number | null;
+};
+
 export type ChartGuidancePoint =
-  | { kind: "point"; period: string; value: number; disclosure: string; target?: boolean }
-  | { kind: "range"; period: string; low: number; high: number; disclosure: string; target?: boolean };
+  | (GuidanceMetadata & { kind: "point"; value: number; chartValue: number })
+  | (GuidanceMetadata & { kind: "range"; low: number; high: number; chartLow: number; chartHigh: number; chartMidpoint: number });
 
 export type ChartGuidanceResult = {
-  status: "provided" | "partial" | "not_provided";
+  status: "provided" | "not_provided";
+  auditStatus: GuidanceAuditStatus;
   points: ChartGuidancePoint[];
 };
 
-type SafeDisclosure = {
-  ticker: Ticker;
-  metric: Metric;
-  section: string;
-  label: string;
-  period: string;
-  unit: "Bcfe/d";
-  target?: boolean;
-};
-
-type ParsedGuidanceValue =
-  | { kind: "point"; value: number }
-  | { kind: "range"; low: number; high: number };
-
-// This is deliberately an allowlist of disclosures that are explicit enough to place on
-// a quarterly axis. Numeric values remain in data/guidance.json and are read through the
-// existing guidance layer; annual totals, cadence language, and ambiguous periods stay blank.
-const SAFE_DISCLOSURES: readonly SafeDisclosure[] = [
-  { ticker: "RRC", metric: "production", section: "Production", label: "Q2 2026", period: "Q2 2026", unit: "Bcfe/d" },
-  { ticker: "RRC", metric: "production", section: "Production", label: "Year-End 2026 Target", period: "Q4 2026", unit: "Bcfe/d", target: true },
-  { ticker: "RRC", metric: "production", section: "Production", label: "Target", period: "Q4 2027", unit: "Bcfe/d", target: true },
-  { ticker: "AR", metric: "production", section: "Production", label: "Q2 2026", period: "Q2 2026", unit: "Bcfe/d" },
-  { ticker: "AR", metric: "production", section: "Production", label: "2027 Production Target", period: "Q4 2027", unit: "Bcfe/d", target: true }
-];
-
-const GUIDANCE_COVERAGE: Readonly<Record<string, "provided" | "partial">> = {
-  "RRC:production": "partial",
-  "AR:production": "partial"
-};
-
-/** Convert a disclosed daily Bcfe rate to the chart's MMcfe/d unit without changing precision. */
-function parseBcfePerDay(value: string): ParsedGuidanceValue | null {
-  const normalized = value.replaceAll(",", "");
-  const numbers = [...normalized.matchAll(/\d+(?:\.\d+)?/g)].map((match) => Number(match[0]) * 1_000);
-  if (numbers.length === 0 || numbers.some((number) => !Number.isFinite(number))) return null;
-  if (/[–-]|\bto\b/i.test(normalized) && numbers.length >= 2) {
-    return { kind: "range", low: Math.min(numbers[0], numbers[1]), high: Math.max(numbers[0], numbers[1]) };
-  }
-  return { kind: "point", value: numbers[0] };
+function toChartValue(value: number, unit: string): number | null {
+  if (unit === "Bcfe/d") return value * 1_000;
+  if (unit === "MMcfe/d" || unit === "$MM") return value;
+  return null;
 }
 
-/** Resolve only safely chartable numeric management guidance for one company and metric. */
+function normalizeEntry(entry: GuidanceEntry): ChartGuidancePoint | null {
+  if (!entry.chartable) return null;
+  const metadata: GuidanceMetadata = {
+    ticker: entry.company,
+    metric: entry.metric,
+    period: entry.period,
+    plotPeriod: entry.plotPeriod,
+    midpoint: entry.midpoint,
+    unit: entry.unit,
+    guidanceType: entry.guidanceType,
+    source: entry.source,
+    sourceUrl: entry.sourceUrl,
+    sourceDate: entry.sourceDate,
+    note: entry.note
+  };
+
+  if (entry.low !== null && entry.high !== null) {
+    const chartLow = toChartValue(entry.low, entry.unit);
+    const chartHigh = toChartValue(entry.high, entry.unit);
+    const midpoint = entry.midpoint ?? (entry.low + entry.high) / 2;
+    const chartMidpoint = toChartValue(midpoint, entry.unit);
+    if (chartLow === null || chartHigh === null || chartMidpoint === null) return null;
+    return { ...metadata, kind: "range", low: entry.low, high: entry.high, chartLow, chartHigh, chartMidpoint };
+  }
+
+  if (entry.midpoint === null) return null;
+  const chartValue = toChartValue(entry.midpoint, entry.unit);
+  return chartValue === null ? null : { ...metadata, kind: "point", value: entry.midpoint, chartValue };
+}
+
+/** Source-verified, chart-compatible management guidance for one company and metric. */
 export function getChartGuidance(ticker: Ticker, metric: Metric): ChartGuidanceResult {
-  const disclosures = SAFE_DISCLOSURES.filter((item) => item.ticker === ticker && item.metric === metric);
-  if (disclosures.length === 0) return { status: "not_provided", points: [] };
+  const company = data.companies[ticker];
+  const auditStatus = company?.audit[metric] ?? "not_guided";
+  const points = (company?.entries ?? [])
+    .filter((entry) => entry.metric === metric)
+    .map(normalizeEntry)
+    .filter((entry): entry is ChartGuidancePoint => entry !== null);
 
-  const sections = getCompanyGuidanceSections(ticker);
-  const points = disclosures.flatMap<ChartGuidancePoint>((disclosure) => {
-    const section = sections.find((candidate) => candidate.section === disclosure.section);
-    const row = section?.rows.find((candidate) => candidate.kind === "pair" && candidate.label === disclosure.label);
-    if (!row || row.kind !== "pair") return [];
+  return { status: points.length > 0 ? "provided" : "not_provided", auditStatus, points };
+}
 
-    const parsed = disclosure.unit === "Bcfe/d" ? parseBcfePerDay(row.value) : null;
-    if (!parsed) return [];
-    return [{ ...parsed, period: disclosure.period, disclosure: `${row.label}: ${row.value}`, target: disclosure.target }];
-  });
+/** Full company-by-metric matrix used to verify that every supported peer was audited. */
+export function getManagementGuidanceAuditMatrix(): Record<Ticker, Record<Metric, GuidanceAuditStatus>> {
+  return Object.fromEntries(
+    Object.entries(data.companies).map(([ticker, company]) => [ticker, company.audit])
+  ) as Record<Ticker, Record<Metric, GuidanceAuditStatus>>;
+}
 
-  if (points.length === 0) return { status: "not_provided", points: [] };
-  const coverage = GUIDANCE_COVERAGE[`${ticker}:${metric}`] ?? "provided";
-  return { status: points.length === disclosures.length ? coverage : "partial", points };
+export function getManagementGuidanceAuditMeta(): { auditAsOf: string; note: string } {
+  return data.meta;
 }
 
 /** The chart toggle affects the guidance overlay only. */

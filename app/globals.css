@@ -95,10 +95,20 @@ h2 { font-size: 15px; }
 .model-forecast-point { opacity: .48; }
 .management-guidance-line, .management-guidance-range, .management-guidance-cap { fill: none; stroke-width: 2.5; stroke-dasharray: 5 4; }
 .management-guidance-point { fill: var(--panel); stroke-width: 2; stroke-dasharray: 3 2; }
+.management-guidance-hit-area { stroke: transparent; stroke-width: 18; cursor: pointer; }
+.management-guidance-point-hit-area { fill: transparent; cursor: pointer; }
 .chart-guidance-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
-.chart-guidance-controls span { color: var(--muted); font-size: 11px; }
-.chart-guidance-toggle { padding: 5px 9px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font-size: 11px; }
+.chart-guidance-controls > span { color: var(--muted); font-size: 11px; }
+.chart-guidance-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 6px 7px 6px 10px; border: 1px solid #30465f; border-radius: 8px; background: var(--panel-2); color: var(--text); box-shadow: inset 0 1px rgba(255,255,255,.025); font-size: 11px; font-weight: 650; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, transform .08s ease; }
+.chart-guidance-toggle:hover { background: #142740; border-color: #42617f; }
+.chart-guidance-toggle:active { transform: translateY(1px); }
 .chart-guidance-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chart-guidance-toggle[aria-pressed="true"]:hover { background: rgba(0, 129, 198, .22); }
+.chart-guidance-toggle-label { white-space: nowrap; }
+.chart-guidance-toggle-state { display: inline-flex; align-items: center; gap: 5px; min-width: 47px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 999px; background: rgba(6,17,31,.72); color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; }
+.chart-guidance-toggle-knob { width: 7px; height: 7px; border-radius: 50%; background: #617287; box-shadow: 0 0 0 2px rgba(97,114,135,.14); }
+.chart-guidance-toggle[aria-pressed="true"] .chart-guidance-toggle-state { border-color: rgba(0,129,198,.52); color: #8fd6ff; }
+.chart-guidance-toggle[aria-pressed="true"] .chart-guidance-toggle-knob { background: #35b7ff; box-shadow: 0 0 0 2px rgba(53,183,255,.16), 0 0 8px rgba(53,183,255,.5); }
 .chart-area circle { cursor: pointer; }
 .chart-tooltip rect { fill: var(--panel); stroke: var(--border); stroke-width: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.28)); }
 .chart-tooltip text { fill: var(--text); font-size: 11px; }
