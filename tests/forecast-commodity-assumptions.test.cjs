@@ -18,14 +18,12 @@ function section(name) {
   return workbenchSource.slice(start, start + 3000);
 }
 
-test("1. Henry Hub commodity input is visible in the Commodity price assumptions section", () => {
-  const commoditySection = section("function CommodityPriceAssumptions");
-  assert.match(commoditySection, /label:\s*"Henry Hub",\s*data:\s*henryHub/);
+test("1. Henry Hub is visible in the current-market commodity section", () => {
+  assert.match(workbenchSource, /<CommodityPriceCard label="Henry Hub" data=\{commoditySources\.henryHub\} \/>/);
 });
 
-test("2. WTI commodity input is visible in the Commodity price assumptions section", () => {
-  const commoditySection = section("function CommodityPriceAssumptions");
-  assert.match(commoditySection, /label:\s*"WTI",\s*data:\s*wti/);
+test("2. WTI is visible in the current-market commodity section", () => {
+  assert.match(workbenchSource, /<CommodityPriceCard label="WTI" data=\{commoditySources\.wti\} \/>/);
 });
 
 test("3. OilPriceAPI values display with the exact 'Current Market' label, never blurred with EIA/modeled", () => {
@@ -37,18 +35,18 @@ test("4. EIA fallback displays with the exact 'Latest Official / Delayed' label"
 });
 
 test("5. Modeled fallback preserves the app's existing 'Management Sensitivity' terminology", () => {
-  assert.match(workbenchSource, /modeled:\s*"Management Sensitivity"/);
+  assert.match(workbenchSource, /modeled:\s*"Management Sensitivity · Modeled"/);
 });
 
 test("6. The model input / price actually used for this scenario run is visible, not just an abstract 'current market' figure", () => {
-  const commoditySection = section("function CommodityPriceAssumptions");
+  const commoditySection = section("function CommodityPriceCard");
   assert.match(commoditySection, /formatCommodityPrice\(data\.value, data\.unit\)/);
   assert.match(commoditySection, /Model input for this scenario run/);
 });
 
 test("7. 24h percent change renders when supplied, using the already-normalized change24hPercent field (no re-derivation)", () => {
   assert.match(workbenchSource, /formatChange24h\(data\.change24hPercent\)/);
-  assert.match(workbenchSource, /\{change \? <span[^>]*>\{change\}<\/span> : null\}/);
+  assert.match(workbenchSource, /\{change \? <small[^>]*>\{change\}<\/small> : null\}/);
 });
 
 test("8. Missing 24h change renders nothing (null), never a fabricated 0", () => {
@@ -82,8 +80,9 @@ test("10. No direct OilPriceAPI client call was added to either Forecast compone
   }
 });
 
-test("11. RrcScenarioWorkbench renders the section only when commoditySources is supplied -- the standalone /forecast route (no props) is byte-for-byte unaffected", () => {
-  assert.match(workbenchSource, /\{commoditySources \? <CommodityPriceAssumptions henryHub=\{commoditySources\.henryHub\} wti=\{commoditySources\.wti\} \/> : null\}/);
+test("11. RrcScenarioWorkbench supports current-main props and remains self-sufficient on the standalone route", () => {
+  assert.match(workbenchSource, /providedCommoditySources \?\? resolveCommoditySources\(market\.data\)/);
+  assert.match(workbenchSource, /currentMarketPrices \?\? extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
   const standaloneForecastPage = fs.readFileSync(path.join(process.cwd(), "app", "forecast", "page.tsx"), "utf8");
   assert.match(standaloneForecastPage, /<RrcScenarioWorkbench \/>/);
 });
@@ -93,15 +92,17 @@ test("12. ForecastWorkspacePanel wires commoditySources from the existing resolv
   assert.match(panelSource, /from "@\/lib\/forecast\/live-market-prices"/);
 });
 
-test("Price mode is read-only, and the UI states plainly that custom price entry requires a separate modeling change (no new override mechanism was invented)", () => {
-  assert.match(workbenchSource, /Price mode: Current market \(read-only\)/);
-  assert.match(workbenchSource, /Custom price entry is not available yet -- it requires a separate modeling change\./);
+test("current-market and custom modes are explicit, and custom values flow to the forecast API", () => {
+  assert.match(workbenchSource, /type CommodityMode = "current-market" \| "custom"/);
+  assert.match(workbenchSource, /<option value="current-market">Current market<\/option>/);
+  assert.match(workbenchSource, /<option value="custom">Custom<\/option>/);
+  assert.match(workbenchSource, /henryHubPerMmbtu:\s*parsedOrUndefined\(customHenryHub\)/);
+  assert.match(workbenchSource, /wtiPerBbl:\s*parsedOrUndefined\(customWti\)/);
+  assert.match(workbenchSource, /nglPerBbl:\s*parsedOrUndefined\(customNgl\)/);
 });
 
-test("Commodity badge/border styling reuses the existing Scenario Workbench visual language (same pill/border-radius pattern as the Production assumption badge)", () => {
-  const commoditySection = section("function CommodityPriceAssumptions");
-  assert.match(commoditySection, /borderRadius: 999/);
-  assert.match(commoditySection, /border: "1px solid rgba\(128,128,128,0\.35\)"/);
-  // Desktop horizontal fit / mobile stacking reuses the same responsive grid already used for the preset controls above.
-  assert.match(commoditySection, /gridTemplateColumns: "repeat\(auto-fit,minmax\(220px,1fr\)\)"/);
+test("Commodity cards reuse the existing workbench latest-stat styling", () => {
+  const commoditySection = section("function CommodityPriceCard");
+  assert.match(commoditySection, /className="wb-latest-stat"/);
+  assert.match(workbenchSource, /className="wb-latest-stats"/);
 });

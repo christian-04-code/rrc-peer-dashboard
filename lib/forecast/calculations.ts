@@ -150,7 +150,15 @@ export function calculateCapex(
     [input.capex.otherMillion, "Other capital"]
   ] as const;
 
-  return {
-    totalMillion: sumNullable(values.map(([value, label]) => numeric(value, label, warnings)))
-  };
+  // Individual category lines are still validated/warned on even when a total override is
+  // present, so a genuinely unsupported category (e.g. no source-backed 2027 CapEx split)
+  // still surfaces a warning -- it just no longer nulls out the total FCF depends on.
+  const categorySum = sumNullable(values.map(([value, label]) => numeric(value, label, warnings)));
+  const totalOverride = input.capex.totalOverrideMillion;
+  const totalMillion =
+    totalOverride && totalOverride.value !== null && Number.isFinite(totalOverride.value)
+      ? totalOverride.value
+      : categorySum;
+
+  return { totalMillion };
 }

@@ -1,5 +1,7 @@
 export type ScenarioKind = "bear" | "base" | "bull" | "custom" | "live";
-export type AssumptionClassification = "reported" | "guided" | "modeled" | "live";
+// reported = filed/actual; guided = management guidance; live = current market;
+// modeled = engine/analyst assumption; user = explicit user override.
+export type AssumptionClassification = "reported" | "guided" | "modeled" | "live" | "user";
 
 export type AssumptionSource = {
   name: string;
@@ -55,6 +57,15 @@ export type CapexAssumptions = {
   facilitiesMillion: SourcedValue;
   environmentalMillion: SourcedValue;
   otherMillion: SourcedValue;
+  /**
+   * Optional total-capex override. When present and numeric, calculateCapex uses this
+   * value directly as CapexResult.totalMillion instead of summing the category line
+   * items above -- lets a caller supply a real total (e.g. a management-guided annual
+   * figure that was never disclosed as a category breakdown) without forcing category
+   * fields to a fabricated non-null value just to keep the categorical sum non-null.
+   * Omitted (undefined) preserves the original sum-of-categories behavior exactly.
+   */
+  totalOverrideMillion?: SourcedValue;
 };
 
 export type ForecastPeriodAssumptions = {
