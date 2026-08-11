@@ -1,7 +1,7 @@
 import managementGuidanceData from "@/data/management-guidance.json";
 import type { Ticker } from "./company-registry";
 
-type GuidanceRecord = {
+export type GuidanceRecord = {
   company: Ticker;
   metric: string;
   period: string;
@@ -77,6 +77,11 @@ function isCurrentRecord(record: GuidanceRecord): boolean {
 
 function currentRecords(ticker: Ticker): GuidanceRecord[] {
   return (data.companies[ticker]?.entries ?? []).filter(isCurrentRecord);
+}
+
+/** Current reporting-cycle records for forecast and other non-UI consumers. */
+export function getCompanyGuidanceRecords(ticker: Ticker): GuidanceRecord[] {
+  return currentRecords(ticker).map((record) => ({ ...record }));
 }
 
 function titleCase(value: string): string {

@@ -26,8 +26,17 @@ test("complete RRC scenario uses filing-backed Q1 2026 anchors", () => {
   assert.match(source, /rrcQ1_2026Baseline\.naturalGasMmcfPerDay/);
   assert.match(source, /value: 0\.14/);
   assert.match(source, /value: 1\.63/);
-  assert.match(source, /value: 45\.351/);
+  // Cash G&A uses the reported Q1 2026 cash-only $/Mcfe rate (excluding stock comp),
+  // matching the canonical quarterly dataset rather than total G&A dollars.
+  assert.match(source, /value: 0\.18/);
   assert.match(source, /value: 19\.419/);
+});
+
+test("2026Q1/2026Q2 are immutable reported actuals, sourced from the canonical dataset, not re-forecast", () => {
+  assert.match(source, /rrc-actuals/);
+  assert.match(source, /applyActualQuarterOverrides/);
+  assert.match(source, /isRrcActualPeriod/);
+  assert.match(source, /immutable historical quarter/);
 });
 
 test("forward production is a flat hold of the latest reported baseline, and pricing anchors are explicit", () => {

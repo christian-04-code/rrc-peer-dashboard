@@ -1,7 +1,8 @@
-import { rollForwardBalanceSheet } from "@/lib/forecast/balance-sheet";
 import { calculateRrcQuarterlyHedgeSettlements } from "@/lib/forecast/data/rrc-hedge-settlements";
 import { runForecastScenario } from "@/lib/forecast/engine";
 import {
+  applyActualQuarterOverrides,
+  buildRrcBalanceSheet,
   buildRrcCompleteScenario,
   type RrcCompleteScenarioOptions,
   type RrcPost2027Strategy
@@ -127,27 +128,8 @@ export function runRrcHedgedScenario(
   options: RrcCompleteScenarioOptions = {}
 ) {
   const scenario = buildRrcHedgedScenario(strategy, options);
-  const forecast = runForecastScenario(scenario);
-  const balanceSheet: ReturnType<typeof rollForwardBalanceSheet>[] = [];
-  let beginningCash = 0.247;
-  let beginningDebt = 819.254;
-
-  for (const period of forecast.periods) {
-    const result = rollForwardBalanceSheet({
-      period: period.period,
-      beginningCashMillion: beginningCash,
-      beginningDebtMillion: beginningDebt,
-      freeCashFlowMillion: period.freeCashFlowMillion,
-      dividendsMillion: 23.8,
-      buybacksMillion: 0,
-      debtIssuedMillion: 0,
-      debtRepaidMillion: 0,
-      ebitdaxMillion: period.ebitdaxMillion
-    });
-    balanceSheet.push(result);
-    if (result.endingCashMillion !== null) beginningCash = result.endingCashMillion;
-    if (result.endingDebtMillion !== null) beginningDebt = result.endingDebtMillion;
-  }
+  const forecast = applyActualQuarterOverrides(runForecastScenario(scenario));
+  const balanceSheet = buildRrcBalanceSheet(forecast);
 
   return {
     scenario,
@@ -158,7 +140,8 @@ export function runRrcHedgedScenario(
       "Oil three-way collars are mapped when active.",
       "Basis swaps remain excluded from settlement calculations because position-level fixed basis prices were not disclosed.",
       "Swaptions remain excluded unless exercise is confirmed.",
-      "C3 and C5 hedges are retained in the derivative schedule but require component-level forward prices and production mix before blending into realized NGL pricing."
+      "C3 and C5 hedges are retained in the derivative schedule but require component-level forward prices and production mix before blending into realized NGL pricing.",
+      "2026Q1 and 2026Q2 are immutable reported actuals; hedge-derived realized pricing does not affect their revenue/EBITDAX/CapEx/FCF, which come directly from the canonical reported dataset."
     ]
   };
 }

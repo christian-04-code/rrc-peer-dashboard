@@ -1,256 +1,320 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { LiveMarketPricesInput, ResolvedCommodityClassification, ResolvedCommodityPrice } from "@/lib/forecast/live-market-prices";
+import { useMarketData } from "@/lib/market/use-market-data";
+import {
+  extractLiveMarketMetricsFromMarketResponse,
+  resolveCommoditySources,
+  type LiveMarketPricesInput,
+  type ResolvedCommodityPrice
+} from "@/lib/forecast/live-market-prices";
+import type { RrcForecastYear } from "@/lib/forecast/scenarios/rrc-annual";
 
-type Preset = "bear" | "base" | "bull";
+const YEARS: RrcForecastYear[] = ["2026", "2027", "2028"];
+
+/** 2026 blends Q1/Q2 2026 immutable reported actuals with a Q3/Q4 2026 estimate; 2027/2028 are fully estimated years. */
+function yearLabel(year: RrcForecastYear): string {
+  return year === "2026" ? "2026E (H1 Actual + H2E)" : `${year}E`;
+}
+const PRESET_MULTIPLES = { bear: 4.5, base: 5.5, bull: 6.5 } as const;
+type Preset = keyof typeof PRESET_MULTIPLES;
 type Strategy = "maintenance" | "continued-growth";
-type ProductionMode = "reported" | "override";
+type CommodityMode = "current-market" | "custom";
+type Classification = "reported" | "guided" | "modeled" | "live" | "user";
 
-type LatestReportedProduction = {
-  period: string;
-  sourceLabel: string;
-  gasMmcfPerDay: number | null;
-  nglMbblPerDay: number | null;
-  oilMbblPerDay: number | null;
+type ResolvedAnnualValue = {
+  value: number | null;
+  classification: Classification;
+  sourceName: string;
+  sourceReference: string;
+  sourceDate: string;
+  notes: string;
 };
 
-type ForecastPeriod = {
-  period: string;
+type GuidanceEntry = {
+  metric: string;
+  label: string;
+  year: RrcForecastYear;
+  unit: string;
+  low: number | null;
+  high: number | null;
+  midpoint: number | null;
+  sourceName: string;
+  sourceReference: string;
+  sourceDate: string;
+  notes?: string;
+};
+
+type AnnualPeriodSummary = {
+  year: RrcForecastYear;
   production: { gasMmcf: number | null; nglMbbl: number | null; oilMbbl: number | null; totalMcfe: number | null };
-  revenue: { totalMillion: number | null };
+  revenueMillion: number | null;
+  ebitdaxMillion: number | null;
+  capexMillion: number | null;
+  freeCashFlowMillion: number | null;
+  fcfYield: number | null;
 };
 
-type ScenarioResult = {
-  preset: Preset;
-  latestReportedProduction: LatestReportedProduction;
-  result: {
-    strategy: Strategy;
-    assumptions: {
-      targetEvToEbitdax: number;
-      discountRate: number;
-      terminalGrowthRate: number;
-    };
-    annualFreeCashFlowMillion: Array<{ year: number; value: number | null }>;
-    forecast2027EbitdaxMillion: number | null;
-    endingNetDebtMillion: number | null;
-    multiple: { impliedSharePrice: number | null; equityValueMillion: number | null; warnings: string[] };
-    dcf: { impliedSharePrice: number | null; equityValueMillion: number | null; warnings: string[] };
-    complete: { forecast: { periods: ForecastPeriod[] } };
-  };
+type ValuationResult = {
+  enterpriseValueMillion: number | null;
+  equityValueMillion: number | null;
+  impliedSharePrice: number | null;
+  warnings: string[];
+  forwardYear: RrcForecastYear;
+  forwardEbitdaxMillion: number | null;
+  netDebtMillion: number | null;
+  forecastEndingNetDebtMillion: number | null;
+  valuationNetDebtFloorApplied: boolean;
+  netDebtPeriod: string;
+  ebitdaxPeriod: string;
+  dilutedSharesMillion: number | null;
 };
 
-type OverrideRow = { gasMmcfPerDay: string; nglMbblPerDay: string; oilMbblPerDay: string };
-
-const presetDefaults = {
-  bear: { targetEvToEbitdax: 4.5, discountRate: 0.12, terminalGrowthRate: -0.01 },
-  base: { targetEvToEbitdax: 5.5, discountRate: 0.1, terminalGrowthRate: 0 },
-  bull: { targetEvToEbitdax: 6.5, discountRate: 0.09, terminalGrowthRate: 0.01 }
+type DcfResult = {
+  presentValueForecastMillion: number | null;
+  terminalValueMillion: number | null;
+  enterpriseValueMillion: number | null;
+  equityValueMillion: number | null;
+  impliedSharePrice: number | null;
+  warnings: string[];
+  discountRate: number;
+  terminalGrowthRate: number;
 };
 
-const FUTURE_PERIODS = [2026, 2027, 2028]
-  .flatMap((year) => [1, 2, 3, 4].map((quarter) => `${year}Q${quarter}`))
-  .filter((period) => period !== "2026Q1");
+type AnnualForecastResult = {
+  strategy: Strategy;
+  annual: Record<RrcForecastYear, AnnualPeriodSummary>;
+  productionResolution: Record<RrcForecastYear, ResolvedAnnualValue>;
+  valuation: ValuationResult;
+  dcf: DcfResult;
+  notes: string[];
+};
 
-function formatPresetAssumptions(values: (typeof presetDefaults)[Preset]) {
-  const growth = values.terminalGrowthRate;
-  const growthLabel = `${growth > 0 ? "+" : ""}${(growth * 100).toFixed(0)}%`;
-  return `${values.targetEvToEbitdax.toFixed(1)}x EV/EBITDAX · ${(values.discountRate * 100).toFixed(0)}% discount rate · ${growthLabel} terminal growth`;
+type ApiDefaults = {
+  latestReportedProduction: { period: string; sourceLabel: string; gasMmcfPerDay: number | null; nglMbblPerDay: number | null; oilMbblPerDay: number | null };
+  guidance: GuidanceEntry[];
+  productionDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
+  costDefaults: Record<RrcForecastYear, { loePerMcfe: ResolvedAnnualValue; cashGaPerMcfe: ResolvedAnnualValue; cashTaxRate: ResolvedAnnualValue }>;
+  capexDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
+  pricingDefaults: Record<RrcForecastYear, { gasBasisPerMcf: ResolvedAnnualValue; oilDifferentialPerBbl: ResolvedAnnualValue }>;
+  currentNetDebtMillion: number | null;
+  dilutedSharesMillion: number | null;
+  result: AnnualForecastResult;
+};
+
+type CostField = "loePerMcfe" | "gatheringTransportPerMcfe" | "cashGaPerMcfe" | "explorationMillion" | "cashInterestMillion" | "cashTaxRate";
+type PricingField = "gasBasisPerMcf" | "oilDifferentialPerBbl";
+
+type RrcScenarioWorkbenchProps = {
+  /** Current main passes the already-normalized /api/market values from the dashboard. */
+  currentMarketPrices?: LiveMarketPricesInput;
+  commoditySources?: { wti: ResolvedCommodityPrice; henryHub: ResolvedCommodityPrice };
+};
+
+const EMPTY_YEAR_STRINGS = { "2026": "", "2027": "", "2028": "" } as Record<RrcForecastYear, string>;
+
+function emptyCostYear(): Record<CostField, string> {
+  return { loePerMcfe: "", gatheringTransportPerMcfe: "", cashGaPerMcfe: "", explorationMillion: "", cashInterestMillion: "", cashTaxRate: "" };
 }
 
-// Reusable, unobtrusive info control explaining what the Bear/Base/Bull presets actually
-// change (valuation assumptions only) so it isn't mistaken for a commodity/operating scenario.
-function PresetInfoTooltip() {
-  const [open, setOpen] = useState(false);
+function emptyPricingYear(): Record<PricingField, string> {
+  return { gasBasisPerMcf: "", oilDifferentialPerBbl: "" };
+}
+
+const CLASSIFICATION_STYLE: Record<Classification, { label: string; bg: string; color: string }> = {
+  reported: { label: "Reported", bg: "rgba(112,201,154,.16)", color: "var(--positive)" },
+  guided: { label: "Guidance", bg: "rgba(64,140,220,.18)", color: "#6badf0" },
+  live: { label: "Current Market", bg: "rgba(40,180,120,.18)", color: "#3fd493" },
+  modeled: { label: "Modeled", bg: "rgba(240,180,40,.16)", color: "#e5ad63" },
+  user: { label: "User Input", bg: "rgba(178,130,240,.18)", color: "#b98cf2" }
+};
+
+function ClassificationPill({ classification }: { classification: Classification }) {
+  const style = CLASSIFICATION_STYLE[classification];
   return (
-    <span
-      style={{ position: "relative", display: "inline-flex", verticalAlign: "middle", marginLeft: 6 }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        aria-label="What do the Bear, Base, and Bull presets change?"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        style={{
-          width: 16,
-          height: 16,
-          borderRadius: "50%",
-          border: "1px solid rgba(128,128,128,0.5)",
-          background: "transparent",
-          color: "inherit",
-          fontSize: 10,
-          fontWeight: 700,
-          lineHeight: "14px",
-          padding: 0,
-          cursor: "pointer"
-        }}
-      >
-        i
-      </button>
-      {open ? (
-        <span
-          role="tooltip"
-          style={{
-            position: "absolute",
-            top: 22,
-            left: 0,
-            zIndex: 30,
-            width: 268,
-            background: "var(--panel-2, #102035)",
-            color: "var(--text, #eef5fb)",
-            border: "1px solid rgba(128,128,128,0.35)",
-            borderRadius: 8,
-            padding: "10px 12px",
-            fontSize: 12,
-            lineHeight: 1.5,
-            fontWeight: 400,
-            boxShadow: "0 6px 18px rgba(0,0,0,0.35)"
-          }}
-        >
-          <div><strong>Bear</strong> — {formatPresetAssumptions(presetDefaults.bear)}</div>
-          <div style={{ marginTop: 4 }}><strong>Base</strong> — {formatPresetAssumptions(presetDefaults.base)}</div>
-          <div style={{ marginTop: 4 }}><strong>Bull</strong> — {formatPresetAssumptions(presetDefaults.bull)}</div>
-          <div style={{ marginTop: 8, opacity: 0.75 }}>
-            Valuation scenario presets only. They change the multiple/DCF assumptions above — not commodity prices, production, CapEx, or costs.
-          </div>
-        </span>
-      ) : null}
+    <span className="ann-pill" style={{ background: style.bg, color: style.color }}>
+      {style.label}
     </span>
   );
 }
 
 function money(value: number | null, digits = 1) {
-  return value === null ? "--" : `$${value.toFixed(digits)}`;
+  return value === null || value === undefined ? "--" : `$${value.toFixed(digits)}`;
 }
 
-function number(value: number | null, digits = 1) {
-  return value === null ? "--" : value.toFixed(digits);
+function num(value: number | null, digits = 2) {
+  return value === null || value === undefined ? "--" : value.toFixed(digits);
 }
 
-const COMMODITY_CLASSIFICATION_LABEL: Record<ResolvedCommodityClassification, string> = {
+function pct(value: number | null, digits = 1) {
+  return value === null || value === undefined ? "--" : `${(value * 100).toFixed(digits)}%`;
+}
+
+function parsedOrUndefined(text: string): number | undefined {
+  const trimmed = text.trim();
+  if (trimmed === "") return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+const COMMODITY_SOURCE_LABELS = {
   current_market: "OilPriceAPI · Current Market",
   official_delayed: "EIA · Latest Official / Delayed",
-  modeled: "Management Sensitivity"
-};
+  modeled: "Management Sensitivity · Modeled"
+} as const;
 
-const COMMODITY_CLASSIFICATION_BACKGROUND: Record<ResolvedCommodityClassification, string> = {
-  current_market: "rgba(40,180,120,0.16)",
-  official_delayed: "rgba(64,140,220,0.16)",
-  modeled: "rgba(240,180,40,0.16)"
-};
-
-function formatCommodityPrice(value: number | null, unit: string | null) {
-  if (value === null) return "--";
-  const cleanUnit = unit?.replace(/^\$\//, "") ?? null;
-  return cleanUnit ? `$${value.toFixed(2)} / ${cleanUnit}` : `$${value.toFixed(2)}`;
+function formatCommodityPrice(value: number | null, unit: string | null): string {
+  return value === null ? "--" : `${value.toFixed(2)} ${unit ?? ""}`.trim();
 }
 
-function formatChange24h(percent: number | null) {
+function formatChange24h(percent: number | null): string | null {
   if (percent === null) return null;
-  const sign = percent >= 0 ? "+" : "";
+  const sign = percent > 0 ? "+" : "";
   return `${sign}${percent.toFixed(2)}% 24h`;
 }
 
-// Compact, read-only display of the exact commodity input feeding this scenario run --
-// not a new pricing feature. Renders nothing when the parent doesn't supply
-// commoditySources (e.g. the standalone /forecast route), matching the existing
-// currentMarketPrices prop's no-prop-means-unchanged-behavior convention.
-function CommodityPriceAssumptions({ henryHub, wti }: { henryHub: ResolvedCommodityPrice; wti: ResolvedCommodityPrice }) {
-  const rows: Array<{ label: string; data: ResolvedCommodityPrice }> = [
-    { label: "Henry Hub", data: henryHub },
-    { label: "WTI", data: wti }
-  ];
+function CommodityPriceCard({ label, data }: { label: string; data: ResolvedCommodityPrice }) {
+  const change = formatChange24h(data.change24hPercent);
+  return (
+    <div className="wb-latest-stat">
+      <span>{label}</span>
+      <strong>{formatCommodityPrice(data.value, data.unit)}</strong>
+      <small>{COMMODITY_SOURCE_LABELS[data.classification]}</small>
+      {change ? <small>{change}</small> : null}
+      <small className="muted">Model input for this scenario run</small>
+    </div>
+  );
+}
+
+const CORE_GUIDANCE_METRICS = new Set(["totalProductionBcfePerDay", "capexTotalMillion", "loePerMcfe", "cashGaPerMcfe", "cashTaxRate"]);
+
+function GuidanceRangeCell({ entry }: { entry: GuidanceEntry | undefined }) {
+  if (!entry || entry.midpoint === null) return <span className="muted">--</span>;
+  const range = entry.low !== null && entry.high !== null ? `${entry.low} - ${entry.high} ` : "";
+  return (
+    <span>
+      {range}
+      <strong>{entry.midpoint} {entry.unit}</strong>
+      {range ? <span className="muted"> mid</span> : null}
+    </span>
+  );
+}
+
+function ManagementGuidancePanel({ guidance }: { guidance: GuidanceEntry[] }) {
+  if (guidance.length === 0) {
+    return (
+      <section className="panel">
+        <div className="panel-head"><h2>Management guidance</h2></div>
+        <p className="muted">No structured management guidance is available for this company.</p>
+      </section>
+    );
+  }
+
+  const byMetric = new Map<string, GuidanceEntry[]>();
+  for (const entry of guidance) {
+    if (!byMetric.has(entry.metric)) byMetric.set(entry.metric, []);
+    byMetric.get(entry.metric)!.push(entry);
+  }
+  const coreMetrics = [...byMetric.entries()].filter(([metric]) => CORE_GUIDANCE_METRICS.has(metric));
+  const otherMetrics = [...byMetric.entries()].filter(([metric]) => !CORE_GUIDANCE_METRICS.has(metric));
+
+  function metricRow([metric, entries]: [string, GuidanceEntry[]]) {
+    const byYear = Object.fromEntries(entries.map((e) => [e.year, e]));
+    return (
+      <tr key={metric}>
+        <th align="left">{entries[0].label}</th>
+        {YEARS.map((year) => <td key={year}><GuidanceRangeCell entry={byYear[year]} /></td>)}
+      </tr>
+    );
+  }
+
+  const source = guidance[0];
 
   return (
-    <section style={{ border: "1px solid rgba(128,128,128,0.35)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        <h2 style={{ margin: 0, fontSize: 16 }}>Commodity price assumptions</h2>
-        <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(128,128,128,0.35)", background: "rgba(128,128,128,0.14)" }}>
-          Price mode: Current market (read-only)
-        </span>
+    <section className="panel">
+      <div className="panel-head">
+        <h2>Management guidance</h2>
+        <span className="badge">Reference</span>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        {rows.map(({ label, data }) => {
-          const change = formatChange24h(data.change24hPercent);
-          return (
-            <div key={label} style={{ border: "1px solid rgba(128,128,128,0.25)", borderRadius: 8, padding: 12, display: "grid", gap: 6 }}>
-              <strong style={{ fontSize: 14 }}>{label}</strong>
-              <span style={{ fontSize: 20, fontWeight: 700 }}>{formatCommodityPrice(data.value, data.unit)}</span>
-              <span
-                style={{
-                  fontSize: 12,
-                  padding: "2px 8px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(128,128,128,0.35)",
-                  background: COMMODITY_CLASSIFICATION_BACKGROUND[data.classification],
-                  width: "fit-content"
-                }}
-              >
-                {COMMODITY_CLASSIFICATION_LABEL[data.classification]}
-              </span>
-              {change ? <span style={{ fontSize: 12, opacity: 0.75 }}>{change}</span> : null}
-              <span style={{ fontSize: 11, opacity: 0.6 }}>
-                {data.asOf ? `As of ${data.asOf}` : "As of --"} · Model input for this scenario run
-              </span>
-            </div>
-          );
-        })}
+      <p className="muted panel-note" style={{ marginTop: -6 }}>
+        Reference layer only. Guided midpoints become the default forecast input below when a range or target exists for that year -- nothing here is invented for a metric management did not guide.
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="forecast-table ann-guidance-table">
+          <thead><tr><th align="left">Metric</th>{YEARS.map((year) => <th key={year} align="left">{year}E</th>)}</tr></thead>
+          <tbody>{coreMetrics.map(metricRow)}</tbody>
+        </table>
       </div>
-
-      <p style={{ margin: 0, fontSize: 11, opacity: 0.6 }}>
-        Values shown are exactly what this run sends to the forecast engine as commodity price inputs. Custom price entry is not available yet -- it requires a separate modeling change.
+      {otherMetrics.length > 0 ? (
+        <details className="ann-details">
+          <summary>View all guidance ({otherMetrics.length} more metrics)</summary>
+          <div style={{ overflowX: "auto" }}>
+            <table className="forecast-table ann-guidance-table">
+              <thead><tr><th align="left">Metric</th>{YEARS.map((year) => <th key={year} align="left">{year}E</th>)}</tr></thead>
+              <tbody>{otherMetrics.map(metricRow)}</tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
+      <p className="muted panel-note">
+        {source.sourceName} · {source.sourceReference} · {source.sourceDate}
       </p>
     </section>
   );
 }
 
-export function RrcScenarioWorkbench({
-  currentMarketPrices,
-  commoditySources
-}: {
-  currentMarketPrices?: LiveMarketPricesInput;
-  commoditySources?: { wti: ResolvedCommodityPrice; henryHub: ResolvedCommodityPrice };
-} = {}) {
-  const [preset, setPreset] = useState<Preset>("base");
-  const [strategy, setStrategy] = useState<Strategy>("maintenance");
-  const [assumptions, setAssumptions] = useState(presetDefaults.base);
-  const [current, setCurrent] = useState<ScenarioResult | null>(null);
-  const [comparison, setComparison] = useState<Record<Strategy, ScenarioResult | null>>({ maintenance: null, "continued-growth": null });
+export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: providedCommoditySources }: RrcScenarioWorkbenchProps = {}) {
+  const market = useMarketData();
+  const liveCommodity = useMemo(
+    () => currentMarketPrices ?? extractLiveMarketMetricsFromMarketResponse(market.data),
+    [currentMarketPrices, market.data]
+  );
+  const commoditySources = useMemo(
+    () => providedCommoditySources ?? resolveCommoditySources(market.data),
+    [providedCommoditySources, market.data]
+  );
+
+  const [defaults, setDefaults] = useState<ApiDefaults | null>(null);
+  const [result, setResult] = useState<AnnualForecastResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [latestReported, setLatestReported] = useState<LatestReportedProduction | null>(null);
-  const [productionMode, setProductionMode] = useState<ProductionMode>("reported");
-  const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
+  const [strategy, setStrategy] = useState<Strategy>("maintenance");
+  const [preset, setPreset] = useState<Preset>("base");
+  const [multiple, setMultiple] = useState<string>(String(PRESET_MULTIPLES.base));
+  const [forwardYear, setForwardYear] = useState<RrcForecastYear>("2027");
 
-  useEffect(() => setAssumptions(presetDefaults[preset]), [preset]);
+  const [commodityMode, setCommodityMode] = useState<CommodityMode>("current-market");
+  const [customHenryHub, setCustomHenryHub] = useState("");
+  const [customWti, setCustomWti] = useState("");
+  const [customNgl, setCustomNgl] = useState("");
+
+  const [production, setProduction] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
+  const [costs, setCosts] = useState<Record<RrcForecastYear, Record<CostField, string>>>({
+    "2026": emptyCostYear(),
+    "2027": emptyCostYear(),
+    "2028": emptyCostYear()
+  });
+  const [capex, setCapex] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
+  const [pricing, setPricing] = useState<Record<RrcForecastYear, Record<PricingField, string>>>({
+    "2026": emptyPricingYear(),
+    "2027": emptyPricingYear(),
+    "2028": emptyPricingYear()
+  });
 
   useEffect(() => {
     fetch("/api/rrc-scenarios")
       .then((response) => response.json())
-      .then((data) => setLatestReported(data.latestReportedProduction ?? null))
+      .then((data: ApiDefaults) => {
+        setDefaults(data);
+        setResult(data.result);
+      })
       .catch(() => undefined);
   }, []);
 
-  function overridesPayload() {
-    if (productionMode !== "override") return [];
-    const parse = (text: string) => (text.trim() === "" ? undefined : Number(text));
-    return Object.entries(overrides)
-      .filter(([, row]) => row.gasMmcfPerDay !== "" || row.nglMbblPerDay !== "" || row.oilMbblPerDay !== "")
-      .map(([period, row]) => ({
-        period,
-        gasMmcfPerDay: parse(row.gasMmcfPerDay),
-        nglMbblPerDay: parse(row.nglMbblPerDay),
-        oilMbblPerDay: parse(row.oilMbblPerDay)
-      }));
-  }
+  useEffect(() => setMultiple(String(PRESET_MULTIPLES[preset])), [preset]);
 
-  async function run(selectedStrategy = strategy) {
+  async function runForecast() {
     setLoading(true);
     setError(null);
     try {
@@ -258,215 +322,325 @@ export function RrcScenarioWorkbench({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          preset,
-          strategy: selectedStrategy,
-          assumptions,
-          productionMode,
-          productionOverrides: overridesPayload(),
-          currentMarketPrices
+          strategy,
+          production: Object.fromEntries(
+            YEARS.map((year) => [year, { totalBcfePerDay: parsedOrUndefined(production[year]) }])
+          ),
+          costs: Object.fromEntries(
+            YEARS.map((year) => [
+              year,
+              Object.fromEntries(
+                (Object.keys(costs[year]) as CostField[]).map((field) => [field, parsedOrUndefined(costs[year][field])])
+              )
+            ])
+          ),
+          capex: Object.fromEntries(YEARS.map((year) => [year, { totalMillion: parsedOrUndefined(capex[year]) }])),
+          pricing: Object.fromEntries(
+            YEARS.map((year) => [
+              year,
+              Object.fromEntries(
+                (Object.keys(pricing[year]) as PricingField[]).map((field) => [field, parsedOrUndefined(pricing[year][field])])
+              )
+            ])
+          ),
+          commodityMode,
+          customCommodity: {
+            henryHubPerMmbtu: parsedOrUndefined(customHenryHub),
+            wtiPerBbl: parsedOrUndefined(customWti),
+            nglPerBbl: parsedOrUndefined(customNgl)
+          },
+          liveCommodity,
+          valuation: {
+            targetEvToEbitdax: parsedOrUndefined(multiple) ?? PRESET_MULTIPLES[preset],
+            forwardYear
+          }
         })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Scenario calculation failed.");
-      const result = payload as ScenarioResult;
-      setCurrent(result);
-      setLatestReported(result.latestReportedProduction);
-      setComparison((existing) => ({ ...existing, [selectedStrategy]: result }));
-      return result;
+      if (!response.ok) throw new Error(payload.error ?? "Forecast calculation failed.");
+      setResult(payload.result as AnnualForecastResult);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Scenario calculation failed.");
-      return null;
+      setError(cause instanceof Error ? cause.message : "Forecast calculation failed.");
     } finally {
       setLoading(false);
     }
   }
 
-  async function compareBoth() {
-    await run("maintenance");
-    await run("continued-growth");
+  function productionClassification(year: RrcForecastYear): Classification {
+    if (production[year].trim() !== "") return "user";
+    return defaults?.productionDefaults[year]?.classification ?? "modeled";
   }
 
-  function resetProduction() {
-    setProductionMode("reported");
-    setOverrides({});
+  function costClassification(year: RrcForecastYear, field: CostField): Classification {
+    if (costs[year][field].trim() !== "") return "user";
+    if (field === "loePerMcfe") return defaults?.costDefaults[year]?.loePerMcfe.classification ?? "modeled";
+    if (field === "cashGaPerMcfe") return defaults?.costDefaults[year]?.cashGaPerMcfe.classification ?? "modeled";
+    if (field === "cashTaxRate") return defaults?.costDefaults[year]?.cashTaxRate.classification ?? "modeled";
+    return "modeled";
   }
 
-  function copyLatestReportedToAllPeriods() {
-    if (!latestReported) return;
-    const row: OverrideRow = {
-      gasMmcfPerDay: latestReported.gasMmcfPerDay === null ? "" : String(latestReported.gasMmcfPerDay),
-      nglMbblPerDay: latestReported.nglMbblPerDay === null ? "" : String(latestReported.nglMbblPerDay),
-      oilMbblPerDay: latestReported.oilMbblPerDay === null ? "" : String(latestReported.oilMbblPerDay)
-    };
-    setOverrides(Object.fromEntries(FUTURE_PERIODS.map((period) => [period, row])));
+  function capexClassification(year: RrcForecastYear): Classification {
+    if (capex[year].trim() !== "") return "user";
+    return defaults?.capexDefaults[year]?.classification ?? "modeled";
   }
 
-  function updateOverride(period: string, field: keyof OverrideRow, text: string) {
-    setOverrides((existing) => {
-      const row: OverrideRow = existing[period] ?? { gasMmcfPerDay: "", nglMbblPerDay: "", oilMbblPerDay: "" };
-      return { ...existing, [period]: { ...row, [field]: text } };
-    });
-  }
-
-  const fcf = useMemo(
-    () => current?.result.annualFreeCashFlowMillion ?? [],
-    [current]
-  );
-
-  const forecastPeriods = current?.result.complete.forecast.periods ?? [];
-
-  function isOverridden(period: string) {
-    if (productionMode !== "override") return false;
-    const row = overrides[period];
-    return !!row && (row.gasMmcfPerDay !== "" || row.nglMbblPerDay !== "" || row.oilMbblPerDay !== "");
+  function pricingClassification(year: RrcForecastYear, field: PricingField): Classification {
+    if (pricing[year][field].trim() !== "") return "user";
+    return defaults?.pricingDefaults[year]?.[field]?.classification ?? "modeled";
   }
 
   return (
-    <main style={{ maxWidth: 1280, margin: "0 auto", padding: "24px", display: "grid", gap: 18 }}>
+    <main style={{ maxWidth: 1180, margin: "0 auto", padding: "24px", display: "grid", gap: 16 }}>
       <header>
-        <p style={{ margin: 0, opacity: 0.7, fontSize: 13 }}>RANGE RESOURCES FORECAST ENGINE</p>
-        <h1 style={{ margin: "4px 0 8px" }}>Scenario Workbench</h1>
-        <p style={{ margin: 0, opacity: 0.75 }}>Bear, base, and bull valuation cases with an explicit 2028 maintenance-versus-growth fork.</p>
+        <p style={{ margin: 0, opacity: 0.7, fontSize: 13 }}>RANGE RESOURCES</p>
+        <h1 style={{ margin: "4px 0 8px" }}>Forecast</h1>
+        <p style={{ margin: 0, opacity: 0.75 }}>
+          Given management&apos;s operating outlook and either current commodity prices or your own assumptions,
+          what could RRC generate in Revenue, EBITDAX, and FCF -- and what is it worth at a selected EV/EBITDAX multiple?
+        </p>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <label>
-          Scenario preset
-          <PresetInfoTooltip />
-          <select value={preset} onChange={(event) => setPreset(event.target.value as Preset)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="bear">Bear</option><option value="base">Base</option><option value="bull">Bull</option></select>
-        </label>
-        <label>Post-2027 strategy<select value={strategy} onChange={(event) => setStrategy(event.target.value as Strategy)} style={{ width: "100%", padding: 10, marginTop: 6 }}><option value="maintenance">Maintenance</option><option value="continued-growth">Continued growth</option></select></label>
-        <label>Target EV / EBITDAX<input type="number" step="0.1" value={assumptions.targetEvToEbitdax} onChange={(event) => setAssumptions({ ...assumptions, targetEvToEbitdax: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
-        <label>Discount rate<input type="number" step="0.005" value={assumptions.discountRate} onChange={(event) => setAssumptions({ ...assumptions, discountRate: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
-        <label>Terminal growth<input type="number" step="0.005" value={assumptions.terminalGrowthRate} onChange={(event) => setAssumptions({ ...assumptions, terminalGrowthRate: Number(event.target.value) })} style={{ width: "100%", padding: 10, marginTop: 6 }} /></label>
-      </section>
+      {defaults ? <ManagementGuidancePanel guidance={defaults.guidance} /> : null}
 
-      <section style={{ border: "1px solid rgba(128,128,128,0.35)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 16 }}>Production assumption</h2>
-          <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(128,128,128,0.35)", background: productionMode === "override" ? "rgba(240,180,40,0.16)" : "rgba(40,180,120,0.16)" }}>
-            {productionMode === "override" ? "User production assumption" : (latestReported ? `${latestReported.sourceLabel}` : "Latest reported production")}
-          </span>
+      <section className="panel">
+        <div className="panel-head"><h2>Model assumptions</h2></div>
+
+        <h3 className="wb-group-title" style={{ marginTop: 4 }}>Production (total company, Bcfe/d)</h3>
+        <div className="ann-year-grid">
+          {YEARS.map((year) => (
+            <label className="wb-field" key={year}>
+              <span className="wb-field-label">
+                {yearLabel(year)} <ClassificationPill classification={productionClassification(year)} />
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder={defaults?.productionDefaults[year]?.value !== null && defaults?.productionDefaults[year]?.value !== undefined ? String(defaults.productionDefaults[year].value) : "--"}
+                value={production[year]}
+                onChange={(event) => setProduction((prev) => ({ ...prev, [year]: event.target.value }))}
+              />
+            </label>
+          ))}
         </div>
+        <p className="muted panel-note">
+          Default = management guidance midpoint/target when RRC guided that year, otherwise the latest reported total held flat. Editing a year classifies it User Input.
+          For 2026, this is the full-year target -- Q1/Q2 are locked to actual reported production, and Q3/Q4 are solved so the full year reconciles to this figure.
+        </p>
 
-        <label>Production mode
-          <select
-            value={productionMode}
-            onChange={(event) => setProductionMode(event.target.value as ProductionMode)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-          >
-            <option value="reported">Latest reported</option>
-            <option value="override">Manual override</option>
-          </select>
-        </label>
-
-        {latestReported ? (
-          <p style={{ margin: 0, fontSize: 12, opacity: 0.75 }}>
-            {latestReported.sourceLabel}: gas {number(latestReported.gasMmcfPerDay, 1)} MMcf/d, NGL {number(latestReported.nglMbblPerDay, 1)} Mbbl/d, oil {number(latestReported.oilMbblPerDay, 1)} Mbbl/d. Held constant across all future periods by default.
-          </p>
-        ) : null}
-
-        {productionMode === "override" ? (
-          <>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" onClick={copyLatestReportedToAllPeriods} style={{ padding: "6px 10px" }}>Copy latest reported to all periods</button>
-              <button type="button" onClick={resetProduction} style={{ padding: "6px 10px" }}>Reset to latest reported</button>
+        <h3 className="wb-group-title">Commodity price mode</h3>
+        <div className="wb-groups" style={{ marginBottom: 8 }}>
+          <label className="wb-field">
+            Mode
+            <select value={commodityMode} onChange={(event) => setCommodityMode(event.target.value as CommodityMode)}>
+              <option value="current-market">Current market</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+        </div>
+        {commodityMode === "current-market" ? (
+          <div>
+            <div className="wb-latest-stats">
+              <CommodityPriceCard label="Henry Hub" data={commoditySources.henryHub} />
+              <CommodityPriceCard label="WTI" data={commoditySources.wti} />
             </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    <th align="left">Period</th>
-                    <th align="left">Gas (MMcf/d)</th>
-                    <th align="left">NGL (Mbbl/d)</th>
-                    <th align="left">Oil (Mbbl/d)</th>
-                    <th align="left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {FUTURE_PERIODS.map((period) => {
-                    const row = overrides[period] ?? { gasMmcfPerDay: "", nglMbblPerDay: "", oilMbblPerDay: "" };
-                    return (
-                      <tr key={period}>
-                        <td>{period}</td>
-                        <td><input type="number" placeholder="reported" value={row.gasMmcfPerDay} onChange={(event) => updateOverride(period, "gasMmcfPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td><input type="number" placeholder="reported" value={row.nglMbblPerDay} onChange={(event) => updateOverride(period, "nglMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td><input type="number" placeholder="reported" value={row.oilMbblPerDay} onChange={(event) => updateOverride(period, "oilMbblPerDay", event.target.value)} style={{ width: 90, padding: 4 }} /></td>
-                        <td>{isOverridden(period) ? "Override" : "Latest reported"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <p className="muted panel-note">Spot-price sensitivity -- not a forward curve. Held flat across 2026E-2028E. Source: OilPriceAPI, EIA fallback.</p>
+          </div>
+        ) : (
+          <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
+            <label className="wb-field">Henry Hub ($/MMBtu)<input type="number" step="0.01" placeholder="3.75" value={customHenryHub} onChange={(event) => setCustomHenryHub(event.target.value)} /></label>
+            <label className="wb-field">WTI ($/bbl)<input type="number" step="0.01" placeholder="65" value={customWti} onChange={(event) => setCustomWti(event.target.value)} /></label>
+            <label className="wb-field">NGL realization ($/bbl)<input type="number" step="0.01" placeholder="24" value={customNgl} onChange={(event) => setCustomNgl(event.target.value)} /></label>
+          </div>
+        )}
+
+        <h3 className="wb-group-title">Costs</h3>
+        {YEARS.map((year) => (
+          <div className="wb-year-group" key={year}>
+            <p className="wb-year-label">{yearLabel(year)}</p>
+            <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}>
+              <label className="wb-field">
+                <span className="wb-field-label">LOE $/Mcfe <ClassificationPill classification={costClassification(year, "loePerMcfe")} /></span>
+                <input type="number" step="0.01" placeholder={num(defaults?.costDefaults[year]?.loePerMcfe.value ?? null)} value={costs[year].loePerMcfe} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], loePerMcfe: event.target.value } }))} />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">GP&amp;T $/Mcfe <ClassificationPill classification={costClassification(year, "gatheringTransportPerMcfe")} /></span>
+                <input type="number" step="0.01" placeholder="1.63" value={costs[year].gatheringTransportPerMcfe} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], gatheringTransportPerMcfe: event.target.value } }))} />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">G&amp;A $/Mcfe <ClassificationPill classification={costClassification(year, "cashGaPerMcfe")} /></span>
+                <input type="number" step="0.01" placeholder={defaults?.costDefaults[year]?.cashGaPerMcfe.value !== null && defaults?.costDefaults[year]?.cashGaPerMcfe.value !== undefined ? num(defaults.costDefaults[year].cashGaPerMcfe.value) : "--"} value={costs[year].cashGaPerMcfe} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], cashGaPerMcfe: event.target.value } }))} />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">Exploration $mm <ClassificationPill classification={costClassification(year, "explorationMillion")} /></span>
+                <input type="number" step="0.1" placeholder="6.03" value={costs[year].explorationMillion} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], explorationMillion: event.target.value } }))} />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">Cash interest $mm <ClassificationPill classification={costClassification(year, "cashInterestMillion")} /></span>
+                <input type="number" step="0.1" placeholder="19.42" value={costs[year].cashInterestMillion} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], cashInterestMillion: event.target.value } }))} />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">
+                  Cash tax rate (decimal input) <ClassificationPill classification={costClassification(year, "cashTaxRate")} />
+                  <small>{pct(defaults?.costDefaults[year]?.cashTaxRate.value ?? null, 0)} default</small>
+                </span>
+                <input type="number" step="0.01" placeholder={num(defaults?.costDefaults[year]?.cashTaxRate.value ?? null)} value={costs[year].cashTaxRate} onChange={(event) => setCosts((prev) => ({ ...prev, [year]: { ...prev[year], cashTaxRate: event.target.value } }))} />
+              </label>
             </div>
-          </>
-        ) : null}
+          </div>
+        ))}
+
+        <h3 className="wb-group-title">CapEx (total, $mm)</h3>
+        <div className="ann-year-grid">
+          {YEARS.map((year) => (
+            <label className="wb-field" key={year}>
+              <span className="wb-field-label">
+                {yearLabel(year)} <ClassificationPill classification={capexClassification(year)} />
+              </span>
+              <input
+                type="number"
+                step="1"
+                placeholder={defaults?.capexDefaults[year]?.value !== null && defaults?.capexDefaults[year]?.value !== undefined ? String(defaults.capexDefaults[year].value) : "--"}
+                value={capex[year]}
+                onChange={(event) => setCapex((prev) => ({ ...prev, [year]: event.target.value }))}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="muted panel-note">Evenly allocated across quarters internally; the quarterly engine is unchanged. For 2026, this is the full-year target -- Q1/Q2 use actual reported CapEx, and the remainder is split evenly across Q3/Q4.</p>
+
+        <h3 className="wb-group-title">Realized pricing differentials</h3>
+        {YEARS.map((year) => (
+          <div className="wb-year-group" key={year}>
+            <p className="wb-year-label">{yearLabel(year)}</p>
+            <div className="ann-year-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
+              <label className="wb-field">
+                <span className="wb-field-label">Gas differential vs. NYMEX $/Mcf <ClassificationPill classification={pricingClassification(year, "gasBasisPerMcf")} /></span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={num(defaults?.pricingDefaults[year]?.gasBasisPerMcf.value ?? null)}
+                  value={pricing[year].gasBasisPerMcf}
+                  onChange={(event) => setPricing((prev) => ({ ...prev, [year]: { ...prev[year], gasBasisPerMcf: event.target.value } }))}
+                />
+              </label>
+              <label className="wb-field">
+                <span className="wb-field-label">Oil differential vs. WTI $/bbl <ClassificationPill classification={pricingClassification(year, "oilDifferentialPerBbl")} /></span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={num(defaults?.pricingDefaults[year]?.oilDifferentialPerBbl.value ?? null)}
+                  value={pricing[year].oilDifferentialPerBbl}
+                  onChange={(event) => setPricing((prev) => ({ ...prev, [year]: { ...prev[year], oilDifferentialPerBbl: event.target.value } }))}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+        <p className="muted panel-note">Realized gas price = Henry Hub + gas differential. Realized oil price = WTI + oil differential. Sign exactly as disclosed by management.</p>
+
+        <h3 className="wb-group-title">Valuation</h3>
+        <div className="wb-groups">
+          <div className="wb-group">
+            <label className="wb-field">
+              Post-2027 strategy
+              <select value={strategy} onChange={(event) => setStrategy(event.target.value as Strategy)}>
+                <option value="maintenance">Maintenance</option>
+                <option value="continued-growth">Continued growth</option>
+              </select>
+            </label>
+            <label className="wb-field">
+              Forward EBITDAX year
+              <select value={forwardYear} onChange={(event) => setForwardYear(event.target.value as RrcForecastYear)}>
+                {YEARS.map((year) => <option key={year} value={year}>{year}E</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="wb-group">
+            <label className="wb-field">
+              Scenario preset
+              <select value={preset} onChange={(event) => setPreset(event.target.value as Preset)}>
+                <option value="bear">Bear</option>
+                <option value="base">Base</option>
+                <option value="bull">Bull</option>
+              </select>
+            </label>
+            <label className="wb-field">
+              Target EV / EBITDAX
+              <span className="wb-suffix-input">
+                <input type="number" step="0.1" value={multiple} onChange={(event) => setMultiple(event.target.value)} />
+                <span>x</span>
+              </span>
+            </label>
+          </div>
+        </div>
       </section>
 
-      {commoditySources ? <CommodityPriceAssumptions henryHub={commoditySources.henryHub} wti={commoditySources.wti} /> : null}
-
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button onClick={() => void run()} disabled={loading} style={{ padding: "10px 16px" }}>{loading ? "Calculating…" : "Run scenario"}</button>
-        <button onClick={() => void compareBoth()} disabled={loading} style={{ padding: "10px 16px" }}>Compare maintenance vs growth</button>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={() => void runForecast()} disabled={loading} style={{ padding: "10px 16px" }}>
+          {loading ? "Calculating…" : "Run forecast"}
+        </button>
       </div>
       {error ? <p role="alert">{error}</p> : null}
 
-      {current ? (
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
-          <article><small>2027 EBITDAX</small><h2>{money(current.result.forecast2027EbitdaxMillion)}</h2></article>
-          <article><small>Ending net debt</small><h2>{money(current.result.endingNetDebtMillion)}</h2></article>
-          <article><small>Multiple value / share</small><h2>{money(current.result.multiple.impliedSharePrice, 2)}</h2></article>
-          <article><small>DCF value / share</small><h2>{money(current.result.dcf.impliedSharePrice, 2)}</h2></article>
-          {fcf.map((item) => <article key={item.year}><small>{item.year} FCF</small><h2>{money(item.value)}</h2></article>)}
-        </section>
+      {result ? (
+        <>
+          <section className="wb-section">
+            <h2>Annual forecast</h2>
+            <div style={{ overflowX: "auto" }}>
+              <table className="forecast-table">
+                <thead>
+                  <tr><th align="left">Metric</th>{YEARS.map((year) => <th key={year} align="right">{yearLabel(year)}</th>)}</tr>
+                </thead>
+                <tbody>
+                  <tr><td>Production (Bcfe/d avg)</td>{YEARS.map((year) => <td key={year} align="right">{result.annual[year].production.totalMcfe === null ? "--" : num(result.annual[year].production.totalMcfe / 365 / 1000, 2)}</td>)}</tr>
+                  <tr><td>Revenue</td>{YEARS.map((year) => <td key={year} align="right">{money(result.annual[year].revenueMillion)}</td>)}</tr>
+                  <tr><td>EBITDAX</td>{YEARS.map((year) => <td key={year} align="right">{money(result.annual[year].ebitdaxMillion)}</td>)}</tr>
+                  <tr><td>CapEx</td>{YEARS.map((year) => <td key={year} align="right">{money(result.annual[year].capexMillion)}</td>)}</tr>
+                  <tr><td>Free cash flow</td>{YEARS.map((year) => <td key={year} align="right">{money(result.annual[year].freeCashFlowMillion)}</td>)}</tr>
+                  <tr><td>FCF yield</td>{YEARS.map((year) => <td key={year} align="right">{pct(result.annual[year].fcfYield)}</td>)}</tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="muted panel-note">Production x realized commodity prices → Revenue → cash operating costs → EBITDAX → interest / cash taxes / CapEx → FCF.</p>
+            <p className="muted panel-note">2026E = Q1 2026 actual + Q2 2026 actual (immutable reported quarters) + Q3/Q4 2026 estimate. 2027E and 2028E are fully estimated years.</p>
+          </section>
+
+          <section className="wb-result-rows">
+            <section className="wb-result-grid">
+              <div className="wb-result-card"><small>Enterprise value</small><strong>{money(result.valuation.enterpriseValueMillion)}</strong></div>
+              <div className="wb-result-card"><small>Equity value</small><strong>{money(result.valuation.equityValueMillion)}</strong></div>
+              <div className="wb-result-card"><small>Implied share price</small><strong>{money(result.valuation.impliedSharePrice, 2)}</strong></div>
+              <div className="wb-result-card"><small>{result.valuation.forwardYear}E EBITDAX x multiple</small><strong>{money(result.valuation.forwardEbitdaxMillion)} <small style={{ fontWeight: 400 }}>at {multiple}x</small></strong></div>
+            </section>
+            <p className="muted panel-note">
+              EV = {result.valuation.ebitdaxPeriod} EBITDAX x target multiple. Equity value = EV - net debt at {result.valuation.netDebtPeriod} ({money(result.valuation.netDebtMillion)}).
+              Implied share price = equity value / {num(result.valuation.dilutedSharesMillion, 3)}mm diluted shares. Net debt and EBITDAX are read from the same period end.
+            </p>
+            <p className="muted panel-note">
+              Forecast ending net debt/net cash at {result.valuation.netDebtPeriod}: {money(result.valuation.forecastEndingNetDebtMillion)} (negative = net cash; unaffected by the convention below).
+              {result.valuation.valuationNetDebtFloorApplied ? " Valuation net debt is floored at $0; unallocated forecast excess cash is not credited to implied equity value, since this model does not simulate buybacks, special dividends, acquisitions, or other capital allocation of unmodeled excess free cash flow." : null}
+            </p>
+            {result.valuation.warnings.length > 0 ? <p className="muted panel-note">{result.valuation.warnings.join(" ")}</p> : null}
+          </section>
+
+          <details className="ann-details">
+            <summary>Advanced: DCF (secondary)</summary>
+            <section className="wb-result-grid" style={{ marginTop: 10 }}>
+              <div className="wb-result-card"><small>DCF enterprise value</small><strong>{money(result.dcf.enterpriseValueMillion)}</strong></div>
+              <div className="wb-result-card"><small>DCF equity value</small><strong>{money(result.dcf.equityValueMillion)}</strong></div>
+              <div className="wb-result-card"><small>DCF implied share price</small><strong>{money(result.dcf.impliedSharePrice, 2)}</strong></div>
+            </section>
+            <p className="muted panel-note">
+              {pct(result.dcf.discountRate, 0)} discount rate, {pct(result.dcf.terminalGrowthRate, 0)} terminal growth, uses today&apos;s reported net debt (not a future ending net debt).
+              Secondary output -- EV/EBITDAX above is the primary valuation method for this page.
+            </p>
+          </details>
+        </>
       ) : null}
 
-      {forecastPeriods.length > 0 ? (
-        <section>
-          <h2>Quarterly production and revenue</h2>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr><th align="left">Period</th><th align="left">Production source</th><th align="right">Gas (MMcf)</th><th align="right">NGL (Mbbl)</th><th align="right">Oil (Mbbl)</th><th align="right">Total Mcfe</th><th align="right">Revenue</th></tr></thead>
-              <tbody>
-                {forecastPeriods.map((period) => (
-                  <tr key={period.period}>
-                    <td>{period.period}</td>
-                    <td>{period.period === "2026Q1" ? "Latest reported (10-Q)" : isOverridden(period.period) ? "User override" : "Latest reported (held constant)"}</td>
-                    <td align="right">{number(period.production.gasMmcf, 0)}</td>
-                    <td align="right">{number(period.production.nglMbbl, 1)}</td>
-                    <td align="right">{number(period.production.oilMbbl, 1)}</td>
-                    <td align="right">{number(period.production.totalMcfe, 0)}</td>
-                    <td align="right">{money(period.revenue.totalMillion)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
-
-      <section>
-        <h2>Maintenance vs. growth valuation bridge</h2>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th align="left">Metric</th><th align="right">Maintenance</th><th align="right">Growth</th><th align="right">Difference</th></tr></thead>
-            <tbody>
-              {[
-                ["2027 EBITDAX", comparison.maintenance?.result.forecast2027EbitdaxMillion ?? null, comparison["continued-growth"]?.result.forecast2027EbitdaxMillion ?? null],
-                ["Ending net debt", comparison.maintenance?.result.endingNetDebtMillion ?? null, comparison["continued-growth"]?.result.endingNetDebtMillion ?? null],
-                ["EV/EBITDAX implied share price", comparison.maintenance?.result.multiple.impliedSharePrice ?? null, comparison["continued-growth"]?.result.multiple.impliedSharePrice ?? null],
-                ["DCF implied share price", comparison.maintenance?.result.dcf.impliedSharePrice ?? null, comparison["continued-growth"]?.result.dcf.impliedSharePrice ?? null]
-              ].map(([label, maintenance, growth]) => {
-                const left = maintenance as number | null;
-                const right = growth as number | null;
-                return <tr key={label as string}><td>{label}</td><td align="right">{number(left, 2)}</td><td align="right">{number(right, 2)}</td><td align="right">{left === null || right === null ? "--" : number(right - left, 2)}</td></tr>;
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <p style={{ fontSize: 12, opacity: 0.65 }}>All forecast and valuation assumptions remain explicitly modeled. Unsupported values render “--”; the interface does not fabricate missing inputs.</p>
+      <p style={{ fontSize: 12, opacity: 0.65 }}>
+        Every input above is classified Reported, Guidance, Current Market, Modeled, or User Input. Unsupported or missing values render &quot;--&quot;; nothing is fabricated.
+      </p>
     </main>
   );
 }

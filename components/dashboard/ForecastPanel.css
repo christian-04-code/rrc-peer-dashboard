@@ -6,6 +6,60 @@
 .forecast-table th, .forecast-table td { text-align: right; }
 .forecast-table thead th:first-child, .forecast-table tbody th { text-align: left; }
 
+.wb-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.wb-group { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 14px; display: grid; gap: 10px; align-content: start; }
+.wb-group-title { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.wb-field { display: grid; gap: 6px; font-size: 13px; }
+.wb-field select, .wb-field input { width: 100%; padding: 9px 10px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); border-radius: 8px; }
+.wb-field-label { display: flex; align-items: center; }
+.wb-suffix-input { position: relative; display: flex; align-items: center; }
+.wb-suffix-input input { padding-right: 30px; }
+.wb-suffix-input span { position: absolute; right: 10px; color: var(--muted); font-size: 13px; pointer-events: none; }
+
+.wb-section { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+.wb-section-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wb-section-head h2 { margin: 0; font-size: 15px; }
+.wb-pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+.wb-pill.override { border-color: rgba(229,173,99,.5); background: rgba(229,173,99,.12); color: #e5ad63; }
+.wb-pill.reported { border-color: rgba(112,201,154,.5); background: rgba(112,201,154,.12); color: var(--positive); }
+
+.wb-latest-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.wb-latest-stat { border: 1px solid var(--border); background: var(--panel-2); border-radius: 8px; padding: 9px 10px; display: grid; gap: 3px; }
+.wb-latest-stat span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.wb-latest-stat strong { font-size: 16px; }
+.wb-latest-stat strong small { color: var(--muted); font-size: 11px; font-weight: 500; }
+.wb-latest-note { margin: 0; font-size: 11px; color: var(--muted); }
+
+.wb-year-group { display: grid; gap: 6px; }
+.wb-year-group + .wb-year-group { margin-top: 8px; }
+.wb-year-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px; }
+.wb-year-group:first-child .wb-year-label { border-top: 0; padding-top: 0; }
+
+.wb-gap-top { margin-top: 10px; }
+.wb-gap-bottom { margin-bottom: 10px; }
+.wb-result-rows { display: grid; gap: 10px; }
+.wb-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.wb-result-card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 13px 14px; display: grid; gap: 5px; }
+.wb-result-card small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.wb-result-card strong { font-size: clamp(18px, 2vw, 22px); }
+.wb-result-card strong.positive { color: var(--positive); }
+.wb-result-card strong.negative { color: var(--negative); }
+.wb-result-card em { font-style: normal; font-size: 11px; color: var(--muted); }
+
+.wb-compare-empty { border: 1px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+.ann-pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+
+.ann-year-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
+
+.ann-guidance-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ann-guidance-table th, .ann-guidance-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.ann-guidance-table thead th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+
+.ann-details { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+.ann-details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text); }
+.ann-details[open] summary { margin-bottom: 6px; }
+
 @media (max-width: 720px) {
   .forecast-head { flex-direction: column; align-items: stretch; }
 }
