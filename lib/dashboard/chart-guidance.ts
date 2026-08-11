@@ -57,6 +57,11 @@ export type ChartGuidanceResult = {
   points: ChartGuidancePoint[];
 };
 
+export type SelectedChartGuidanceResult = {
+  status: "provided" | "not_provided";
+  points: ChartGuidancePoint[];
+};
+
 function toChartValue(value: number, unit: string): number | null {
   if (unit === "Bcfe/d") return value * 1_000;
   if (unit.toLowerCase() === "mmcfe/d" || unit === "$MM") return value;
@@ -119,6 +124,12 @@ export function getChartGuidance(ticker: Ticker, metric: Metric): ChartGuidanceR
   return { status: points.length > 0 ? "provided" : "not_provided", auditStatus, points };
 }
 
+/** Chart-compatible guidance for every company in the active comparison set. */
+export function getSelectedChartGuidance(tickers: Ticker[], metric: Metric): SelectedChartGuidanceResult {
+  const points = tickers.flatMap((ticker) => getChartGuidance(ticker, metric).points);
+  return { status: points.length > 0 ? "provided" : "not_provided", points };
+}
+
 /** Full company-by-metric matrix used to verify that every supported peer was audited. */
 export function getManagementGuidanceAuditMatrix(): Record<Ticker, Record<Metric, GuidanceAuditStatus>> {
   return Object.fromEntries(
@@ -131,6 +142,9 @@ export function getManagementGuidanceAuditMeta(): ManagementGuidanceFile["meta"]
 }
 
 /** The chart toggle affects the guidance overlay only. */
-export function getVisibleChartGuidance(result: ChartGuidanceResult, visible: boolean): ChartGuidancePoint[] {
+export function getVisibleChartGuidance(
+  result: Pick<ChartGuidanceResult, "points"> | SelectedChartGuidanceResult,
+  visible: boolean
+): ChartGuidancePoint[] {
   return visible ? result.points : [];
 }

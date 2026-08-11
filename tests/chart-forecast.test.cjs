@@ -90,7 +90,7 @@ test("ChartWorkspace renders internal model forecasts with a non-dashed treatmen
   const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
   assert.match(source, /model-forecast-line/);
   assert.doesNotMatch(source, /className=\{`\$\{lineClass\} forecast-line`\}/);
-  assert.match(css, /\.primary-line\.model-forecast-line\s*\{[^}]*opacity/);
+  assert.match(css, /\.company-line\.model-forecast-line\s*\{[^}]*opacity/);
   assert.doesNotMatch(css, /\.model-forecast-line\s*\{[^}]*stroke-dasharray/);
   assert.match(css, /\.management-guidance-line[^}]*stroke-dasharray/);
   assert.match(source, /buildForecastChartSeries/);

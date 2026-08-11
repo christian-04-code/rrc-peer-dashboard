@@ -10,7 +10,7 @@ import {
   forecastQuarterLabel,
   type ForecastChartMetric
 } from "@/lib/dashboard/chart-forecast";
-import { getChartGuidance, getVisibleChartGuidance, type ChartGuidancePoint } from "@/lib/dashboard/chart-guidance";
+import { getSelectedChartGuidance, getVisibleChartGuidance, type ChartGuidancePoint } from "@/lib/dashboard/chart-guidance";
 import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
@@ -102,26 +102,26 @@ type GuidanceHoverPoint = {
 type HoverPoint = SeriesHoverPoint | GuidanceHoverPoint;
 
 export function ChartWorkspace({
-  ticker,
-  comparisonTickers,
+  selectedTickers,
   title,
   metric,
   currentMarketPrices
 }: {
-  ticker: Ticker;
-  comparisonTickers: Ticker[];
+  selectedTickers: Ticker[];
   title: string;
   metric: Metric;
   currentMarketPrices?: RrcCurrentMarketPrices;
 }) {
   const config = metricConfig[metric];
   const showsForecast = FORECAST_METRICS.has(metric);
-  const tickers = [ticker, ...comparisonTickers.filter((peer) => peer !== ticker)];
-  const tickerKey = tickers.join(",");
+  const tickerKey = selectedTickers.join(",");
   const [hover, setHover] = useState<HoverPoint | null>(null);
   const [showManagementGuidance, setShowManagementGuidance] = useState(false);
 
-  const guidance = useMemo(() => getChartGuidance(ticker, metric), [ticker, metric]);
+  const guidance = useMemo(
+    () => getSelectedChartGuidance(selectedTickers, metric),
+    [metric, selectedTickers]
+  );
   const visibleGuidance = getVisibleChartGuidance(guidance, showManagementGuidance);
 
   useEffect(() => {
@@ -130,11 +130,11 @@ export function ChartWorkspace({
   }, [metric, tickerKey]);
 
   const actualAxisQuarters = useMemo(() => Array.from(new Set(
-    tickers.flatMap((seriesTicker) => getAllQuartersForTicker(seriesTicker).map((row) => row.quarter))
-  )), [tickerKey]);
+    selectedTickers.flatMap((seriesTicker) => getAllQuartersForTicker(seriesTicker).map((row) => row.quarter))
+  )), [selectedTickers]);
 
   const series: Series[] = useMemo(() => {
-    return tickers.map((seriesTicker) => {
+    return selectedTickers.map((seriesTicker) => {
       const actualByQuarter = new Map(
         getAllQuartersForTicker(seriesTicker).map((row) => [row.quarter, config.value(row)])
       );
@@ -145,8 +145,7 @@ export function ChartWorkspace({
       const forecastValues = FORECAST_CHART_PERIODS.map((_, index) => forecastPoints[index]?.value ?? null);
       return { ticker: seriesTicker, values: [...actualValues, ...forecastValues] };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickerKey, metric, showsForecast, currentMarketPrices, actualAxisQuarters]);
+  }, [selectedTickers, metric, showsForecast, currentMarketPrices, actualAxisQuarters, config]);
 
   const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.plotPeriod));
   const axisQuarters = Array.from(new Set([
@@ -202,7 +201,7 @@ export function ChartWorkspace({
           <span>Only explicitly disclosed periods are shown</span>
         </div>
       ) : null}
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${tickers.join(", ")} from Q1 2024 through ${axisQuarters[axisQuarters.length - 1]}.`}>
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${selectedTickers.join(", ")} from Q1 2024 through ${axisQuarters[axisQuarters.length - 1]}.`}>
         <g className="grid-lines">
           {yTicks.map((value) => {
             const y = yFor(value);
@@ -220,9 +219,9 @@ export function ChartWorkspace({
               : null
           ))}
         </g>
-        {series.map((item, seriesIndex) => {
-          const lineClass = seriesIndex === 0 ? "primary-line" : "peer-line";
-          const pointClass = seriesIndex === 0 ? "primary-line-point" : "peer-line-point";
+        {series.map((item) => {
+          const lineClass = "company-line";
+          const pointClass = "company-line-point";
           const color = getCompanyColor(item.ticker);
           const actualPaths = buildPathSegments(item.values.slice(0, splitIndex), xFor, yFor);
           const modeledPaths = showsForecast
@@ -257,7 +256,7 @@ export function ChartWorkspace({
                     style={{ fill: color }}
                     cx={point.x}
                     cy={point.y}
-                    r={seriesIndex === 0 ? 3.5 : 2.5}
+                    r={3}
                     tabIndex={0}
                     role="img"
                   aria-label={`${item.ticker} ${axisQuarters[index]} ${formatSeriesValue(value, config.precision)} ${config.unit}${modeled ? " modeled" : ""}`}
@@ -274,10 +273,10 @@ export function ChartWorkspace({
         {visibleGuidance.map((point) => {
           const index = axisQuarters.indexOf(point.plotPeriod);
           if (index < 0) return null;
-          const x = xFor(index);
-          const color = getCompanyColor(ticker);
-          const label = `${ticker} Management Guidance · ${point.period}`;
-          const pointKey = `guidance-${point.plotPeriod}-${point.metric}-${point.period}`;
+          const x = xFor(index) + guidanceMarkOffset(point, visibleGuidance);
+          const color = getCompanyColor(point.ticker);
+          const label = `${point.ticker} Management Guidance · ${point.period}`;
+          const pointKey = `guidance-${point.ticker}-${point.plotPeriod}-${point.metric}-${point.period}`;
 
           if (point.kind === "range") {
             const yLow = yFor(point.chartLow);
@@ -288,7 +287,7 @@ export function ChartWorkspace({
                 key={pointKey}
                 role="img"
                 tabIndex={0}
-                aria-label={`${label}, low ${formatValue(point.low)}, high ${formatValue(point.high)} ${point.unit}; source ${point.source}, ${point.sourceDate}`}
+                aria-label={`${label}, low ${formatValue(point.low)}, high ${formatValue(point.high)} ${point.unit}${point.status ? `; status ${guidanceTypeLabel(point.status)}` : ""}; source ${point.sourceLocation ?? point.source}, ${point.sourceDate}`}
                 onMouseEnter={() => setHover(guidanceHover)}
                 onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
                 onFocus={() => setHover(guidanceHover)}
@@ -309,7 +308,7 @@ export function ChartWorkspace({
               key={pointKey}
               role="img"
               tabIndex={0}
-              aria-label={`${label}, ${formatValue(point.value)} ${point.unit}; source ${point.source}, ${point.sourceDate}`}
+              aria-label={`${label}, ${formatValue(point.value)} ${point.unit}${point.status ? `; status ${guidanceTypeLabel(point.status)}` : ""}; source ${point.sourceLocation ?? point.source}, ${point.sourceDate}`}
               onMouseEnter={() => setHover(guidanceHover)}
               onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
               onFocus={() => setHover(guidanceHover)}
@@ -324,10 +323,9 @@ export function ChartWorkspace({
         {hover ? <ChartPointTooltip point={hover} unit={config.unit} seriesPrecision={config.precision} chartWidth={WIDTH} chartHeight={HEIGHT} /> : null}
       </svg>
       <div className="chart-legend">
-        {tickers.map((seriesTicker) => (
+        {selectedTickers.map((seriesTicker) => (
           <span
             key={seriesTicker}
-            className={seriesTicker === ticker ? "primary-legend" : undefined}
             style={{ borderColor: getCompanyColor(seriesTicker), color: getCompanyColor(seriesTicker) }}
           >
             {seriesTicker}
@@ -362,8 +360,14 @@ function buildGuidanceAxisPeriods(periods: string[]): string[] {
   return periodsThroughTarget;
 }
 
-// Single reusable tooltip renderer for every chart metric/series (primary, comparison,
-// actual, and modeled points) so hover behavior isn't duplicated per metric.
+function guidanceMarkOffset(point: ChartGuidancePoint, points: ChartGuidancePoint[]): number {
+  const samePeriod = points.filter((candidate) => candidate.plotPeriod === point.plotPeriod);
+  const position = samePeriod.indexOf(point);
+  return (position - (samePeriod.length - 1) / 2) * 8;
+}
+
+// Single reusable tooltip renderer for every selected company, actual/modeled point,
+// and management-guidance mark so hover behavior stays consistent across metrics.
 function ChartPointTooltip({
   point,
   unit,
@@ -405,7 +409,7 @@ function ChartPointTooltip({
 }
 
 function guidanceTooltipLines(point: ChartGuidancePoint): string[] {
-  const lines = ["Management Guidance", `${point.ticker} · ${point.period}`, guidanceTypeLabel(point.guidanceType)];
+  const lines = [`${point.ticker} · Management Guidance`, `${guidanceMetricLabel(point.metric)} · ${point.period}`, guidanceTypeLabel(point.guidanceType)];
   if (point.status) lines.push(`Status: ${guidanceTypeLabel(point.status)}`);
   if (point.kind === "range") {
     lines.push(`Low: ${formatValue(point.low)} ${point.unit}`);
@@ -416,6 +420,10 @@ function guidanceTooltipLines(point: ChartGuidancePoint): string[] {
   }
   lines.push(`Source: ${point.sourceLocation ?? point.source} · ${point.sourceDate}`);
   return lines;
+}
+
+function guidanceMetricLabel(metric: Metric): string {
+  return metricConfig[metric].label;
 }
 
 function guidanceTypeLabel(type: ChartGuidancePoint["guidanceType"]): string {
