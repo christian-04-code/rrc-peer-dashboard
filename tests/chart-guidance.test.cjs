@@ -14,6 +14,15 @@ const {
 const TICKERS = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
 const METRICS = ["production", "revenue", "fcf", "capex", "debt", "ebitdax"];
 const VALID_AUDIT_STATUSES = new Set(["explicit_guidance", "long_term_target", "not_guided"]);
+const EXPECTED_POINT_COUNTS = {
+  RRC: { production: 3, revenue: 0, fcf: 0, capex: 2, debt: 0, ebitdax: 0 },
+  AR: { production: 3, revenue: 0, fcf: 0, capex: 0, debt: 0, ebitdax: 0 },
+  CNX: { production: 1, revenue: 0, fcf: 1, capex: 1, debt: 0, ebitdax: 1 },
+  CRK: { production: 2, revenue: 0, fcf: 0, capex: 2, debt: 0, ebitdax: 0 },
+  EQT: { production: 2, revenue: 0, fcf: 0, capex: 0, debt: 1, ebitdax: 0 },
+  EXE: { production: 1, revenue: 0, fcf: 0, capex: 1, debt: 0, ebitdax: 0 },
+  GPOR: { production: 1, revenue: 0, fcf: 0, capex: 0, debt: 0, ebitdax: 0 }
+};
 
 test("the final dataset has 228 records with 216 current Q2-cycle and 12 preserved Q1 records", () => {
   const raw = require(path.join(process.cwd(), "data", "management-guidance.json"));
@@ -39,6 +48,17 @@ test("all chart overlays come only from the current Q2 reporting cycle", () => {
       for (const point of getChartGuidance(ticker, metric).points) {
         assert.equal(point.reportingCycle, "Q2 2026");
       }
+    }
+  }
+});
+
+test("all 42 company-by-metric combinations have the audited chart coverage", () => {
+  for (const ticker of TICKERS) {
+    for (const metric of METRICS) {
+      const guidance = getChartGuidance(ticker, metric);
+      const expectedCount = EXPECTED_POINT_COUNTS[ticker][metric];
+      assert.equal(guidance.points.length, expectedCount, `${ticker} ${metric}`);
+      assert.equal(guidance.status, expectedCount > 0 ? "provided" : "not_provided", `${ticker} ${metric}`);
     }
   }
 });
@@ -78,13 +98,35 @@ test("annual financial guidance appears once and is never divided into quarters"
   }
 });
 
-test("incompatible units, non-total components, and thresholds stay off the chart", () => {
-  assert.equal(getChartGuidance("CNX", "production").status, "not_provided");
-  assert.equal(getChartGuidance("EQT", "production").status, "not_provided");
+test("non-total components and thresholds stay off the chart", () => {
   assert.equal(getChartGuidance("GPOR", "fcf").status, "not_provided");
   assert.equal(getChartGuidance("AR", "capex").status, "not_provided", "AR components must not become an inferred total");
   assert.equal(getChartGuidance("GPOR", "capex").status, "not_provided", "GPOR acreage must not merge into base CapEx");
   assert.equal(getChartGuidance("RRC", "fcf").status, "not_provided", "cumulative >$1.7B is not quarterly FCF");
+});
+
+test("total-period production guidance converts to an exact average daily rate", () => {
+  const cnx = getChartGuidance("CNX", "production").points[0];
+  assert.equal(cnx.period, "FY 2026");
+  assert.equal(cnx.chartLow, 605_000 / 365);
+  assert.equal(cnx.chartHigh, 620_000 / 365);
+
+  const eqt = getChartGuidance("EQT", "production").points;
+  const fullYear = eqt.find((point) => point.period === "FY 2026");
+  const thirdQuarter = eqt.find((point) => point.period === "Q3 2026");
+  assert.equal(fullYear.chartLow, 2_375_000 / 365);
+  assert.equal(fullYear.chartHigh, 2_450_000 / 365);
+  assert.equal(thirdQuarter.chartLow, 570_000 / 92);
+  assert.equal(thirdQuarter.chartHigh, 620_000 / 92);
+});
+
+test("EQT's explicit net-debt target maps to the core Net Debt chart", () => {
+  const guidance = getChartGuidance("EQT", "debt");
+  assert.equal(guidance.status, "provided");
+  assert.equal(guidance.points.length, 1);
+  assert.equal(guidance.points[0].metric, "debt");
+  assert.equal(guidance.points[0].chartValue, 5000);
+  assert.equal(guidance.points[0].period, "Near Term / Long-Term");
 });
 
 test("EXE Q2 range supersedes the Q1 point and normalizes its disclosed midpoint consistently", () => {
