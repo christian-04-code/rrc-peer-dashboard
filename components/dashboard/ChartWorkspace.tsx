@@ -29,7 +29,6 @@ const metricConfig: Record<Metric, {
   unit: string;
   value: (row: QuarterlyFinancials) => number | null;
   comparable: boolean;
-  caveat?: string;
 }> = {
   production: {
     label: "Production",
@@ -47,8 +46,7 @@ const metricConfig: Record<Metric, {
     label: "Capital expenditures",
     unit: "$MM",
     value: (row) => row.capitalExpenditures.value,
-    comparable: true,
-    caveat: "Capital expenditure definitions vary by company. RRC and AR are accrual-adjusted total capital spending; other peers use company-reported figures."
+    comparable: true
   },
   debt: {
     label: "Net debt",
@@ -152,7 +150,6 @@ export function ChartWorkspace({
       <div className="chart-area chart-empty-state">
         <div>
           <h2>{title}</h2>
-          <p>{config.caveat}</p>
         </div>
         <div className="empty-chart-message" role="status">No verified peer series available</div>
       </div>
@@ -171,10 +168,7 @@ export function ChartWorkspace({
 
   return (
     <div className="chart-area">
-      <div>
-        <h2>{title}</h2>
-        {config.caveat ? <p className="muted">{config.caveat}</p> : null}
-      </div>
+      <h2>{title}</h2>
       {guidance.status === "provided" ? (
         <div className="chart-guidance-controls">
           <button

@@ -103,6 +103,7 @@ test("the removed explanatory sentence is absent and guidance tooltips are expli
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "ChartWorkspace.tsx"), "utf8");
   assert.doesNotMatch(source, /Reported actuals are shown through the latest reported quarter/);
   assert.doesNotMatch(source, /Dashed overlays represent management guidance/);
+  assert.doesNotMatch(source, /Capital expenditure definitions vary by company/);
   assert.match(source, /Low:/);
   assert.match(source, /Midpoint:/);
   assert.match(source, /High:/);
