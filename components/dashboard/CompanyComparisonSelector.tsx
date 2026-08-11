@@ -50,7 +50,7 @@ export function CompanyComparisonSelector({
             disabled={requiredSelection}
             onClick={() => onActivate(entry.ticker)}
           >
-            {entry.selectorLabel}{selected ? " ✓" : ""}
+            {entry.selectorLabel}
           </button>
         );
       })}</div>

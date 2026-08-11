@@ -25,6 +25,7 @@ test("Overview uses one unified multi-select company row without primary/peer la
   assert.doesNotMatch(`${homeSource}\n${selectorSource}`, /Primary company|Compare peers/);
   assert.match(selectorSource, /Compare companies/);
   assert.match(selectorSource, /aria-pressed=\{selected\}/);
+  assert.doesNotMatch(selectorSource, /✓/);
 });
 
 test("company selection supports all seven companies and always retains one", () => {
