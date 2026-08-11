@@ -1,7 +1,7 @@
 {
   "meta": {
     "layer": "Layer 1 - Historical Truth",
-    "coverage": "Q1 2024 through Q1 2026 for all peers, plus audited RRC-only Q2 2026 actuals",
+    "coverage": "Q1 2024 through audited Q2 2026 actual rows for all core peers",
     "quarters": [
       "Q1 2024",
       "Q2 2024",
@@ -1759,7 +1759,8 @@
             "Q2 2025": 1297.493,
             "Q3 2025": 1213.994,
             "Q4 2025": 1411.629,
-            "Q1 2026": 1945.126
+            "Q1 2026": 1945.126,
+            "Q2 2026": 1559.842
           },
           "source_by_quarter": {
             "Q1 2024": "Q1 2024 AR 10-Q, MD&A segment operating results (Total revenue)",
@@ -1770,7 +1771,8 @@
             "Q2 2025": "Q2 2025 AR 10-Q, MD&A segment operating results (Total revenue)",
             "Q3 2025": "Q3 2025 AR 10-Q, MD&A segment operating results (Total revenue)",
             "Q4 2025": "2025 AR 10-K FY total revenue less Q1-Q3 2025 AR 10-Qs standalone total revenue",
-            "Q1 2026": "Q1 2026 AR 10-Q, MD&A segment operating results (Total revenue)"
+            "Q1 2026": "Q1 2026 AR 10-Q, MD&A segment operating results (Total revenue)",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly total consolidated revenue. Q4 2024 and Q4 2025 calculated as full-year total revenue less Q1-Q3 standalone totals."
         },
@@ -1788,7 +1790,8 @@
             "Q2 2025": 379,
             "Q3 2025": 318,
             "Q4 2025": 422,
-            "Q1 2026": 723
+            "Q1 2026": 723,
+            "Q2 2026": 595.437
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 262.087",
@@ -1799,7 +1802,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 379.464",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 318.24",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 422.145",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 723.418"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 723.418",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported Adjusted EBITDAX / Adjusted EBITDA equivalent; standalone quarterly values.",
           "factset_overridden_quarters": [
@@ -1828,7 +1832,8 @@
             "Q2 2025": 179,
             "Q3 2025": -145.5,
             "Q4 2025": 186.5,
-            "Q1 2026": 464.55
+            "Q1 2026": 464.55,
+            "Q2 2026": 219.759
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 10.82",
@@ -1839,7 +1844,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 262.437",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 90.906",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 156.016",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 657.451"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 657.451",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported Free Cash Flow / Adjusted Free Cash Flow; AR definition uses CFO less capital expenditures and Martica distributions, plus transaction expense in Q1 2026 adjusted FCF. Not recalculated as generic CFO - capex.",
           "factset_overridden_quarters": [
@@ -1868,7 +1874,8 @@
             "Q2 2025": 208.409,
             "Q3 2025": 173.63,
             "Q4 2025": 202.909,
-            "Q1 2026": 206.101
+            "Q1 2026": 206.101,
+            "Q2 2026": 326
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 219.0",
@@ -1879,7 +1886,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 199.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 217.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 193.0",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 252.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 252.0",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Corrected to total company capital expenditures (activity basis: D&C + leasehold/acreage + other capital where disclosed). Differs from cash capex used in AR FCF reconciliation.",
           "factset_overridden_quarters": [
@@ -1908,7 +1916,8 @@
             "Q2 2025": 1285.5,
             "Q3 2025": 1499.963,
             "Q4 2025": 1393.5,
-            "Q1 2026": 2665
+            "Q1 2026": 2665,
+            "Q2 2026": 2634.7
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1519.285",
@@ -1919,7 +1928,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1105.353",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1313.553",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1403.953",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2686.5"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2686.5",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Net debt calculated as quarter-end total debt principal less cash and cash equivalents; AR reported zero cash at each period end reviewed.",
           "factset_overridden_quarters": [
@@ -1948,7 +1958,8 @@
             "Q2 2025": 3430.5099999999998,
             "Q3 2025": 3428.6,
             "Q4 2025": 3510.702,
-            "Q1 2026": 3396.202
+            "Q1 2026": 3396.202,
+            "Q2 2026": 4144
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 3426.0",
@@ -1959,7 +1970,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3430.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3429.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3510.869565217391",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 3852.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 3852.0",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production from E&P selected operating data; Q4 2024 and Q4 2025 calculated from full-year less Q1-Q3 combined Bcfe.",
           "factset_overridden_quarters": [
@@ -3458,7 +3470,8 @@
             "Q2 2025": 962.422,
             "Q3 2025": 583.84,
             "Q4 2025": 610.4839999999999,
-            "Q1 2026": 786.654
+            "Q1 2026": 786.654,
+            "Q2 2026": 618.484
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3469,7 +3482,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly reported revenue and other operating income; Q4 values derived as FY less 9M where definitions match.",
           "factset_overridden_quarters": [
@@ -3490,7 +3504,8 @@
             "Q2 2025": 332.0,
             "Q3 2025": 298.0,
             "Q4 2025": 292.0,
-            "Q1 2026": 400.0
+            "Q1 2026": 400.0,
+            "Q2 2026": 290
           },
           "source_by_quarter": {
             "Q1 2024": "CNX Q4 2024 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
@@ -3501,7 +3516,8 @@
             "Q2 2025": "CNX Q3/Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
             "Q3 2025": "CNX Q3/Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
             "Q4 2025": "CNX Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
-            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table"
+            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported CNX Adjusted EBITDAX from supplemental non-GAAP bridge. Includes EBIT + DD&A + exploration, adjusted for CNX-disclosed discrete items including unrealized derivative gains/losses, non-core asset sale gain/loss, stock-based compensation, debt extinguishment and Virginia flood insurance where applicable."
         },
@@ -3519,7 +3535,8 @@
             "Q2 2025": 188.0,
             "Q3 2025": 226.0,
             "Q4 2025": 132.0,
-            "Q1 2026": 139.0
+            "Q1 2026": 139.0,
+            "Q2 2026": 138
           },
           "source_by_quarter": {
             "Q1 2024": "CNX Q4 2024 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
@@ -3530,7 +3547,8 @@
             "Q2 2025": "CNX Q3/Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
             "Q3 2025": "CNX Q3/Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
             "Q4 2025": "CNX Q4 2025 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
-            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table"
+            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Non-GAAP Measures quarterly table",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported Free Cash Flow from CNX supplemental reconciliation; definition = net cash provided by operating activities less capital expenditures, plus proceeds from asset sales, less investments in equity affiliates."
         },
@@ -3548,7 +3566,8 @@
             "Q2 2025": 113.565,
             "Q3 2025": 75.544,
             "Q4 2025": 174.414,
-            "Q1 2026": 169.906
+            "Q1 2026": 169.906,
+            "Q2 2026": 142
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 168.0",
@@ -3559,7 +3578,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 114.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 76.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 174.0",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 170.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 170.0",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported capital expenditures from CNX supplemental FCF reconciliation; standalone quarterly values.",
           "factset_overridden_quarters": [
@@ -3588,7 +3608,8 @@
             "Q2 2025": 2802.747,
             "Q3 2025": "#N/A",
             "Q4 2025": "#N/A",
-            "Q1 2026": "#N/A"
+            "Q1 2026": "#N/A",
+            "Q2 2026": 2239.488
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2277.33",
@@ -3599,7 +3620,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2621.496",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2580.492",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2428.642",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2375.08"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2375.08",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Calculated as quarter-end debt principal less cash and cash equivalents, consistent with workbook row definition and RRC/AR method.",
           "factset_overridden_quarters": [
@@ -3628,7 +3650,8 @@
             "Q2 2025": 1841.6989012,
             "Q3 2025": 1752.7826,
             "Q4 2025": 1655.5,
-            "Q1 2026": 1693.6
+            "Q1 2026": 1693.6,
+            "Q2 2026": 1664.8
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1542.857142857143",
@@ -3639,7 +3662,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1841.758241758242",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1753.260869565217",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1655.434782608696",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1693.333333333333"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1693.333333333333",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production converted to MMcfe/d from CNX total sales volumes.",
           "factset_overridden_quarters": [
@@ -5141,7 +5165,8 @@
             "Q2 2025": 470.262,
             "Q3 2025": 449.852,
             "Q4 2025": 789.814,
-            "Q1 2026": 587.354
+            "Q1 2026": 587.354,
+            "Q2 2026": 470.262
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
@@ -5152,7 +5177,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 787.321",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly reported revenue.",
           "factset_overridden_quarters": [
@@ -5174,7 +5200,8 @@
             "Q2 2025": 260,
             "Q3 2025": 249,
             "Q4 2025": 276.834,
-            "Q1 2026": 251.3
+            "Q1 2026": 251.3,
+            "Q2 2026": 244.811
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 229.583",
@@ -5185,7 +5212,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 259.74",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 249.115",
             "Q4 2025": "SEC Form 8-K Exhibit 99.1 filed 2026-02-11; CRK earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 251.265"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 251.265",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported adjusted EBITDA/EBITDAX; standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -5252,7 +5280,8 @@
             "Q2 2025": 268.202,
             "Q3 2025": 284.051,
             "Q4 2025": 279.2065,
-            "Q1 2026": 357.456
+            "Q1 2026": 357.456,
+            "Q2 2026": 446.869
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 331.035",
@@ -5263,7 +5292,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 331.557",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 345.005",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 366.684",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 417.102"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 417.102",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Total quarterly capital expenditures / drilling & completion capital as reported.",
           "factset_overridden_quarters": [
@@ -5292,7 +5322,8 @@
             "Q2 2025": 2992,
             "Q3 2025": 3107,
             "Q4 2025": 2805,
-            "Q1 2026": 2933
+            "Q1 2026": 2933,
+            "Q2 2026": 3088.872
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2722.46",
@@ -5303,7 +5334,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3038.021",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3149.665",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2824.95",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2971.095"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2971.095",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarter-end total debt less cash, or company-reported net debt.",
           "factset_overridden_quarters": [
@@ -5332,7 +5364,8 @@
             "Q2 2025": 1233.6,
             "Q3 2025": 1215.5,
             "Q4 2025": "#N/A",
-            "Q1 2026": 1087.8999999999999
+            "Q1 2026": 1087.8999999999999,
+            "Q2 2026": 1242.879
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1533.131868131868",
@@ -5343,7 +5376,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1233.384615384615",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1215.619565217391",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1209.315217391304",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1087.988888888889"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1087.988888888889",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production; convert to MMcfe/d for comparability.",
           "factset_overridden_quarters": [
@@ -6770,7 +6804,8 @@
             "Q2 2025": 1599.135,
             "Q3 2025": 1958.571,
             "Q4 2025": 2388.071,
-            "Q1 2026": 3378.736
+            "Q1 2026": 3378.736,
+            "Q2 2026": 1809.94
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, Statements of Condensed Consolidated Operations; three months ended",
@@ -6781,7 +6816,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2557.719",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; 10-Q, Statements of Condensed Consolidated Operations; three months ended",
             "Q4 2025": "2025_Q4_EQT_10-K.pdf; 10-K, Consolidated Statements of Operations; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, Statements of Condensed Consolidated Operations; three months ended"
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, Statements of Condensed Consolidated Operations; three months ended",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly reported revenue.",
           "factset_overridden_quarters": [
@@ -6803,7 +6839,8 @@
             "Q2 2025": 1035,
             "Q3 2025": 1200,
             "Q4 2025": 1509,
-            "Q1 2026": 2547
+            "Q1 2026": 2547,
+            "Q2 2026": 1202.99
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1011.707",
@@ -6814,7 +6851,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1158.465",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1327.734",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1637.381",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2679.045"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2679.045",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported Adjusted EBITDA; used as the closest disclosed peer equivalent to Adjusted EBITDAX.",
           "factset_overridden_quarters": [
@@ -6843,7 +6881,8 @@
             "Q2 2025": 240,
             "Q3 2025": 601,
             "Q4 2025": 743.866,
-            "Q1 2026": 1832
+            "Q1 2026": 1832,
+            "Q2 2026": 329.666
           },
           "source_by_quarter": {
             "Q1 2024": "SEC Form 8-K Exhibit 99.1 filed 2024-04-23; EQT earnings release; company-reported free cash flow reconciliation for the quarter.",
@@ -6854,7 +6893,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 340.218",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 600.888",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 856.962",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1945.06"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1945.06",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported free cash flow (or adjusted free cash flow where that is the company's primary disclosed measure); standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -6882,7 +6922,8 @@
             "Q2 2025": 554,
             "Q3 2025": 618,
             "Q4 2025": 654.741,
-            "Q1 2026": 608
+            "Q1 2026": 608,
+            "Q2 2026": 666.258
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, Investing Activities / capital expenditures table; three months ended",
@@ -6893,7 +6934,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 553.559",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 617.893",
             "Q4 2025": "2025_Q4_EQT_10-K.pdf; 10-K, Capital expenditures table; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 607.836"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 607.836",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Total quarterly capital expenditures / drilling & completion capital as reported.",
           "factset_overridden_quarters": [
@@ -6918,7 +6960,8 @@
             "Q2 2025": 8092.409,
             "Q3 2025": 8008,
             "Q4 2025": 7745,
-            "Q1 2026": 5665.843
+            "Q1 2026": 5665.843,
+            "Q2 2026": 5542.851
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 4896.304",
@@ -6929,7 +6972,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 7810.6",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 8033.675",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 7744.691",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5709.889"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5709.889",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarter-end total debt less cash and cash equivalents; uses principal debt when explicitly disclosed, otherwise reported debt carrying amount.",
           "factset_overridden_quarters": [
@@ -6958,7 +7002,8 @@
             "Q2 2025": 6242.599999999999,
             "Q3 2025": 6893.579,
             "Q4 2025": 6617.03,
-            "Q1 2026": 6867.094
+            "Q1 2026": 6867.094,
+            "Q2 2026": 6972.242
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 5868.681318681319",
@@ -6969,7 +7014,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6244.252747252747",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6895.597826086957",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6619.5",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 6863.322222222222"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 6863.322222222222",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production; convert to MMcfe/d for comparability.",
           "factset_overridden_quarters": [
@@ -8414,7 +8460,8 @@
             "Q2 2025": 3690.0,
             "Q3 2025": 2966.0,
             "Q4 2025": 3272.0,
-            "Q1 2026": 4397.0
+            "Q1 2026": 4397.0,
+            "Q2 2026": 2960
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
@@ -8425,7 +8472,8 @@
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
             "Q4 2025": "2025_Q4_EXE_10-K.pdf; 10-K, Consolidated Statements of Operations; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly reported revenue."
         },
@@ -8443,7 +8491,8 @@
             "Q2 2025": 1176.0,
             "Q3 2025": 1082.0,
             "Q4 2025": 1425.0,
-            "Q1 2026": 1968.0
+            "Q1 2026": 1968.0,
+            "Q2 2026": 1183
           },
           "source_by_quarter": {
             "Q1 2024": "SEC Form 8-K Exhibit 99.1 filed 2024-04-30; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
@@ -8454,7 +8503,8 @@
             "Q2 2025": "SEC Form 8-K Exhibit 99.1 filed 2025-07-29; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
             "Q3 2025": "SEC Form 8-K Exhibit 99.1 filed 2025-10-28; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
             "Q4 2025": "SEC Form 8-K Exhibit 99.1 filed 2026-02-17; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
-            "Q1 2026": "SEC Form 8-K Exhibit 99.1 filed 2026-04-28; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter."
+            "Q1 2026": "SEC Form 8-K Exhibit 99.1 filed 2026-04-28; EXE earnings release; company-reported adjusted EBITDA/EBITDAX reconciliation for the quarter.",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported adjusted EBITDA/EBITDAX; standalone quarterly values in $MM."
         },
@@ -8472,7 +8522,8 @@
             "Q2 2025": 692,
             "Q3 2025": 423,
             "Q4 2025": 218,
-            "Q1 2026": 1704
+            "Q1 2026": 1704,
+            "Q2 2026": 343
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 131.0",
@@ -8483,7 +8534,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 665.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 426.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 215.0",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1695.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1695.0",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported free cash flow (or adjusted free cash flow where that is the company's primary disclosed measure); standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -8511,7 +8563,8 @@
             "Q2 2025": 727.0,
             "Q3 2025": 775,
             "Q4 2025": 741,
-            "Q1 2026": 716.0
+            "Q1 2026": 716.0,
+            "Q2 2026": 851
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 354.0",
@@ -8522,7 +8575,8 @@
             "Q2 2025": "2025_Q2 EXE/legacy Chesapeake earnings supplemental, \"Capital Expenditures Accrued\"; exact standalone quarter ($mm).",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 735.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 728.0",
-            "Q1 2026": "2026_Q1 EXE/legacy Chesapeake earnings supplemental, \"Capital Expenditures Accrued\"; exact standalone quarter ($mm)."
+            "Q1 2026": "2026_Q1 EXE/legacy Chesapeake earnings supplemental, \"Capital Expenditures Accrued\"; exact standalone quarter ($mm).",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Total quarterly capital expenditures / drilling & completion capital as reported.",
           "factset_overridden_quarters": [
@@ -8548,7 +8602,8 @@
             "Q2 2025": 4329,
             "Q3 2025": 4365.5,
             "Q4 2025": 4329,
-            "Q1 2026": 2754
+            "Q1 2026": 2754,
+            "Q2 2026": 3075
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 771.0",
@@ -8559,7 +8614,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 4404.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 4412.0",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 4409.0",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2805.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2805.0",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarter-end face-value principal debt less cash and cash equivalents; excludes debt discounts, premiums and issuance-cost carrying-value adjustments.",
           "factset_overridden_quarters": [
@@ -8588,7 +8644,8 @@
             "Q2 2025": 7202.0,
             "Q3 2025": 7333.0,
             "Q4 2025": 7400.0,
-            "Q1 2026": 7436.0
+            "Q1 2026": 7436.0,
+            "Q2 2026": 7482
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
@@ -8597,7 +8654,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production; convert to MMcfe/d for comparability."
         },
@@ -10033,7 +10091,8 @@
             "Q2 2025": 448,
             "Q3 2025": 379.745,
             "Q4 2025": 398.188,
-            "Q1 2026": 437.532
+            "Q1 2026": 437.532,
+            "Q2 2026": 323.228
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_GPOR_10-Q.pdf; 10-Q, Comparative three-month amount in 2025 Q1 Statements of Operations (local 2024 Q1 file duplicates Q2)",
@@ -10044,7 +10103,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 447.616",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; 10-Q, Consolidated Statements of Operations; three months ended",
             "Q4 2025": "2025_Q4_GPOR_10-K.pdf; 10-K, Consolidated Statements of Operations; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, Consolidated Statements of Operations; three months ended"
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, Consolidated Statements of Operations; three months ended",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarterly reported revenue.",
           "factset_overridden_quarters": [
@@ -10066,7 +10126,8 @@
             "Q2 2025": 212,
             "Q3 2025": 213,
             "Q4 2025": 235.4155,
-            "Q1 2026": 264
+            "Q1 2026": 264,
+            "Q2 2026": 179.1
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 185.7",
@@ -10077,7 +10138,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 212.3",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 213.1",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 234.8",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 264.2"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 264.2",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported adjusted EBITDA/EBITDAX; standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -10106,7 +10168,8 @@
             "Q2 2025": 73.85,
             "Q3 2025": 105,
             "Q4 2025": 129.25,
-            "Q1 2026": 124.2
+            "Q1 2026": 124.2,
+            "Q2 2026": 6.4
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 38.8",
@@ -10117,7 +10180,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 64.6",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 103.4",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 120.2",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 118.9"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 118.9",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Company-reported free cash flow (or adjusted free cash flow where that is the company's primary disclosed measure); standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -10145,7 +10209,8 @@
             "Q2 2025": 124.2,
             "Q3 2025": 74.9,
             "Q4 2025": 94.404,
-            "Q1 2026": 121.7
+            "Q1 2026": 121.7,
+            "Q2 2026": 148.6
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 124.4",
@@ -10156,7 +10221,8 @@
             "Q2 2025": "2025_Q2 GPOR earnings release/supplemental; disclosed incurred base capital investment, exact standalone quarter ($mm).",
             "Q3 2025": "2025_Q3 GPOR earnings release/supplemental; disclosed incurred base capital investment, exact standalone quarter ($mm).",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 110.5",
-            "Q1 2026": "2026_Q1 GPOR earnings release/supplemental; disclosed incurred base capital investment, exact standalone quarter ($mm)."
+            "Q1 2026": "2026_Q1 GPOR earnings release/supplemental; disclosed incurred base capital investment, exact standalone quarter ($mm).",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Total quarterly capital expenditures / drilling & completion capital as reported.",
           "factset_overridden_quarters": [
@@ -10179,7 +10245,8 @@
             "Q2 2025": 691,
             "Q3 2025": 688,
             "Q4 2025": 651.5,
-            "Q1 2026": 821
+            "Q1 2026": 821,
+            "Q2 2026": 928.946
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 628.791",
@@ -10190,7 +10257,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 701.206",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 697.633",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 795.187",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 829.079"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 829.079",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Quarter-end face-value principal debt less cash and cash equivalents; excludes unamortized debt issuance costs.",
           "factset_overridden_quarters": [
@@ -10219,7 +10287,8 @@
             "Q2 2025": 1006.2950000000001,
             "Q3 2025": 1119.68,
             "Q4 2025": 1097.4209999999998,
-            "Q1 2026": 996.79
+            "Q1 2026": 996.79,
+            "Q2 2026": 962.8
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1054.0",
@@ -10230,7 +10299,8 @@
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1120.0",
             "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 997.0",
             "Q4 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1055.472",
-            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1097.422"
+            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1097.422",
+            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
           },
           "notes": "Average daily total production; convert to MMcfe/d for comparability.",
           "factset_overridden_quarters": [

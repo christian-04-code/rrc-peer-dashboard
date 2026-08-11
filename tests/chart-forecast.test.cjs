@@ -69,13 +69,15 @@ test("peer tickers unsupported by the forecast engine return an empty forecast s
   }
 });
 
-test("Q1 and Q2 2026 stay historical actuals and neither can appear in the forecast series", () => {
-  const reportedQ1_2026 = getAllQuartersForTicker("RRC").find((row) => row.quarter === "Q1 2026");
-  const reportedQ2_2026 = getAllQuartersForTicker("RRC").find((row) => row.quarter === "Q2 2026");
-  assert.equal(reportedQ1_2026.revenue.source, "codex");
-  assert.equal(reportedQ1_2026.revenue.basis, "actual");
-  assert.equal(reportedQ2_2026.revenue.value, 833.571);
-  assert.equal(reportedQ2_2026.revenue.basis, "actual");
+test("Q1 and Q2 2026 stay historical actuals for every peer and neither can appear in a forecast series", () => {
+  for (const ticker of ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
+    const reportedQ1_2026 = getAllQuartersForTicker(ticker).find((row) => row.quarter === "Q1 2026");
+    const reportedQ2_2026 = getAllQuartersForTicker(ticker).find((row) => row.quarter === "Q2 2026");
+    assert.equal(reportedQ1_2026.revenue.source, "codex");
+    assert.equal(reportedQ1_2026.revenue.basis, "actual");
+    assert.equal(reportedQ2_2026.revenue.source, "codex");
+    assert.equal(reportedQ2_2026.revenue.basis, "actual");
+  }
   // The forecast series intentionally excludes both reported quarters so it can never overwrite either actual.
   const forecastPeriods = buildForecastChartSeries("RRC", "revenue").map((point) => point.period);
   assert.ok(!forecastPeriods.includes("Q1 2026"));

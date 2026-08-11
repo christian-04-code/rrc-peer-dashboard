@@ -58,7 +58,7 @@ test("cashAndEquivalents and totalDebt are quarter-end balance-sheet point-in-ti
 test("non-RRC tickers do not have the four new fields fabricated -- they remain undefined, not zero or copied from RRC", () => {
   for (const ticker of ["AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
     const rows = getAllQuartersForTicker(ticker);
-    assert.equal(rows.length, 9, `${ticker} should still have 9 quarters`);
+    assert.equal(rows.length, 10, `${ticker} should have 10 quarters through Q2 2026`);
     for (const row of rows) {
       assert.equal(row.netIncome, undefined, `${ticker} ${row.quarter} netIncome should remain unset`);
       assert.equal(row.operatingCashFlow, undefined, `${ticker} ${row.quarter} operatingCashFlow should remain unset`);
@@ -66,6 +66,55 @@ test("non-RRC tickers do not have the four new fields fabricated -- they remain 
       assert.equal(row.totalDebt, undefined, `${ticker} ${row.quarter} totalDebt should remain unset`);
     }
   }
+});
+
+test("remaining priority peers add only the approved Q2 2026 actuals and preserve Q1 2026", () => {
+  const approved = {
+    AR: { q1: [3852, 1945.126, 252, 2686.5, 723.418], q2: [4144, 1559.842, 326, 2634.7, 595.437] },
+    CNX: { q1: [1693.333333333333, 786.654, 170, 2375.08, 400], q2: [1664.8, 618.484, 142, 2239.488, 290] },
+    CRK: { q1: [1087.988888888889, 587.354, 417.102, 2971.095, 251.265], q2: [1242.879, 470.262, 446.869, 3088.872, 244.811] },
+    EQT: { q1: [6863.322222222222, 3378.736, 607.836, 5709.889, 2679.045], q2: [6972.242, 1809.94, 666.258, 5542.851, 1202.99] },
+    EXE: { q1: [7436, 4397, 716, 2805, 1968], q2: [7482, 2960, 851, 3075, 1183] },
+    GPOR: { q1: [997, 437.532, 121.7, 829.079, 264.2], q2: [962.8, 323.228, 148.6, 928.946, 179.1] }
+  };
+
+  const values = (row) => [
+    row.production.total.value,
+    row.revenue.value,
+    row.capitalExpenditures.value,
+    row.netDebt.value,
+    row.adjustedEbitdax.value
+  ];
+
+  for (const [ticker, expected] of Object.entries(approved)) {
+    const q1 = getQuarterlyFinancials(ticker, "Q1 2026");
+    const q2 = getQuarterlyFinancials(ticker, "Q2 2026");
+    assert.deepEqual(values(q1), expected.q1, `${ticker} Q1 2026 must remain unchanged`);
+    assert.deepEqual(values(q2), expected.q2, `${ticker} Q2 2026 must match the approved audit`);
+    for (const field of [q2.production.total, q2.revenue, q2.capitalExpenditures, q2.netDebt, q2.adjustedEbitdax]) {
+      assert.notEqual(field.basis, "guidance", `${ticker} Q2 2026 must be historical, not guidance`);
+      assert.equal(field.source, "codex");
+    }
+  }
+});
+
+test("duplicated historical JSON stores the approved Q2 values and omits CRK FCF", () => {
+  const historical = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "data/historical.json"), "utf8"));
+  const approved = {
+    AR: [4144, 1559.842, 219.759, 326, 2634.7, 595.437],
+    CNX: [1664.8, 618.484, 138, 142, 2239.488, 290],
+    CRK: [1242.879, 470.262, undefined, 446.869, 3088.872, 244.811],
+    EQT: [6972.242, 1809.94, 329.666, 666.258, 5542.851, 1202.99],
+    EXE: [7482, 2960, 343, 851, 3075, 1183],
+    GPOR: [962.8, 323.228, 6.4, 148.6, 928.946, 179.1]
+  };
+  const metrics = ["Total Production", "Revenue", "Free Cash Flow", "Capital Expenditures", "Net Debt", "Adjusted EBITDAX"];
+
+  for (const [ticker, values] of Object.entries(approved)) {
+    const stored = metrics.map((metric) => historical.companies[ticker].metrics[metric].values["Q2 2026"]);
+    assert.deepEqual(stored, values);
+  }
+  assert.equal(Object.hasOwn(historical.companies.CRK.metrics["Free Cash Flow"].values, "Q2 2026"), false);
 });
 
 test("RRC adds only the accepted Q2 2026 actuals and preserves Q1 2026", () => {

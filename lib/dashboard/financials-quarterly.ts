@@ -1,7 +1,7 @@
 /**
  * Quarterly financial and operating fixture for the 7 core RRC peer companies
- * (RRC, AR, CNX, CRK, EQT, EXE, GPOR), covering Q1 2024 through Q1 2026 for
- * every peer plus the audited RRC-only Q2 2026 actual.
+ * (RRC, AR, CNX, CRK, EQT, EXE, GPOR), covering Q1 2024 through the audited
+ * Q2 2026 actual for every peer.
  *
  * SOURCE (priority 1 -- used for all cells below unless flagged otherwise):
  *   "Peer Comparsion site/Peer_Comp_Site_Data/Codex/
@@ -70,7 +70,7 @@ export type Quarter =
   | "Q1 2025" | "Q2 2025" | "Q3 2025" | "Q4 2025"
   | "Q1 2026" | "Q2 2026";
 
-/** Quarters with reported actuals for every core peer. RRC has an additional Q2 2026 row. */
+/** Quarters shared by the complete auxiliary datasets (EPS, market cap, and other nine-quarter fixtures). */
 export const quarters: Quarter[] = [
   "Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024",
   "Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025",
@@ -132,6 +132,69 @@ export type QuarterlyFinancials = {
 
 const RRC_CAPEX_NOTE =
   "Range historical capital expenditures use company-reported all-in capital spending from quarterly earnings materials, consistent with the stored Q1 and Q2 2026 values; standalone quarters are in $MM at the company's reported nearest-$MM precision.";
+
+type AuditedPeerQ2Actual = {
+  ticker: Exclude<Ticker, "RRC">;
+  production: number;
+  revenue: number;
+  adjustedEbitdax: number;
+  capitalExpenditures: number;
+  capitalExpendituresBasis?: ValueBasis;
+  netDebt: number;
+};
+
+function auditedPeerQ2Actual({
+  ticker,
+  production,
+  revenue,
+  adjustedEbitdax,
+  capitalExpenditures,
+  capitalExpendituresBasis = "actual",
+  netDebt
+}: AuditedPeerQ2Actual): QuarterlyFinancials {
+  const unresolved = (basis: ValueBasis = "actual"): SourcedValue => ({
+    value: null,
+    source: "codex",
+    basis,
+    note: `Outside the accepted ${ticker} Q2 2026 six-metric actuals integration scope; left unresolved rather than estimated.`
+  });
+
+  return {
+    ticker,
+    quarter: "Q2 2026",
+    revenue: { value: revenue, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 revenue for the three months ended June 30, 2026.` },
+    adjustedEbitdax: { value: adjustedEbitdax, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 Adjusted EBITDAX or existing dashboard equivalent.` },
+    capitalExpenditures: { value: capitalExpenditures, source: "codex", basis: capitalExpendituresBasis, note: `Approved audited ${ticker} standalone Q2 2026 capital expenditures under the existing live-series definition.` },
+    netDebt: { value: netDebt, source: "codex", basis: "derived", note: `Approved audited ${ticker} quarter-end net debt as of June 30, 2026, under the existing live-series definition.` },
+    production: {
+      total: { value: production, source: "codex", basis: "actual", note: `Approved audited ${ticker} Q2 2026 average daily production in MMcfe/d.` },
+      naturalGas: unresolved(),
+      ngl: unresolved(),
+      oilCondensate: unresolved()
+    },
+    commodityMix: {
+      naturalGasPct: unresolved("derived"),
+      nglPct: unresolved("derived"),
+      oilCondensatePct: unresolved("derived")
+    },
+    realizedPrices: {
+      naturalGas: unresolved(),
+      ngl: unresolved(),
+      oilCondensate: unresolved()
+    },
+    costs: {
+      leaseOperatingExpense: unresolved(),
+      gatheringProcessingTransportation: unresolved(),
+      cashGA: unresolved(),
+      totalCashUnitCosts: unresolved("derived")
+    },
+    wells: {
+      drilled: unresolved(),
+      turnedInLine: unresolved(),
+      ducInventory: unresolved()
+    }
+  };
+}
 
 const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
   RRC: {
@@ -838,6 +901,15 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Unavailable: no consistent quarter-end DUC inventory disclosure found; wells in process/completion backlog not used as DUC inventory." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "AR",
+      production: 4144.0,
+      revenue: 1559.842,
+      adjustedEbitdax: 595.437,
+      capitalExpenditures: 326.0,
+      capitalExpendituresBasis: "derived",
+      netDebt: 2634.7
+    })
   },
   CNX: {
     "Q1 2024": {
@@ -1155,6 +1227,14 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Only true quarter-end drilled-but-uncompleted count populated: 2024 and 2025 year-end net development DUC wells from 10-K. Interim quarters left blank." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "CNX",
+      production: 1664.8,
+      revenue: 618.484,
+      adjustedEbitdax: 290.0,
+      capitalExpenditures: 142.0,
+      netDebt: 2239.488
+    })
   },
   CRK: {
     "Q1 2024": {
@@ -1472,6 +1552,14 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "CRK",
+      production: 1242.879,
+      revenue: 470.262,
+      adjustedEbitdax: 244.811,
+      capitalExpenditures: 446.869,
+      netDebt: 3088.872
+    })
   },
   EQT: {
     "Q1 2024": {
@@ -1789,6 +1877,14 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "EQT",
+      production: 6972.242,
+      revenue: 1809.94,
+      adjustedEbitdax: 1202.99,
+      capitalExpenditures: 666.258,
+      netDebt: 5542.851
+    })
   },
   EXE: {
     "Q1 2024": {
@@ -2106,6 +2202,14 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "EXE",
+      production: 7482.0,
+      revenue: 2960.0,
+      adjustedEbitdax: 1183.0,
+      capitalExpenditures: 851.0,
+      netDebt: 3075.0
+    })
   },
   GPOR: {
     "Q1 2024": {
@@ -2423,6 +2527,14 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
     },
+    "Q2 2026": auditedPeerQ2Actual({
+      ticker: "GPOR",
+      production: 962.8,
+      revenue: 323.228,
+      adjustedEbitdax: 179.1,
+      capitalExpenditures: 148.6,
+      netDebt: 928.946
+    })
   },
 };
 
