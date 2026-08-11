@@ -12,7 +12,6 @@ test("RRC production guidance appears only at explicitly disclosed periods", () 
   assert.deepEqual(guidance.points.map((point) => point.period), ["Q2 2026", "Q4 2026", "Q4 2027"]);
   assert.deepEqual(guidance.points.map((point) => point.value), [2300, 2500, 2600]);
 });
-
 test("the management guidance toggle hides only the guidance overlay data", () => {
   const guidance = getChartGuidance("RRC", "production");
   assert.deepEqual(getVisibleChartGuidance(guidance, false), []);
@@ -50,4 +49,3 @@ test("range guidance remains a low/high range rather than becoming a midpoint", 
   });
   assert.equal("value" in target, false);
 });
-
