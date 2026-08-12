@@ -260,7 +260,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
   const result = customActive ? customResult ?? defaultResult : defaultResult;
 
   return (
-    <main className="forecast-panel" style={{ maxWidth: 1180, margin: "0 auto", padding: "24px" }}>
+    <main className="forecast-panel" style={{ maxWidth: 1440, margin: "0 auto", padding: "24px" }}>
       <header className="forecast-head">
         <div>
           <h1>Forecast</h1>
@@ -305,6 +305,12 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
         </p>
         <div className="wb-table-scroll">
           <table className="forecast-table wb-primary-table">
+            <colgroup>
+              <col style={{ width: "34%" }} />
+              {YEARS.map((year) => (
+                <col key={year} style={{ width: "22%" }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th align="left">Metric</th>

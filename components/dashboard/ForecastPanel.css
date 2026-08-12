@@ -1,4 +1,4 @@
-.forecast-panel { display: grid; gap: 16px; }
+.forecast-panel { display: grid; gap: 12px; }
 .forecast-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
 .forecast-head h1 { margin-bottom: 4px; }
 .forecast-head p { margin: 0; color: var(--muted); font-size: 13px; }
@@ -16,7 +16,7 @@
 .wb-suffix-input input { padding-right: 30px; }
 .wb-suffix-input span { position: absolute; right: 10px; color: var(--muted); font-size: 13px; pointer-events: none; }
 
-.wb-section { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+.wb-section { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
 .wb-section-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center; }
 .wb-section-head h2 { margin: 0; font-size: 15px; }
 .wb-pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); white-space: nowrap; }
@@ -39,7 +39,7 @@
 .wb-gap-bottom { margin-bottom: 10px; }
 .wb-result-rows { display: grid; gap: 10px; }
 .wb-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.wb-result-card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 13px 14px; display: grid; gap: 5px; }
+.wb-result-card { border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 11px 13px; display: grid; gap: 4px; }
 .wb-result-card small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .wb-result-card strong { font-size: clamp(18px, 2vw, 22px); }
 .wb-result-card strong.positive { color: var(--positive); }
@@ -53,7 +53,7 @@
 .ann-year-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
 
 .ann-guidance-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ann-guidance-table th, .ann-guidance-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.ann-guidance-table th, .ann-guidance-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .ann-guidance-table thead th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
 .ann-guidance-table input[type="number"] { width: 100%; min-width: 84px; padding: 6px 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); border-radius: 6px; text-align: right; }
 
@@ -76,7 +76,7 @@
 
 /* Three color-coded source/status cards at the top of the page. */
 .wb-source-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.wb-source-card { border: 1px solid var(--border); border-left-width: 3px; background: var(--panel); border-radius: 12px; padding: 13px 15px; display: grid; gap: 4px; }
+.wb-source-card { border: 1px solid var(--border); border-left-width: 3px; background: var(--panel); border-radius: 12px; padding: 11px 14px; display: grid; gap: 3px; }
 .wb-source-label { display: flex; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .wb-source-card strong { font-size: 15px; }
 .wb-source-card small { color: var(--muted); font-size: 11px; }
@@ -91,7 +91,7 @@
 .wb-primary-table { width: 100%; border-collapse: collapse; }
 .wb-primary-table thead th { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 6px 12px 10px; border-bottom: 2px solid var(--border); }
 .wb-primary-table thead th:first-child { text-align: left; }
-.wb-primary-table tbody th, .wb-primary-table tbody td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.wb-primary-table tbody th, .wb-primary-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
 .wb-primary-table tbody th { text-align: left; font-weight: 500; color: var(--text); white-space: nowrap; }
 .wb-primary-table tbody td { text-align: right; font-variant-numeric: tabular-nums; }
 .wb-primary-table tbody tr:last-child th, .wb-primary-table tbody tr:last-child td { border-bottom: 0; }
@@ -104,12 +104,12 @@
 .wb-override-count { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); background: var(--panel-2); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
 .wb-override-count.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 
-.wb-customize-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.wb-customize-col { display: grid; gap: 10px; align-content: start; }
+.wb-customize-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.wb-customize-col { display: grid; gap: 8px; align-content: start; }
 
 .wb-callout { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: 12px; line-height: 1.45; }
 
-.wb-price-card { border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px; padding: 11px 12px; display: grid; gap: 8px; }
+.wb-price-card { border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
 .wb-price-card .wb-latest-stat { border: 0; background: transparent; padding: 0; }
 .wb-price-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
 .wb-price-override { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
