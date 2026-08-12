@@ -167,7 +167,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
           </>
         ) : (
           <>
-            <p>Monthly state-level <strong>marketed production</strong>; distinct from the national dry-production series.</p>
+            <p>Source: U.S. EIA</p>
             <dl>
               <div><dt>Latest production</dt><dd>{formatNumber(selectedProduction?.current ?? null)} MMcf</dd></div>
               <div><dt>Month over month</dt><dd>{formatPct(selectedProduction?.monthOverMonthPct ?? null)}</dd></div>

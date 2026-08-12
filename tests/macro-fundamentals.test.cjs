@@ -139,7 +139,24 @@ test("Macro renders the required evidence chart datasets before the deterministi
   assert.match(source, /<RegionalStorageTable regions=/);
   assert.match(source, /<StateProductionRanking states=/);
   assert.ok(source.indexOf("07 · NGL") < source.indexOf("09 · MACRO SNAPSHOT"));
-  assert.match(source, /OilPriceAPI current Henry Hub\/WTI/);
+  assert.match(source, /Sources: U\.S\. EIA · OilPriceAPI/);
   assert.match(source, /Week ending/);
-  assert.match(source, /OVERALL RRC MACRO SETUP/);
+  assert.match(source, /buildRrcMacroRisk/);
+  assert.match(source, /rrcRisk\.title/);
+  assert.doesNotMatch(source, /RRC ENERGY FUNDAMENTALS|02 · WEEKLY CENTERPIECE|OVERALL RRC MACRO SETUP/);
+});
+
+test("Macro cleanup uses concise source copy and existing accent treatments", () => {
+  const panel = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroPanel.tsx"), "utf8");
+  const map = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
+  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
+  assert.match(panel, /U\.S\. EIA · EIA APIs/);
+  assert.match(panel, /Regional Working Gas Storage vs\. Five-Year Average/);
+  assert.match(panel, /Official EIA regions/);
+  assert.match(panel, /macro-source-accent/);
+  assert.match(map, /<p>Source: U\.S\. EIA<\/p>/);
+  assert.doesNotMatch(map, /distinct from the national dry-production series/);
+  assert.match(css, /\.macro-card-title span\.macro-source-accent\s*\{[^}]*#75c7ee/);
+  assert.match(css, /\.rrc-macro-risk-label em\s*\{[^}]*var\(--negative\)/);
+  assert.match(css, /\.macro-regional-row\.header\s*\{[^}]*#75c7ee/);
 });

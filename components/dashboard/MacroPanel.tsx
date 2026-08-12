@@ -5,6 +5,7 @@ import { useMacroFundamentals } from "@/lib/market/use-macro-fundamentals";
 import type { CurrentMarketCommodityQuote, MarketObservation, NormalizedMarketMetric } from "@/lib/market/types";
 import {
   buildMacroSnapshot,
+  buildRrcMacroRisk,
   buildStorageComparison,
   buildStorageProfile,
   formatDelta,
@@ -98,8 +99,8 @@ function UnsupportedMetric({ label, note }: { label: string; note: string }) {
   return <div className="macro-unsupported"><span>{label}</span><strong>--</strong><small>{note}</small></div>;
 }
 
-function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
-  return <header className="macro-section-head"><div><span>{eyebrow}</span><h2>{title}</h2></div><p>{description}</p></header>;
+function SectionHeader({ eyebrow, title, description }: { eyebrow?: string; title: string; description: string }) {
+  return <header className="macro-section-head"><div>{eyebrow ? <span>{eyebrow}</span> : null}<h2>{title}</h2></div><p>{description}</p></header>;
 }
 
 function observationLabel(period: string | null | undefined, frequency: "daily" | "weekly" | "monthly" | "annual" | undefined): string {
@@ -147,40 +148,42 @@ export function MacroPanel() {
     eastStoragePct: east?.fiveYearPct,
     paProductionYoyPct: pa?.yearOverYearPct
   });
-  const rrcState = snapshot.find((item) => item.label === "Appalachia");
-  const rrcSetup = rrcState?.tone === "positive" ? "Supportive" : rrcState?.tone === "negative" ? "Challenging" : rrcState?.state === "Unavailable" ? "Unavailable" : "Neutral";
+  const rrcRisk = buildRrcMacroRisk(metrics, {
+    eastStoragePct: east?.fiveYearPct,
+    paProductionYoyPct: pa?.yearOverYearPct
+  });
   const productionBcfd = monthlyMmcfToBcfd(productionMetric?.value ?? null, productionMetric?.period ?? null);
   const currentQuotes = market.data?.currentMarket;
 
   return (
     <div className="macro-panel">
       <header className="macro-page-head">
-        <div><span className="macro-kicker">RRC ENERGY FUNDAMENTALS</span><h1>Natural Gas &amp; NGL Intelligence</h1><p>Market indicators, historical evidence, geographic fundamentals, and transparent RRC read-throughs.</p></div>
-        <div className="macro-asof"><span>Market API generated</span><strong>{market.data?.generatedAt ? new Date(market.data.generatedAt).toLocaleString() : market.loading ? "Loading…" : "--"}</strong><small>{market.error ?? fundamentals.error ?? `${metrics.filter((metric) => metric.status === "ok").length} of ${metrics.length || 7} official feeds · ${Object.values(currentQuotes ?? {}).filter((quote) => quote.status === "ok").length} current quotes`}</small></div>
+        <div><h1>Natural Gas &amp; NGL Intelligence</h1><p>U.S. EIA · EIA APIs</p></div>
+        <div className="macro-asof"><span>Market API generated</span><strong>{market.data?.generatedAt ? new Date(market.data.generatedAt).toLocaleString() : market.loading ? "Loading…" : "--"}</strong>{market.error ?? fundamentals.error ? <small>{market.error ?? fundamentals.error}</small> : null}</div>
       </header>
 
       <section className="macro-section macro-pulse">
-        <SectionHeader eyebrow="01 · MARKET PULSE" title="Cross-commodity tape" description="OilPriceAPI current Henry Hub/WTI where valid; EIA official observations and history remain distinct." />
+        <SectionHeader eyebrow="01 · MARKET PULSE" title="Cross-commodity tape" description="Sources: U.S. EIA · OilPriceAPI" />
         <div className="macro-pulse-grid">{PULSE_IDS.map((id) => <PulseMetric key={id} metric={byId.get(id)} label={id.replaceAll("_", " ")} current={id === "henry_hub" ? currentQuotes?.henryHub : id === "wti" ? currentQuotes?.wti : undefined} />)}</div>
       </section>
 
       <section className="macro-section macro-storage-section">
-        <SectionHeader eyebrow="02 · WEEKLY CENTERPIECE" title="U.S. natural gas storage" description="Current year against prior year, same-week five-year average, and the full historical range." />
+        <SectionHeader title="U.S. natural gas storage" description="Current year against prior year, same-week five-year average, and the full historical range." />
         <div className="macro-balance-grid">
-          <div className="macro-primary-chart"><div className="macro-card-title"><div><h3>Lower-48 working gas</h3><span>{observationLabel(storageMetric?.period, "weekly")} · Weekly · U.S. EIA</span></div><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong></div><StorageChart metric={storageMetric} /></div>
+          <div className="macro-primary-chart"><div className="macro-card-title"><div><h3>Lower-48 working gas</h3><span className="macro-source-accent">{observationLabel(storageMetric?.period, "weekly")} · Weekly · U.S. EIA</span></div><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong></div><StorageChart metric={storageMetric} /></div>
           <aside className="macro-weekly-report"><div><span>LATEST WEEKLY REPORT</span><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong><p>{observationLabel(storageMetric?.period, "weekly")}</p></div><div className="macro-balance-stats">
             <Stat label="Weekly injection / withdrawal" value={formatDelta(storage?.weeklyChange ?? null, "Bcf")} note="injection (+) / withdrawal (−)" />
             <Stat label="vs 5-year average" value={formatDelta(storage?.versusAverage ?? null, "Bcf")} note={formatPct(storage?.versusAveragePct ?? null)} />
             <Stat label="vs year ago" value={formatDelta(storage?.yearOverYear ?? null, "Bcf")} note={storage?.priorYear && storage.yearOverYear !== null ? formatPct((storage.yearOverYear / storage.priorYear) * 100) : "--"} />
             <Stat label="5-year same-week range" value={storage?.fiveYearMin != null && storage?.fiveYearMax != null ? `${storage.fiveYearMin.toFixed(0)}–${storage.fiveYearMax.toFixed(0)} Bcf` : "--"} />
-          </div><small>Observation and retrieval timestamps are tracked separately.</small></aside>
+          </div></aside>
         </div>
-        <div className="macro-subsection-head"><div><span>REGIONAL STORAGE</span><h3>Tightness versus five-year norms</h3></div><p>Official EIA regions; state storage is not inferred.</p></div>
+        <div className="macro-subsection-head"><div><span>REGIONAL STORAGE</span><h3>Regional Working Gas Storage vs. Five-Year Average</h3></div><p>Official EIA regions</p></div>
         <RegionalStorageTable regions={regionalStorage} />
       </section>
 
       <section className="macro-section">
-        <SectionHeader eyebrow="03 · INTERACTIVE ENERGY MAP" title="Storage regions and state production" description="Switch layer and production view; hover or focus for context, click to persist geography." />
+        <SectionHeader eyebrow="03 · INTERACTIVE ENERGY MAP" title="Storage regions and state production" description="Source: U.S. EIA" />
         <MacroEnergyMap data={fundamentals.data} />
       </section>
 
@@ -213,7 +216,7 @@ export function MacroPanel() {
         <article className="macro-section macro-grid-card">
           <SectionHeader eyebrow="08 · APPALACHIA / RANGE" title="Appalachia fundamentals" description="East storage, PA/WV/OH supply, LNG, and Henry Hub tied directly to Range context." />
           <div className="macro-rrc-grid polished">
-            <div className={`macro-rrc-callout ${rrcState?.tone ?? "neutral"}`}><span>OVERALL RRC MACRO SETUP</span><strong>{rrcSetup}</strong><p>East storage, Appalachia supply, LNG exports, and Henry Hub frame the demand and pricing environment for Range.</p><small>Rule state: {rrcState?.state ?? "Unavailable"} · {rrcState?.inputs ?? "--"}</small></div>
+            <div className={`macro-rrc-callout ${rrcRisk.tone}`}><span className="rrc-macro-risk-label"><b>RRC</b> <em>Macro Risk</em></span><strong>{rrcRisk.title}</strong><p>{rrcRisk.explanation}</p><small>{rrcRisk.supportingMetrics}</small></div>
             <div className="macro-regional-grid appalachia"><Stat label="East storage vs 5Y" value={formatPct(east?.fiveYearPct ?? null)} note={`${east?.current?.toFixed(0) ?? "--"} Bcf · ${observationLabel(east?.period, "weekly")}`} /><Stat label="PA production YoY" value={formatPct(pa?.yearOverYearPct ?? null)} note={`${pa?.current?.toFixed(0) ?? "--"} MMcf · ${observationLabel(pa?.period, "monthly")}`} /><Stat label="WV production YoY" value={formatPct(wv?.yearOverYearPct ?? null)} note={observationLabel(wv?.period, "monthly")} /><Stat label="OH production YoY" value={formatPct(oh?.yearOverYearPct ?? null)} note={observationLabel(oh?.period, "monthly")} /><Stat label="LNG exports YoY" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} note={observationLabel(lngMetric?.period, "monthly")} /><Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" /></div>
           </div>
         </article>
