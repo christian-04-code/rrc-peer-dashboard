@@ -364,3 +364,45 @@ test("commodity price cards still show the commodity name, benchmark, current pr
   assert.match(workbenchSource, /<CommodityPriceCard label="Henry Hub" data=\{commoditySources\.henryHub\} \/>/);
   assert.match(workbenchSource, /<CommodityPriceCard label="WTI" data=\{commoditySources\.wti\} \/>/);
 });
+
+// --- Commodity card header alignment (benchmark label moves to top-right) ---
+
+test("each commodity price card has a header row pairing the commodity name (left) with its benchmark/type label (right) via a simple flex row", () => {
+  assert.match(workbenchSource, /<div className="wb-price-card-head">\s*<span className="wb-price-card-label">Natural Gas<\/span>\s*<span className="wb-price-card-benchmark">Henry Hub<\/span>/);
+  assert.match(workbenchSource, /<div className="wb-price-card-head">\s*<span className="wb-price-card-label">NGL<\/span>\s*<span className="wb-price-card-benchmark">Realization<\/span>/);
+  assert.match(workbenchSource, /<div className="wb-price-card-head">\s*<span className="wb-price-card-label">Oil<\/span>\s*<span className="wb-price-card-benchmark">WTI<\/span>/);
+  assert.match(cssSource, /\.wb-price-card-head \{[^}]*display: flex;[^}]*justify-content: space-between;[^}]*align-items: center;/);
+});
+
+test("the benchmark label is no longer duplicated as its own line inside CommodityPriceCard's body (only in the header row)", () => {
+  const fnStart = workbenchSource.indexOf("function CommodityPriceCard");
+  const fnBody = workbenchSource.slice(fnStart, workbenchSource.indexOf("\n}", fnStart));
+  assert.doesNotMatch(fnBody, /<span>\{label\}<\/span>/);
+});
+
+// --- Tooltip presentation fix: constrained width, wraps, opaque, high z-index ---
+
+test("tooltip bubbles wrap onto multiple lines (white-space: normal overrides inherited nowrap from ancestor table cells/labels) and are width-constrained, not a single 800px+ line", () => {
+  const bubbleRuleStart = cssSource.indexOf(".info-tip-bubble {");
+  const bubbleRule = cssSource.slice(bubbleRuleStart, cssSource.indexOf("}", bubbleRuleStart) + 1);
+  assert.match(bubbleRule, /white-space: normal;/);
+  assert.match(bubbleRule, /max-width: 300px;/);
+  assert.match(bubbleRule, /min-width: 220px;/);
+});
+
+test("tooltip background is a fully opaque dashboard token (darker than the surrounding cards), with a real border/shadow and a high z-index so it never blends into or sits behind card/table content", () => {
+  const bubbleRuleStart = cssSource.indexOf(".info-tip-bubble {");
+  const bubbleRule = cssSource.slice(bubbleRuleStart, cssSource.indexOf("}", bubbleRuleStart) + 1);
+  assert.match(bubbleRule, /background: var\(--bg\);/);
+  assert.match(bubbleRule, /border: 1px solid var\(--border\);/);
+  assert.match(bubbleRule, /box-shadow: 0 12px 32px rgba\(0,0,0,\.55\);/);
+  assert.match(bubbleRule, /z-index: 200;/);
+  assert.doesNotMatch(bubbleRule, /rgba\([^)]*,\s*0?\.[0-6]\)\s*;\s*border/, "background itself must not carry alpha transparency");
+});
+
+test("tooltip text stays left-aligned with a readable line-height (not centered long copy)", () => {
+  const bubbleRuleStart = cssSource.indexOf(".info-tip-bubble {");
+  const bubbleRule = cssSource.slice(bubbleRuleStart, cssSource.indexOf("}", bubbleRuleStart) + 1);
+  assert.match(bubbleRule, /text-align: left;/);
+  assert.match(bubbleRule, /line-height: 1\.45;/);
+});

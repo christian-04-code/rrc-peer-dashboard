@@ -66,7 +66,12 @@
 .info-tip { position: relative; display: inline-flex; margin-left: 6px; vertical-align: middle; }
 .info-tip-trigger { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); font-size: 10px; font-weight: 700; font-style: italic; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: help; padding: 0; }
 .info-tip-trigger:hover, .info-tip-trigger:focus-visible { color: #fff; background: var(--accent); border-color: var(--accent); }
-.info-tip-bubble { position: absolute; left: 50%; transform: translateX(-50%) translateY(4px); width: max-content; max-width: 260px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--text); box-shadow: 0 10px 28px rgba(0,0,0,.4); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease; z-index: 60; text-align: left; text-transform: none; letter-spacing: normal; }
+/* white-space: normal overrides the nowrap several ancestors (table cells, uppercase
+   labels) set and would otherwise inherit into the bubble -- without it the bubble tries
+   to fit its text on one unbroken line, which is what made it render far too wide. A
+   darker, fully opaque background (--bg, not the surrounding --panel/--panel-2 cards)
+   keeps the tooltip visually isolated from the card/table content behind it. */
+.info-tip-bubble { position: absolute; left: 50%; transform: translateX(-50%) translateY(4px); width: max-content; min-width: 220px; max-width: 300px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--text); box-shadow: 0 12px 32px rgba(0,0,0,.55); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease; z-index: 200; text-align: left; text-transform: none; letter-spacing: normal; white-space: normal; overflow-wrap: break-word; }
 .info-tip--top .info-tip-bubble { bottom: calc(100% + 9px); }
 .info-tip--bottom .info-tip-bubble { top: calc(100% + 9px); transform: translateX(-50%) translateY(-4px); }
 .info-tip--left .info-tip-bubble { left: 0; transform: translateY(4px); }
@@ -111,7 +116,9 @@
 
 .wb-price-card { border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
 .wb-price-card .wb-latest-stat { border: 0; background: transparent; padding: 0; }
+.wb-price-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .wb-price-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.wb-price-card-benchmark { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); white-space: nowrap; }
 .wb-price-override { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
 .wb-price-override input { width: 100%; padding: 7px 9px; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 7px; }
 

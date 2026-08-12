@@ -122,11 +122,11 @@ function change24hClass(percent: number | null): string | undefined {
   return percent > 0 ? "positive" : "negative";
 }
 
+/** The benchmark name (label) is now shown in the enclosing price card's header row (see wb-price-card-head) instead of as its own line here, so the card body starts directly with the price. */
 function CommodityPriceCard({ label, data }: { label: string; data: ResolvedCommodityPrice }) {
   const change = formatChange24h(data.change24hPercent);
   return (
-    <div className="wb-latest-stat">
-      <span>{label}</span>
+    <div className="wb-latest-stat" aria-label={`${label} benchmark price`}>
       <strong>{formatCommodityPrice(data.value, data.unit)}</strong>
       <small>{COMMODITY_SOURCE_LABELS[data.classification]}</small>
       {change ? <small className={change24hClass(data.change24hPercent)}>{change}</small> : null}
@@ -466,7 +466,10 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
             <h3 className="wb-group-title">Commodity Prices</h3>
             <div className="wb-latest-stats">
               <div className="wb-price-card">
-                <span className="wb-price-card-label">Natural Gas</span>
+                <div className="wb-price-card-head">
+                  <span className="wb-price-card-label">Natural Gas</span>
+                  <span className="wb-price-card-benchmark">Henry Hub</span>
+                </div>
                 <CommodityPriceCard label="Henry Hub" data={commoditySources.henryHub} />
                 <label className="wb-price-override">
                   <input
@@ -480,9 +483,11 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 </label>
               </div>
               <div className="wb-price-card">
-                <span className="wb-price-card-label">NGL</span>
+                <div className="wb-price-card-head">
+                  <span className="wb-price-card-label">NGL</span>
+                  <span className="wb-price-card-benchmark">Realization</span>
+                </div>
                 <div className="wb-latest-stat">
-                  <span>Realization</span>
                   <strong>--</strong>
                   <small>Management Sensitivity · Modeled</small>
                 </div>
@@ -498,7 +503,10 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 </label>
               </div>
               <div className="wb-price-card">
-                <span className="wb-price-card-label">Oil</span>
+                <div className="wb-price-card-head">
+                  <span className="wb-price-card-label">Oil</span>
+                  <span className="wb-price-card-benchmark">WTI</span>
+                </div>
                 <CommodityPriceCard label="WTI" data={commoditySources.wti} />
                 <label className="wb-price-override">
                   <input
