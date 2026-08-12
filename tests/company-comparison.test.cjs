@@ -76,7 +76,8 @@ test("one global toggle controls all selected-company guidance only", () => {
   assert.deepEqual(getVisibleChartGuidance(guidance, true), guidance.points);
   assert.match(chartSource, /aria-pressed=\{showManagementGuidance\}/);
   assert.match(chartSource, /guidance\.status === "provided"/);
-  assert.equal((chartSource.match(/Management Guidance — dashed/g) ?? []).length, 1);
+  assert.equal((chartSource.match(/Management Guidance/g) ?? []).length > 0, true);
+  assert.doesNotMatch(chartSource, /— dashed/);
 });
 
 test("chart guidance uses each point's ticker for color, identity, and collision-safe keys", () => {

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import comparisonPreferences from "@/config/comparison-preferences.json";
-import { activityMessages, fixtureDisclaimer } from "@/lib/dashboard/homepage-data";
+import { activityMessages } from "@/lib/dashboard/homepage-data";
 import { getOverviewSummaryCards } from "@/lib/dashboard/overview-metrics";
 import {
   defaultTicker,
@@ -52,12 +52,18 @@ export function HomeDashboard() {
   const { selectedTickers, focusedTicker } = companyComparison;
   const company = getCompany(focusedTicker);
   const brandCompany = getCompany("RRC");
+  const liveSharePrices = useMemo(() => Object.fromEntries(
+    selectableCompanies.map(({ ticker }) => {
+      const quote = finnhubQuotes.data?.equities[ticker];
+      return [ticker, quote?.status === "ok" && quote.price !== null
+        ? { value: quote.price, note: `Finnhub · current market (${quote.symbol})` }
+        : null];
+    })
+  ), [finnhubQuotes.data]);
   const liveSharePrice = useMemo(() => {
-    const quote = finnhubQuotes.data?.equities[focusedTicker];
-    if (!quote || quote.status !== "ok" || quote.price === null) return null;
-    return { value: quote.price, note: `Finnhub · current market (${quote.symbol})` };
-  }, [finnhubQuotes.data, focusedTicker]);
-  const metrics = useMemo(() => getOverviewSummaryCards(focusedTicker, liveSharePrice), [focusedTicker, liveSharePrice]);
+    return liveSharePrices[focusedTicker] ?? null;
+  }, [focusedTicker, liveSharePrices]);
+  const metrics = useMemo(() => getOverviewSummaryCards(focusedTicker, liveSharePrice, liveSharePrices), [focusedTicker, liveSharePrice, liveSharePrices]);
 
   useEffect(() => {
     let index = 0;
@@ -113,7 +119,7 @@ export function HomeDashboard() {
               <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
               <div className="brand">
                 <strong>RRC Peer Intelligence</strong>
-                <span>Interactive energy research workspace</span>
+                <span>Interactive Peer Dashboard</span>
               </div>
             </div>
             <nav aria-label="Primary navigation">
@@ -167,8 +173,6 @@ export function HomeDashboard() {
               </section>
             </>
           )}
-
-          {view !== "macro" ? <p className="fixture-note">{fixtureDisclaimer}</p> : null}
         </section>
       </div>
 

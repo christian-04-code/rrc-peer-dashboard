@@ -12,9 +12,9 @@ export function CompanyHero({ company, activity }: { company: CompanyRegistryEnt
     <div className="company-header">
       <div className="company-identity">
         <div className={LOGOS_REQUIRING_LIGHT_BACKING.has(company.ticker) ? "hero-logo hero-logo--boxed" : "hero-logo"}><Image src={company.logo} alt={company.logoAlt} fill sizes="36px" /></div>
-        <div><h1>{company.shortName}</h1><p>{company.ticker} · {company.exchange} · {company.description}</p></div>
+        <div><h1>{company.shortName}</h1><p>{company.ticker} · {company.exchange}</p></div>
       </div>
-      <div className="updated"><span>Live market & verified company data</span><strong>{activity}</strong></div>
+      <div className="updated"><strong>{activity}</strong></div>
     </div>
   );
 }

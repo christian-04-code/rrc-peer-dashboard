@@ -52,10 +52,13 @@ h2 { font-size: 15px; }
 .company-header p, .chart-area p, .map-area p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
 .updated { text-align: right; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 20px 0; }
-.metric { min-height: 112px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 7px; border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 14px; text-align: left; transition: 160ms ease; }
+.metric { min-height: 112px; position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 7px; border: 1px solid var(--border); background: var(--panel); border-radius: 12px; padding: 26px 14px 14px; text-align: left; transition: 160ms ease; }
 .metric:hover, .metric.active { transform: translateY(-2px); border-color: var(--accent); background: var(--panel-2); }
 .metric span, .metric small { color: var(--muted); }
 .metric strong { font-size: clamp(18px, 2vw, 25px); }
+.metric-rank { position: absolute; top: 11px; right: 12px; display: grid; justify-items: end; gap: 1px; line-height: 1.05; }
+.metric-rank span { color: var(--muted); font-size: 9px; }
+.metric-rank b { color: #8fd6ff; font-size: 12px; }
 .company-selector { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 14px 0; margin-bottom: 16px; }
 .selector-block { display: grid; gap: 8px; }
 .selector-block > div { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -379,7 +382,6 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .topbar-main nav { overflow-x: auto; }
   .topbar-main nav button { flex: 0 0 auto; }
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .metric:last-child { grid-column: 1 / -1; }
   .workspace-grid { grid-template-columns: 1fr; }
   aside { display: grid; grid-template-columns: 1fr 1fr; }
   .macro-pulse-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }

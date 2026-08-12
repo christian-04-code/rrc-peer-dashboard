@@ -12,4 +12,3 @@ export type MarketRibbonItem = {
 
 export const marketRibbon = fixture.marketRibbon as MarketRibbonItem[];
 export const activityMessages = fixture.activityMessages;
-export const fixtureDisclaimer = fixture.disclaimer;

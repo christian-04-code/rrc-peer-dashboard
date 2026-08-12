@@ -1,7 +1,6 @@
 {
   "environment": "production",
   "generatedAt": "2026-08-10T00:00:00Z",
-  "disclaimer": "Market prices reflect current provider observations where available. Company financials use verified reported data; modeled periods are explicitly identified, and unsupported observations remain blank.",
   "companies": {
     "RRC": {
       "metrics": {

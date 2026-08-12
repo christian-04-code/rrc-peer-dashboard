@@ -15,24 +15,22 @@ test("RRC Valuations widget resolves EPS, EBITDAX, Market Cap, and P/E for the c
   assert.equal(metrics.length, 4);
 
   const eps = byKey(metrics, "eps");
-  assert.equal(eps.current, 1.52);
-  assert.equal(eps.previous, 0.96);
-  assert.equal(eps.currentPeriod, "Q1 2026");
-  assert.equal(eps.previousPeriod, "Q1 2025");
+  assert.equal(eps.current, null);
+  assert.equal(eps.previous, 0.66);
+  assert.equal(eps.currentPeriod, "Q2 2026");
+  assert.equal(eps.previousPeriod, "Q2 2025");
 
   const ebitdax = byKey(metrics, "ebitdax");
-  assert.equal(ebitdax.current, 569.529);
-  assert.equal(ebitdax.previous, 424.123);
+  assert.equal(ebitdax.current, 349.059);
+  assert.equal(ebitdax.previous, 329.024);
 
   const marketCap = byKey(metrics, "marketCap");
-  assert.equal(marketCap.current, 10650.0);
-  assert.equal(marketCap.previous, 9540.0);
+  assert.equal(marketCap.current, null);
+  assert.equal(marketCap.previous, 9650.0);
 
   const pe = byKey(metrics, "pe");
-  assert.ok(pe.current !== null && Number.isFinite(pe.current));
+  assert.equal(pe.current, null);
   assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
-  // 10650 / (237.578+144.307+179.087+341.63 TTM net income) ~= 11.8
-  assert.ok(Math.abs(pe.current - 11.8) < 0.2, `expected RRC current P/E near 11.8, got ${pe.current}`);
 });
 
 test("a peer ticker without extracted EPS/net-income renders '--' (null) for EPS and P/E, not a fabricated value", () => {
@@ -44,10 +42,11 @@ test("a peer ticker without extracted EPS/net-income renders '--' (null) for EPS
   assert.equal(pe.current, null);
   assert.equal(pe.previous, null);
 
-  // Market cap and EBITDAX are independently sourced and should still resolve for peers.
+  // Q2 market cap remains unsupported; EBITDAX is independently sourced and resolves.
   const marketCap = byKey(metrics, "marketCap");
   const ebitdax = byKey(metrics, "ebitdax");
-  assert.ok(marketCap.current !== null);
+  assert.equal(marketCap.current, null);
+  assert.ok(marketCap.previous !== null);
   assert.ok(ebitdax.current !== null);
 });
 

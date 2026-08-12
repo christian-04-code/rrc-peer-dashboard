@@ -198,7 +198,6 @@ export function ChartWorkspace({
               <span>{showManagementGuidance ? "ON" : "OFF"}</span>
             </span>
           </button>
-          <span>Only explicitly disclosed periods are shown</span>
         </div>
       ) : null}
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${config.label} comparison for ${selectedTickers.join(", ")} from Q1 2024 through ${axisQuarters[axisQuarters.length - 1]}.`}>
@@ -333,7 +332,7 @@ export function ChartWorkspace({
         ))}
         <span className="chart-semantic-legend actual-legend">Actual</span>
         {showsForecast ? <span className="chart-semantic-legend model-legend">Internal Model Forecast</span> : null}
-        {guidance.status === "provided" ? <span className="chart-semantic-legend guidance-legend">Management Guidance — dashed</span> : null}
+        {guidance.status === "provided" ? <span className="chart-semantic-legend guidance-legend">Management Guidance</span> : null}
       </div>
     </div>
   );

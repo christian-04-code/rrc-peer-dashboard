@@ -50,10 +50,10 @@ test("share price never overwrites the other reported-quarter Overview cards (pr
 test("HomeDashboard recomputes the live share price per focused ticker and wires it through getOverviewSummaryCards using Finnhub", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "HomeDashboard.tsx"), "utf8");
   assert.match(source, /useFinnhubQuotes/);
-  assert.match(source, /finnhubQuotes\.data\?\.equities\[focusedTicker\]/);
-  assert.match(source, /getOverviewSummaryCards\(focusedTicker, liveSharePrice\)/);
+  assert.match(source, /finnhubQuotes\.data\?\.equities\[ticker\]/);
+  assert.match(source, /getOverviewSummaryCards\(focusedTicker, liveSharePrice, liveSharePrices\)/);
   // useMemo dependency arrays include `focusedTicker` so changing detail context updates the price.
-  assert.match(source, /}, \[finnhubQuotes\.data, focusedTicker\]\)/);
+  assert.match(source, /}, \[focusedTicker, liveSharePrices\]\)/);
   // FMP must no longer be part of the active Overview share-price path.
   assert.doesNotMatch(source, /useFmpQuotes/);
 });

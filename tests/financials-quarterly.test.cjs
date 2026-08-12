@@ -27,7 +27,7 @@ function load(relativePath) {
 const { getQuarterlyFinancials, getAllQuartersForTicker, quarters } = load("lib/dashboard/financials-quarterly.ts");
 
 test("RRC preserves its supporting balance-sheet fields for the original nine-quarter dataset", () => {
-  for (const quarter of quarters) {
+  for (const quarter of quarters.filter((quarter) => quarter !== "Q2 2026")) {
     const row = getQuarterlyFinancials("RRC", quarter);
     for (const field of ["netIncome", "operatingCashFlow", "cashAndEquivalents", "totalDebt"]) {
       assert.ok(row[field], `RRC ${quarter} is missing ${field}`);

@@ -18,9 +18,10 @@ test("ChartWorkspace's fcf metric reads the real normalized dataset instead of a
 
 test("historical FCF remains numeric across the shared nine-quarter auxiliary range", () => {
   const tickers = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
+  const auxiliaryQuarters = quarters.filter((quarter) => quarter !== "Q2 2026");
   let sawNegative = false;
   for (const ticker of tickers) {
-    for (const quarter of quarters) {
+    for (const quarter of auxiliaryQuarters) {
       const point = getQuarterlyFreeCashFlow(ticker, quarter);
       assert.equal(typeof point.value, "number", `${ticker} ${quarter} should have a numeric FCF value`);
       assert.ok(Number.isFinite(point.value));

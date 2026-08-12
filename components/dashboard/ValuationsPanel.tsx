@@ -35,7 +35,7 @@ export function ValuationsPanel({ ticker }: { ticker: Ticker }) {
       </div>
 
       <p className="muted panel-note">
-        Current ({latestQuarter}) vs. prior-year quarter ({priorYearQuarter}). P/E uses trailing-twelve-month net income; other metrics are standalone-quarter or quarter-end values. Unsupported metrics display &quot;--&quot;.
+        Latest reported ({latestQuarter}) vs. prior-year quarter ({priorYearQuarter}). P/E uses quarter-end market cap and trailing-twelve-month net income; other metrics are standalone-quarter or quarter-end values. Unsupported metrics display &quot;--&quot;.
       </p>
     </div>
   );
