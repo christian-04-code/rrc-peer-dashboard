@@ -1,5 +1,32 @@
 # RRC Peer Dashboard — Data Inventory Summary
 
+> **Stale snapshot notice (2026-08-12, fix/q2-data-foundation):** this file was
+> generated before Q2 2026 existed and has not been regenerated since. It is kept
+> as a point-in-time record of the original consolidation pass, not a live
+> report -- do not treat its numbers as current. Known-stale facts, corrected:
+> - **Coverage window** is now 10 quarters (Q1 2024-**Q2 2026**), not the 9
+>   shown below.
+> - **`data/guidance.json`** (referenced throughout as the Layer 2 source) has
+>   zero imports anywhere in the app and is orphaned/deprecated. The live
+>   guidance source is `data/management-guidance.json`
+>   (`meta.reportingCycle: "Q2 2026"`).
+> - **GPOR guidance coverage** (section 5 below shows "0 ()") is stale: GPOR
+>   now has 29 entries in `data/management-guidance.json`, rebuilt 2026-08-11.
+> - **EV / LTM EBITDAX** (section 2 below, "MISSING" for every quarter for
+>   CRK/EQT/EXE/GPOR) is no longer unconditionally missing: this branch
+>   populated Q2 2026 for those four tickers (their first-ever value for this
+>   metric) once an accessible quarter-end closing-price source (Nasdaq's
+>   historical trades table) was found. Q1 2024-Q1 2026 remain genuinely
+>   missing for those four tickers -- that gap was not backfilled.
+> - **Production/pricing/cost/wells detail at Q2 2026** for all 7 core peers
+>   has been added to both `data/historical.json` and the live
+>   `lib/dashboard/financials-quarterly.ts` fixture; this file's completeness
+>   percentages and per-metric gap lists do not reflect that quarter at all.
+>
+> A full regeneration of this report against the current data was out of scope
+> for the Q2 2026 data-foundation pass; treat the sections below as historical
+> context only.
+
 Consolidation pass output inventory: what data exists per company/metric/quarter across Layer 1 (Historical) and Layer 2 (Guidance), what's genuinely missing vs. intentionally null, and rough completeness by company. Generated from `data/historical.json` and `data/guidance.json`.
 
 **Historical coverage window:** Q1 2024, Q2 2024, Q3 2024, Q4 2024, Q1 2025, Q2 2025, Q3 2025, Q4 2025, Q1 2026 (9 standalone quarters)
