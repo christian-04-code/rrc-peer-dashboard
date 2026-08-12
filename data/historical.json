@@ -1665,7 +1665,8 @@
             "Q2 2025": 9650.0,
             "Q3 2025": 8930.0,
             "Q4 2025": 8410.0,
-            "Q1 2026": 10650.0
+            "Q1 2026": 10650.0,
+            "Q2 2026": 8784.65
           },
           "source_by_quarter": {
             "Q1 2024": "Macrotrends RRC historical market cap for 2024-03-31 quarter-end: $8.17B; share-count cross-check from 2024_Q1_RRC_10-Q balance sheet/SE: issued less treasury = 242.594mm.",
@@ -1676,7 +1677,8 @@
             "Q2 2025": "Macrotrends RRC historical market cap for 2025-06-30 quarter-end: $9.65B; share-count cross-check from 2025_Q2_RRC_10-Q balance sheet/SE: issued less treasury = 238.508mm.",
             "Q3 2025": "Macrotrends RRC historical market cap for 2025-09-30 quarter-end: $8.93B; share-count cross-check from 2025_Q3_RRC_10-Q balance sheet/SE: issued less treasury = 236.936mm.",
             "Q4 2025": "Macrotrends RRC historical market cap for 2025-12-31 quarter-end: $8.41B; share-count cross-check from 2025_Q4_RRC_10-K balance sheet/SE: issued less treasury = 235.458mm.",
-            "Q1 2026": "Macrotrends RRC historical market cap for 2026-03-31 quarter-end: $10.65B; share-count cross-check from 2026_Q1_RRC_10-Q balance sheet/SE: issued less treasury = 235.622mm."
+            "Q1 2026": "Macrotrends RRC historical market cap for 2026-03-31 quarter-end: $10.65B; share-count cross-check from 2026_Q1_RRC_10-Q balance sheet/SE: issued less treasury = 235.622mm.",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($37.19), multiplied by filing-sourced diluted shares (236.210mm, three months ended June 30, 2026, RRC Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode historical equity market capitalization aligned to quarter-end valuation date. Use historical quarter-end market value, not current market cap; source notes show date-specific market cap and filing share-count cross-check."
         },
@@ -3376,7 +3378,8 @@
             "Q2 2025": 12620.0,
             "Q3 2025": 10440.0,
             "Q4 2025": 10760.0,
-            "Q1 2026": 13220.0
+            "Q1 2026": 13220.0,
+            "Q2 2026": 11005.286
           },
           "source_by_quarter": {
             "Q1 2024": "Macrotrends AR historical market cap table, dated 2024-03-31; quarter-end equity market cap in $MM.",
@@ -3387,7 +3390,8 @@
             "Q2 2025": "Macrotrends AR historical market cap table, dated 2025-06-30; quarter-end equity market cap in $MM.",
             "Q3 2025": "Macrotrends AR historical market cap table, dated 2025-09-30; quarter-end equity market cap in $MM.",
             "Q4 2025": "Macrotrends AR historical market cap table, dated 2025-12-31; quarter-end equity market cap in $MM.",
-            "Q1 2026": "Macrotrends AR historical market cap table, dated 2026-03-31; quarter-end equity market cap in $MM."
+            "Q1 2026": "Macrotrends AR historical market cap table, dated 2026-03-31; quarter-end equity market cap in $MM.",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($35.14), multiplied by filing-sourced diluted shares (313.184mm, three months ended June 30, 2026, AR Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
@@ -5071,7 +5075,8 @@
             "Q2 2025": 4779.397,
             "Q3 2025": 4364.701,
             "Q4 2025": 5243.053,
-            "Q1 2026": 5471.876
+            "Q1 2026": 5471.876,
+            "Q2 2026": 5223.906
           },
           "source_by_quarter": {
             "Q1 2024": "Yahoo Finance historical chart, exact unadjusted close on 2024-03-28, multiplied by filing-sourced diluted shares in row 32 ($mm).",
@@ -5082,7 +5087,8 @@
             "Q2 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-06-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q3 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-09-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q4 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-12-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
-            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm)."
+            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($33.93), multiplied by filing-sourced diluted shares (153.961273mm, three months ended June 30, 2026, CNX Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
@@ -6713,7 +6719,8 @@
             "Q2 2025": 8109.219,
             "Q3 2025": 5811.281,
             "Q4 2025": 6793.015,
-            "Q1 2026": 6191.112
+            "Q1 2026": 6191.112,
+            "Q2 2026": 4350.851
           },
           "source_by_quarter": {
             "Q1 2024": "Yahoo Finance historical chart, exact unadjusted close on 2024-03-28, multiplied by filing-sourced diluted shares in row 32 ($mm).",
@@ -6724,7 +6731,8 @@
             "Q2 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-06-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q3 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-09-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q4 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-12-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
-            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm)."
+            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($14.92), multiplied by filing-sourced diluted shares (291.612mm, three months ended June 30, 2026, CRK Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
@@ -8369,7 +8377,8 @@
             "Q2 2025": 36395.004,
             "Q3 2025": 33967.967,
             "Q4 2025": 33461.086,
-            "Q1 2026": 39805.42
+            "Q1 2026": 39805.42,
+            "Q2 2026": 33446.535
           },
           "source_by_quarter": {
             "Q1 2024": "Yahoo Finance historical chart, exact unadjusted close on 2024-03-28, multiplied by filing-sourced diluted shares in row 32 ($mm).",
@@ -8380,7 +8389,8 @@
             "Q2 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-06-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q3 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-09-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q4 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-12-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
-            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm)."
+            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($53.17), multiplied by filing-sourced diluted shares (629.049mm, three months ended June 30, 2026, EQT Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
@@ -10000,7 +10010,8 @@
             "Q2 2025": 27848.755,
             "Q3 2025": 25303.149,
             "Q4 2025": 26530.352,
-            "Q1 2026": 26262.543
+            "Q1 2026": 26262.543,
+            "Q2 2026": 21735.775
           },
           "source_by_quarter": {
             "Q1 2024": "Yahoo Finance historical chart, exact unadjusted close on 2024-03-28, multiplied by filing-sourced diluted shares in row 32 ($mm).",
@@ -10011,7 +10022,8 @@
             "Q2 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-06-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q3 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-09-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q4 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-12-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
-            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm)."
+            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($91.19), multiplied by filing-sourced diluted shares (238.357mm, three months ended June 30, 2026, EXE Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
@@ -11658,7 +11670,8 @@
             "Q2 2025": 3532.892,
             "Q3 2025": 3495.958,
             "Q4 2025": 3859.965,
-            "Q1 2026": 3801.837
+            "Q1 2026": 3801.837,
+            "Q2 2026": 3045.267
           },
           "source_by_quarter": {
             "Q1 2024": "Yahoo Finance historical chart, exact unadjusted close on 2024-03-28, multiplied by filing-sourced diluted shares in row 32 ($mm).",
@@ -11669,7 +11682,8 @@
             "Q2 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-06-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q3 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-09-30, multiplied by filing-sourced diluted shares in row 32 ($mm).",
             "Q4 2025": "Yahoo Finance historical chart, exact unadjusted close on 2025-12-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
-            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm)."
+            "Q1 2026": "Yahoo Finance historical chart, exact unadjusted close on 2026-03-31, multiplied by filing-sourced diluted shares in row 32 ($mm).",
+            "Q2 2026": "Nasdaq historical trades table unadjusted close on 2026-06-30 ($169.70), multiplied by filing-sourced diluted shares (17.945mm, three months ended June 30, 2026, GPOR Q2 2026 Form 10-Q)."
           },
           "notes": "Hardcode market capitalization aligned to the valuation measurement date."
         },
