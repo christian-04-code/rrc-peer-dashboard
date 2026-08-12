@@ -3017,7 +3017,7 @@
           "period": "FY 2026",
           "plotPeriod": "Q4 2026",
           "low": 7400,
-          "midpoint": 7.5,
+          "midpoint": 7500,
           "high": 7600,
           "unit": "MMcfe/d",
           "guidanceType": "range",
@@ -3029,7 +3029,7 @@
           "status": "reaffirmed",
           "sourceLocation": "Q2 2026 Results / Earnings Presentation",
           "managementWording": "Expand Energy reaffirmed full-year 2026 production guidance of 7.4 to 7.6 Bcfe/d.",
-          "note": "Refined from approximate point estimate (Q1 2026 cycle) to an explicit range at the same 7.5 Bcfe/d midpoint."
+          "note": "Refined from approximate point estimate (Q1 2026 cycle) to an explicit range at the same 7.5 Bcfe/d midpoint. [Data-quality fix, fix/q2-data-foundation: midpoint was stored as 7.5 (Bcfe/d units) while low/high were stored as 7400/7600 (MMcfe/d units), a ~1000x unit mismatch inconsistent with its own unit field. Corrected to 7500 MMcfe/d = (7400+7600)/2, matching the disclosed 7.4-7.6 Bcfe/d range and the unit field already on this record. The chart rendering path (chart-guidance.ts normalizeEntry) already self-corrected this via its low/high-bounds fallback, so the chart and guidance table were unaffected; this fix corrects the underlying stored value so it is no longer wrong at the data layer for any future consumer that reads midpoint directly."
         },
         {
           "company": "EXE",
@@ -3766,7 +3766,7 @@
           "chartable": true,
           "reportingCycle": "Q2 2026",
           "managementWording": "The discretionary acreage program is intended to expand Gulfport's inventory of high-quality, low-breakeven drilling locations.",
-          "note": "Preserve as a distinct item from the $430MM base operated capital; do not sum unless the source explicitly states inclusion."
+          "note": "Verified against primary source (Gulfport Energy Q2 2026 earnings release, 8-K Ex-99.1, filed 2026-08-03): \"Announcing new discretionary acreage acquisition program, targeting an additional $140 million during the remainder of 2026\" -- the filing itself uses the word \"additional,\" confirming this $140MM is incremental to, not included within, the $430MM base operated capital program (capex_base_operated). Preserved as a distinct guidance line rather than pre-summed into a single $570MM figure so that base sustaining capital and opportunistic acreage-acquisition spend remain separately comparable; a combined total-2026-capital-outlay figure can be derived downstream ($430MM + $140MM) but should always be presented explicitly labeled as including the discretionary program, never silently blended into \"capex.\""
         },
         {
           "company": "GPOR",
