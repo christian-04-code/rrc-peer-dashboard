@@ -228,7 +228,7 @@ test("12. Forecast formulas produce exactly the same result for identical input 
 });
 
 test("13. Bear/Base/Bull EV/EBITDAX multiples are unchanged", () => {
-  const source = fs.readFileSync(path.join(process.cwd(), "app", "api", "rrc-scenarios", "route.ts"), "utf8");
+  const source = fs.readFileSync(path.join(process.cwd(), "lib", "forecast", "companies", "rrc.ts"), "utf8");
   assert.match(source, /RRC_VALUATION_PRESETS\s*=\s*\{\s*bear:\s*4\.5,\s*base:\s*5\.5,\s*bull:\s*6\.5\s*\}/);
 });
 

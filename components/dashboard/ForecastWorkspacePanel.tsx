@@ -30,6 +30,8 @@ export function ForecastWorkspacePanel() {
 
       {isSupported ? (
         <RrcScenarioWorkbench
+          key={ticker}
+          company={ticker}
           currentMarketPrices={extractLiveMarketMetricsFromMarketResponse(market.data)}
           commoditySources={resolveCommoditySources(market.data)}
         />

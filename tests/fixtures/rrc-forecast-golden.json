@@ -1,0 +1,41 @@
+{
+  "capturedFrom": "main@cd8eb43",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 819.007,
+    "dilutedSharesMillion": 236.396,
+    "productionBcfePerDay": { "2026": 2.375, "2027": 2.6, "2028": 2.6 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 1991.5657788357084, "2027": 2021.853224355502, "2028": 1990.639616896166 },
+      "freeCashFlowMillion": { "2026": 1218.5143207005945, "2027": 1152.5265908941722, "2028": 1159.9265275444727 },
+      "impliedSharePrice": 47.04052832516313
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 1900 } } },
+      "ebitdax2027Million": 2109.6056988012824,
+      "impliedSharePrice": 49.08218135419827
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 5 } },
+      "ebitdax2027Million": 2691.020923635538,
+      "impliedSharePrice": 62.60941420326681
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 12 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 2348.517957446231,
+      "impliedSharePrice": 54.22861635479707
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 6.5, "forwardYear": "2027" } },
+      "impliedSharePrice": 55.59335165701097
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 5.5, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 1990.639616896166,
+      "impliedSharePrice": 46.31431112594508
+    }
+  }
+}

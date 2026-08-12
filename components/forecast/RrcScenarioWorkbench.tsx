@@ -14,38 +14,46 @@ import type {
   ResolvedAnnualValue
 } from "@/lib/forecast/scenarios/rrc-annual";
 import type { GuidanceEntry } from "@/lib/forecast/guidance/types";
+import type { Ticker } from "@/lib/dashboard/types";
 
-const YEARS: RrcForecastYear[] = ["2026", "2027", "2028"];
-
-/** 2026 blends Q1/Q2 2026 immutable reported actuals with a Q3/Q4 2026 estimate; 2027/2028 are fully estimated years. */
-function yearLabel(year: RrcForecastYear): string {
+/** Annual columns are estimates; the first year may blend immutable reported quarters with forecast quarters. */
+function yearLabel(year: string): string {
   return `${year}E`;
 }
 
-const PRESET_MULTIPLES = { bear: 4.5, base: 5.5, bull: 6.5 } as const;
-type Preset = keyof typeof PRESET_MULTIPLES;
+type Preset = "bear" | "base" | "bull";
 
 type ApiDefaults = {
   guidance: GuidanceEntry[];
   latestActualPeriod?: string;
-  productionDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
+  productionDefaults: Record<string, ResolvedAnnualValue>;
   commodityProductionDefaults: Record<
-    RrcForecastYear,
+    string,
     { gasMmcfPerDay: ResolvedAnnualValue; nglMbblPerDay: ResolvedAnnualValue; oilMbblPerDay: ResolvedAnnualValue }
   >;
-  capexDefaults: Record<RrcForecastYear, ResolvedAnnualValue>;
+  capexDefaults: Record<string, ResolvedAnnualValue>;
   currentNetDebtMillion: number | null;
   dilutedSharesMillion: number | null;
+  valuationPresets: Record<Preset, number>;
   result: RrcAnnualForecastResult;
 };
 
 type RrcScenarioWorkbenchProps = {
+  company?: Ticker;
   /** Current main passes the already-normalized /api/market values from the dashboard. */
   currentMarketPrices?: LiveMarketPricesInput;
   commoditySources?: { wti: ResolvedCommodityPrice; henryHub: ResolvedCommodityPrice };
 };
 
-const EMPTY_YEAR_STRINGS = { "2026": "", "2027": "", "2028": "" } as Record<RrcForecastYear, string>;
+type GenericDefaultsResponse = {
+  company: { ticker: Ticker; periods: { latestActualPeriod: string; latestDetailedActualPeriod: string; forecastYears: string[]; defaultForwardYear: string } | null };
+  defaults: Omit<ApiDefaults, "result">;
+  result: RrcAnnualForecastResult;
+};
+
+function emptyYearStrings(years: readonly string[]): Record<string, string> {
+  return Object.fromEntries(years.map((year) => [year, ""]));
+}
 
 function money(value: number | null, digits = 1) {
   return value === null || value === undefined ? "--" : `$${value.toFixed(digits)}`;
@@ -68,7 +76,7 @@ function bcfePerDay(totalMcfe: number | null): string {
 
 /** "2026Q2" -> "Q2 2026" */
 function formatPeriodLabel(period: string | undefined): string {
-  if (!period || period.length !== 6) return "Q2 2026";
+  if (!period || !/^\d{4}Q[1-4]$/.test(period)) return "--";
   return `${period.slice(4)} ${period.slice(0, 4)}`;
 }
 
@@ -134,7 +142,7 @@ function CommodityPriceCard({ label, data }: { label: string; data: ResolvedComm
   );
 }
 
-export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: providedCommoditySources }: RrcScenarioWorkbenchProps = {}) {
+export function RrcScenarioWorkbench({ company = "RRC", currentMarketPrices, commoditySources: providedCommoditySources }: RrcScenarioWorkbenchProps = {}) {
   const market = useMarketData();
   const liveCommodity = useMemo(
     () => currentMarketPrices ?? extractLiveMarketMetricsFromMarketResponse(market.data),
@@ -147,14 +155,16 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
 
   const [defaults, setDefaults] = useState<ApiDefaults | null>(null);
   const [defaultResult, setDefaultResult] = useState<RrcAnnualForecastResult | null>(null);
+  const [years, setYears] = useState<RrcForecastYear[]>([]);
+  const [presetMultiples, setPresetMultiples] = useState<Record<Preset, number> | null>(null);
 
-  const [multiple, setMultiple] = useState<string>(String(PRESET_MULTIPLES.base));
+  const [multiple, setMultiple] = useState<string>("");
   const [preset, setPreset] = useState<Preset>("base");
-  const [forwardYear, setForwardYear] = useState<RrcForecastYear>("2027");
+  const [forwardYear, setForwardYear] = useState<RrcForecastYear | "">("");
 
-  const [gasProd, setGasProd] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
-  const [nglProd, setNglProd] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
-  const [oilProd, setOilProd] = useState<Record<RrcForecastYear, string>>({ ...EMPTY_YEAR_STRINGS });
+  const [gasProd, setGasProd] = useState<Record<string, string>>({});
+  const [nglProd, setNglProd] = useState<Record<string, string>>({});
+  const [oilProd, setOilProd] = useState<Record<string, string>>({});
   const [gasPrice, setGasPrice] = useState("");
   const [nglPrice, setNglPrice] = useState("");
   const [oilPrice, setOilPrice] = useState("");
@@ -165,32 +175,68 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
   const [runError, setRunError] = useState<string | null>(null);
 
   const overrideCount =
-    YEARS.reduce(
-      (count, year) => count + (gasProd[year].trim() !== "" ? 1 : 0) + (nglProd[year].trim() !== "" ? 1 : 0) + (oilProd[year].trim() !== "" ? 1 : 0),
+    years.reduce(
+      (count, year) => count + ((gasProd[year] ?? "").trim() !== "" ? 1 : 0) + ((nglProd[year] ?? "").trim() !== "" ? 1 : 0) + ((oilProd[year] ?? "").trim() !== "" ? 1 : 0),
       0
     ) + (gasPrice.trim() !== "" ? 1 : 0) + (nglPrice.trim() !== "" ? 1 : 0) + (oilPrice.trim() !== "" ? 1 : 0);
   const hasOverrideInput = overrideCount > 0;
 
   useEffect(() => {
-    fetch("/api/rrc-scenarios")
-      .then((response) => response.json())
-      .then((data: ApiDefaults) => {
-        setDefaults(data);
-        setDefaultResult((current) => current ?? data.result);
+    let cancelled = false;
+    setDefaults(null);
+    setDefaultResult(null);
+    setCustomResult(null);
+    setCustomActive(false);
+    setYears([]);
+    setForwardYear("");
+    setPreset("base");
+    setPresetMultiples(null);
+    setMultiple("");
+    setGasProd({});
+    setNglProd({});
+    setOilProd({});
+    setGasPrice("");
+    setNglPrice("");
+    setOilPrice("");
+    setRunError(null);
+    fetch(`/api/forecast?company=${encodeURIComponent(company)}`)
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error ?? "Unable to load forecast defaults.");
+        return payload as GenericDefaultsResponse;
+      })
+      .then((data) => {
+        if (cancelled || !data.company.periods) return;
+        const activeYears = data.company.periods.forecastYears as RrcForecastYear[];
+        const nextDefaults = { ...data.defaults, result: data.result } as ApiDefaults;
+        setYears(activeYears);
+        setForwardYear(data.company.periods.defaultForwardYear as RrcForecastYear);
+        setPresetMultiples(nextDefaults.valuationPresets);
+        setMultiple(String(nextDefaults.valuationPresets.base));
+        setGasProd(emptyYearStrings(activeYears));
+        setNglProd(emptyYearStrings(activeYears));
+        setOilProd(emptyYearStrings(activeYears));
+        setDefaults(nextDefaults);
+        setDefaultResult(data.result);
       })
       .catch(() => undefined);
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [company]);
 
-  useEffect(() => setMultiple(String(PRESET_MULTIPLES[preset])), [preset]);
+  useEffect(() => {
+    if (presetMultiples) setMultiple(String(presetMultiples[preset]));
+  }, [preset, presetMultiples]);
 
   async function computeForecast(useOverrides: boolean): Promise<RrcAnnualForecastResult> {
-    const response = await fetch("/api/rrc-scenarios", {
+    const response = await fetch(`/api/forecast?company=${encodeURIComponent(company)}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         strategy: "maintenance",
         production: Object.fromEntries(
-          YEARS.map((year) => [
+          years.map((year) => [
             year,
             useOverrides
               ? {
@@ -212,7 +258,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
             }
           : {},
         liveCommodity,
-        valuation: { targetEvToEbitdax: parsedOrUndefined(multiple) ?? PRESET_MULTIPLES[preset], forwardYear }
+        valuation: { targetEvToEbitdax: parsedOrUndefined(multiple) ?? presetMultiples![preset], forwardYear }
       })
     });
     const payload = await response.json();
@@ -225,6 +271,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
   // production/price overrides are a separate, explicit action (Run Scenario, below) and
   // never trigger this effect.
   useEffect(() => {
+    if (!defaults || !forwardYear) return;
     let cancelled = false;
     computeForecast(false)
       .then((result) => {
@@ -235,7 +282,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveCommodity, multiple, forwardYear]);
+  }, [company, defaults, liveCommodity, multiple, forwardYear]);
 
   async function runScenario() {
     setRunLoading(true);
@@ -252,9 +299,9 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
   }
 
   function resetToDefault() {
-    setGasProd({ ...EMPTY_YEAR_STRINGS });
-    setNglProd({ ...EMPTY_YEAR_STRINGS });
-    setOilProd({ ...EMPTY_YEAR_STRINGS });
+    setGasProd(emptyYearStrings(years));
+    setNglProd(emptyYearStrings(years));
+    setOilProd(emptyYearStrings(years));
     setGasPrice("");
     setNglPrice("");
     setOilPrice("");
@@ -288,7 +335,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
             Management Guidance
             <InfoTip placement="bottom" text="Used when explicitly provided by management; unguided items are filled by the existing model methodology, never invented." />
           </span>
-          <strong>{yearLabel(YEARS[0])}–{yearLabel(YEARS[YEARS.length - 1])} Outlook</strong>
+          <strong>{years.length ? `${yearLabel(years[0])}–${yearLabel(years[years.length - 1])}` : "--"} Outlook</strong>
           <small>Source: Management guidance</small>
         </div>
         <div className="wb-source-card wb-source-card--accent">
@@ -313,14 +360,14 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
           <table className="forecast-table wb-primary-table">
             <colgroup>
               <col style={{ width: "34%" }} />
-              {YEARS.map((year) => (
+              {years.map((year) => (
                 <col key={year} style={{ width: "22%" }} />
               ))}
             </colgroup>
             <thead>
               <tr>
                 <th align="left">Metric</th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <th key={year} align="right">{yearLabel(year)}</th>
                 ))}
               </tr>
@@ -329,9 +376,9 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
               <tr>
                 <th align="left">
                   Total Production (Bcfe/d)
-                  <InfoTip text="2026E blends Q1/Q2 reported actuals with a guided or modeled Q3/Q4 estimate; 2027E/2028E use management's guided target where available, else the latest reported rate held flat." />
+                  <InfoTip text={`${years[0] ?? "Current-year"}E includes immutable actuals through ${formatPeriodLabel(defaults?.latestActualPeriod)} and estimates only the remaining quarters; later years use management guidance where available, else the model default.`} />
                 </th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <td key={year}>{result ? bcfePerDay(result.annual[year].production.totalMcfe) : "--"}</td>
                 ))}
               </tr>
@@ -340,7 +387,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   Revenue ($mm)
                   <InfoTip text="Production times realized commodity price (benchmark plus differential plus hedge impact) for gas, NGL, and oil, summed." />
                 </th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <td key={year}>{result ? money(result.annual[year].revenueMillion) : "--"}</td>
                 ))}
               </tr>
@@ -349,16 +396,16 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   Adjusted EBITDAX ($mm)
                   <InfoTip text="Forecast revenue flows through the existing operating-cost methodology (LOE, gathering/transport, G&A, production taxes) to arrive at EBITDAX." />
                 </th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <td key={year}>{result ? money(result.annual[year].ebitdaxMillion) : "--"}</td>
                 ))}
               </tr>
               <tr>
                 <th align="left">
                   Capital Expenditures ($mm)
-                  <InfoTip text="Q1/Q2 2026 use actual reported CapEx. Forecast periods use management's guided capital budget where available, else a modeled continuation of the current run-rate." />
+                  <InfoTip text={`Periods through ${formatPeriodLabel(defaults?.latestActualPeriod)} use actual reported CapEx. Forecast periods use management's guided capital budget where available, else the company model default.`} />
                 </th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <td key={year}>{result ? money(result.annual[year].capexMillion) : "--"}</td>
                 ))}
               </tr>
@@ -367,16 +414,16 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   Free Cash Flow ($mm)
                   <InfoTip text="The model calculates forecast cash generation after the existing cash-flow and capital-spending methodology: EBITDAX less cash interest, cash taxes, and CapEx." />
                 </th>
-                {YEARS.map((year) => (
+                {years.map((year) => (
                   <td key={year}>{result ? money(result.annual[year].freeCashFlowMillion) : "--"}</td>
                 ))}
               </tr>
               <tr>
                 <th align="left">
                   Ending Net Debt ($mm)
-                  <InfoTip text="Free cash flow flows through the existing net-debt roll-forward each quarter. 2026 Q1/Q2 use the actual reported net debt directly, not a rolled-forward estimate." />
+                  <InfoTip text={`Free cash flow flows through the net-debt roll-forward each quarter. Periods through ${formatPeriodLabel(defaults?.latestActualPeriod)} use reported net debt directly, not a rolled-forward estimate.`} />
                 </th>
-                {YEARS.map((year) => {
+                {years.map((year) => {
                   const value = result ? result.annual[year].endingNetDebtMillion : null;
                   return (
                     <td key={year} className={value !== null && value < 0 ? "positive" : undefined}>
@@ -409,7 +456,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 <thead>
                   <tr>
                     <th align="left">Commodity</th>
-                    {YEARS.map((year) => (
+                    {years.map((year) => (
                       <th key={year} align="right">{yearLabel(year)}</th>
                     ))}
                   </tr>
@@ -417,7 +464,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 <tbody>
                   <tr>
                     <th align="left">Natural Gas (MMcf/d)</th>
-                    {YEARS.map((year) => (
+                    {years.map((year) => (
                       <td key={year} align="right">
                         <input
                           type="number"
@@ -431,7 +478,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   </tr>
                   <tr>
                     <th align="left">NGL (Mbbl/d)</th>
-                    {YEARS.map((year) => (
+                    {years.map((year) => (
                       <td key={year} align="right">
                         <input
                           type="number"
@@ -445,7 +492,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   </tr>
                   <tr>
                     <th align="left">Oil / Condensate (Mbbl/d)</th>
-                    {YEARS.map((year) => (
+                    {years.map((year) => (
                       <td key={year} align="right">
                         <input
                           type="number"
@@ -545,7 +592,7 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
           <label className="wb-field">
             Forward EBITDAX Year
             <select value={forwardYear} onChange={(event) => setForwardYear(event.target.value as RrcForecastYear)}>
-              {YEARS.map((year) => (
+              {years.map((year) => (
                 <option key={year} value={year}>{yearLabel(year)}</option>
               ))}
             </select>
@@ -605,3 +652,6 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
     </main>
   );
 }
+
+/** Company-neutral name for new callers; RrcScenarioWorkbench remains as the compatibility export. */
+export const GenericForecastWorkbench = RrcScenarioWorkbench;

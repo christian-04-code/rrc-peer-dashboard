@@ -165,9 +165,9 @@ test("9. combining a production override and a price override on the same year a
 
 test("10. resetToDefault clears every override input and deactivates the custom result, so the display falls back to the (already-computed) Default Forecast", () => {
   const fn = workbenchSource.slice(workbenchSource.indexOf("function resetToDefault"), workbenchSource.indexOf("const result = customActive"));
-  assert.match(fn, /setGasProd\(\{ \.\.\.EMPTY_YEAR_STRINGS \}\)/);
-  assert.match(fn, /setNglProd\(\{ \.\.\.EMPTY_YEAR_STRINGS \}\)/);
-  assert.match(fn, /setOilProd\(\{ \.\.\.EMPTY_YEAR_STRINGS \}\)/);
+  assert.match(fn, /setGasProd\(emptyYearStrings\(years\)\)/);
+  assert.match(fn, /setNglProd\(emptyYearStrings\(years\)\)/);
+  assert.match(fn, /setOilProd\(emptyYearStrings\(years\)\)/);
   assert.match(fn, /setGasPrice\(""\)/);
   assert.match(fn, /setNglPrice\(""\)/);
   assert.match(fn, /setOilPrice\(""\)/);
