@@ -25,6 +25,7 @@ import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
+import { PeerComparisonMatrix } from "@/components/dashboard/PeerComparisonMatrix";
 import { GuidancePanel } from "@/components/dashboard/GuidancePanel";
 import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
@@ -164,6 +165,7 @@ export function HomeDashboard() {
                   </div>
 
                   <ChartWorkspace selectedTickers={selectedTickers} title={`Company comparison · ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} />
+                  <PeerComparisonMatrix selectedTickers={selectedTickers} metric={metric} />
                 </div>
 
                 <aside>

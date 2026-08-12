@@ -72,7 +72,7 @@ h2 { font-size: 15px; }
 .company-selector button.company-focused { outline: 2px solid var(--accent); outline-offset: 2px; }
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
 .workspace, .panel { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
-.workspace { min-height: 540px; padding: 16px; }
+.workspace { min-width: 0; min-height: 540px; padding: 16px; }
 .workspace-toolbar { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
 .tabs button { color: var(--muted); }
@@ -121,6 +121,32 @@ h2 { font-size: 15px; }
 .chart-semantic-legend::before { content: ""; width: 16px; border-top: 2px solid currentColor; }
 .chart-semantic-legend.model-legend::before { opacity: .45; }
 .chart-semantic-legend.guidance-legend::before { border-top-style: dashed; }
+.peer-matrix { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+.peer-matrix-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+.peer-matrix-head > div { display: grid; gap: 2px; }
+.peer-matrix-head span { font-size: 12px; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
+.peer-matrix-head small { color: var(--muted); font-size: 9px; }
+.peer-matrix-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; scrollbar-color: #38516d transparent; }
+.peer-matrix-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.peer-matrix table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.peer-matrix th, .peer-matrix td { border-bottom: 1px solid rgba(44,62,82,.68); padding: 6px 10px; }
+.peer-matrix thead th { height: 32px; background: var(--panel-2); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-align: right; text-transform: uppercase; }
+.peer-matrix thead th:first-child { width: 180px; text-align: left; }
+.peer-matrix thead th:not(:first-child) { border-top: 2px solid var(--border); color: var(--text); }
+.peer-matrix th:first-child { position: sticky; left: 0; z-index: 2; background: var(--panel); box-shadow: 1px 0 var(--border); }
+.peer-matrix thead th:first-child { z-index: 3; background: var(--panel-2); }
+.peer-matrix-group th { padding: 8px 10px 4px; background: #0d1d30; color: #7690aa; font-size: 9px; font-weight: 800; letter-spacing: .075em; text-align: left; text-transform: uppercase; }
+.peer-matrix-row th { text-align: left; font-size: 11px; font-weight: 650; }
+.peer-matrix-row th span, .peer-matrix-row th small { display: block; }
+.peer-matrix-row th small { margin-top: 1px; color: var(--muted); font-size: 8px; font-weight: 500; }
+.peer-matrix-row td { height: 34px; text-align: right; }
+.peer-matrix-row td span, .peer-matrix-row td small { display: block; }
+.peer-matrix-row td span { font-size: 11px; font-weight: 680; }
+.peer-matrix-row td small { margin-top: 1px; color: var(--muted); font-size: 8px; }
+.peer-matrix-row td.unsupported span { color: var(--muted); font-weight: 500; }
+.peer-matrix-row.active th, .peer-matrix-row.active td { background: rgba(0,129,198,.095); }
+.peer-matrix-row.active th { box-shadow: inset 2px 0 var(--accent), 1px 0 var(--border); color: #9fddff; }
+.peer-matrix tbody tr:last-child th, .peer-matrix tbody tr:last-child td { border-bottom: 0; }
 aside { display: flex; flex-direction: column; gap: 14px; }
 .panel { padding: 16px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -434,6 +460,8 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-map-controls { justify-items: start; width: 100%; }
   .macro-segmented { flex: 0 0 auto; }
   .workspace-toolbar { align-items: flex-start; flex-direction: column; }
+  .workspace { padding: 12px; }
+  .peer-matrix-head > small { display: none; }
   aside { grid-template-columns: 1fr; }
   .map-toolbar { align-items: flex-start; flex-direction: column; }
 }
