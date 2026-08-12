@@ -1,41 +1,42 @@
 {
   "capturedFrom": "main@cd8eb43",
+  "_baselineNote": "Regenerated on feat/rrc-q2-baseline (2026-08-12): the forecast engine's 'latest detailed actual' anchor moved from Q1 2026 to Q2 2026 (see lib/forecast/data/rrc-baseline.ts's rrcQ2_2026Baseline / rrcLatestDetailedBaseline, and RRC_LATEST_DETAILED_ACTUAL_PERIOD in rrc-actuals.ts) after every consumed field was independently verified against RRC's Q2 2026 Form 10-Q on the same definitional basis as the prior Q1 anchor. The values below reflect that recalibration, not a golden-fixture drift; the dominant driver of the 2027E/2028E delta from the prior fixture is the natural gas differential to NYMEX moving from a $0.18/Mcf premium (Q1) to a $0.47/Mcf discount (Q2) -- a real, verified change in RRC's realized basis, not a data artifact. productionBcfePerDay is unchanged because those totals are guidance-driven, not baseline-mix-driven.",
   "get": {
     "latestActualPeriod": "2026Q2",
     "forecastYears": ["2026", "2027", "2028"],
-    "currentNetDebtMillion": 819.007,
-    "dilutedSharesMillion": 236.396,
+    "currentNetDebtMillion": 866.838,
+    "dilutedSharesMillion": 236.21,
     "productionBcfePerDay": { "2026": 2.375, "2027": 2.6, "2028": 2.6 }
   },
   "post": {
     "default": {
-      "ebitdaxMillion": { "2026": 1991.5657788357084, "2027": 2021.853224355502, "2028": 1990.639616896166 },
-      "freeCashFlowMillion": { "2026": 1218.5143207005945, "2027": 1152.5265908941722, "2028": 1159.9265275444727 },
-      "impliedSharePrice": 47.04052832516313
+      "ebitdaxMillion": { "2026": 1979.778028409472, "2027": 1700.3341986056437, "2028": 1668.239717103157 },
+      "freeCashFlowMillion": { "2026": 1206.9623252828824, "2027": 869.1701466893053, "2028": 881.7885397349047 },
+      "impliedSharePrice": 39.591203134207014
     },
     "productionOverride": {
       "request": { "production": { "2027": { "gasMmcfPerDay": 1900 } } },
-      "ebitdax2027Million": 2109.6056988012824,
-      "impliedSharePrice": 49.08218135419827
+      "ebitdax2027Million": 1776.8369878050366,
+      "impliedSharePrice": 41.372522047871385
     },
     "commodityOverride": {
       "request": { "customCommodity": { "henryHubPerMmbtu": 5 } },
-      "ebitdax2027Million": 2691.020923635538,
-      "impliedSharePrice": 62.60941420326681
+      "ebitdax2027Million": 2358.828923251339,
+      "impliedSharePrice": 54.923835053056024
     },
     "multipleSparseOverrides": {
       "request": { "production": { "2028": { "oilMbblPerDay": 12 } }, "customCommodity": { "wtiPerBbl": 80 } },
-      "ebitdax2028Million": 2348.517957446231,
-      "impliedSharePrice": 54.22861635479707
+      "ebitdax2028Million": 2078.5925090557216,
+      "impliedSharePrice": 46.77873868165025
     },
     "valuationMultiple": {
       "request": { "valuation": { "targetEvToEbitdax": 6.5, "forwardYear": "2027" } },
-      "impliedSharePrice": 55.59335165701097
+      "impliedSharePrice": 46.78960370406284
     },
     "forwardYear": {
       "request": { "valuation": { "targetEvToEbitdax": 5.5, "forwardYear": "2028" } },
-      "forwardEbitdaxMillion": 1990.639616896166,
-      "impliedSharePrice": 46.31431112594508
+      "forwardEbitdaxMillion": 1668.239717103157,
+      "impliedSharePrice": 38.84390349294003
     }
   }
 }

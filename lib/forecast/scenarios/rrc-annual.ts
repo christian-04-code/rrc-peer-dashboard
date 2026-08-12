@@ -24,7 +24,7 @@
  * the existing default flows through untouched, with its existing classification.
  */
 
-import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
+import { rrcLatestDetailedBaseline } from "@/lib/forecast/data/rrc-baseline";
 import { rrcActualQuarters } from "@/lib/forecast/data/rrc-actuals";
 import { rrcManagementGuidance, rrcQ3_2026GuidedBcfePerDay } from "@/lib/forecast/guidance/rrc";
 import { findGuidance, type GuidanceEntry } from "@/lib/forecast/guidance/types";
@@ -150,7 +150,7 @@ export type RrcAnnualForecastResult = {
   annual: Record<RrcForecastYear, RrcAnnualPeriodSummary>;
   productionResolution: Record<RrcForecastYear, ResolvedAnnualValue>;
   valuation: RrcAnnualValuationResult;
-  /** Secondary/advanced output only -- not the primary Forecast valuation. Uses the current (Q1 2026) reported net debt, not a future ending net debt, so cash flows aren't NPV'd and then double-counted against their own future debt paydown. */
+  /** Secondary/advanced output only -- not the primary Forecast valuation. Uses the current (Q2 2026) reported net debt, not a future ending net debt, so cash flows aren't NPV'd and then double-counted against their own future debt paydown. */
   dcf: DcfResult & { discountRate: number; terminalGrowthRate: number };
   notes: string[];
 };
@@ -290,11 +290,11 @@ function resolveRrc2026CapexOverride(userAnnualTotalMillion?: number): SourcedVa
 }
 
 const MODELED_PRICING_FALLBACKS: Record<"gasBasisPerMcf" | "oilDifferentialPerBbl", { value: number; unit: string }> = {
-  gasBasisPerMcf: { value: 0.18, unit: "$/Mcf" },
-  oilDifferentialPerBbl: { value: -10.68, unit: "$/bbl" }
+  gasBasisPerMcf: { value: -0.47, unit: "$/Mcf" },
+  oilDifferentialPerBbl: { value: -9.62, unit: "$/bbl" }
 };
 
-/** Mirrors rrc-complete.ts exactly: guidance midpoint when RRC guided that differential for the year, else the Q1 2026 reported differential held flat (modeled). Realized gas price = Henry Hub + this value; realized oil price = WTI + this value; sign exactly as disclosed. */
+/** Mirrors rrc-complete.ts exactly: guidance midpoint when RRC guided that differential for the year, else the Q2 2026 reported differential held flat (modeled). Realized gas price = Henry Hub + this value; realized oil price = WTI + this value; sign exactly as disclosed. */
 export function resolveAnnualPricingDefault(metric: "gasBasisPerMcf" | "oilDifferentialPerBbl", year: RrcForecastYear): ResolvedAnnualValue {
   const guidance = findGuidance(rrcManagementGuidance, metric, year);
   if (guidance && guidance.midpoint !== null) return guidanceToResolved(guidance);
@@ -303,9 +303,9 @@ export function resolveAnnualPricingDefault(metric: "gasBasisPerMcf" | "oilDiffe
     value: fallback.value,
     classification: "modeled",
     sourceName: "Range Resources",
-    sourceReference: "Q1 2026 Form 10-Q realized-pricing disclosure",
-    sourceDate: "2026-08-04",
-    notes: `Q1 2026 reported differential held flat as the forward anchor; RRC did not guide this differential for ${year}.`
+    sourceReference: "Q2 2026 Form 10-Q realized-pricing disclosure",
+    sourceDate: "2026-08-12",
+    notes: `Q2 2026 reported differential held flat as the forward anchor; RRC did not guide this differential for ${year}.`
   };
 }
 
@@ -323,7 +323,7 @@ function commodityResolved(rate: number | null | undefined, basis: ResolvedAnnua
     sourceName: basis.sourceName,
     sourceReference: basis.sourceReference,
     sourceDate: basis.sourceDate,
-    notes: `${label} default rate, split from the Default Forecast total production using the latest reported (Q1 2026) product mix. ${basis.notes}`.trim()
+    notes: `${label} default rate, split from the Default Forecast total production using the latest reported (Q2 2026) product mix. ${basis.notes}`.trim()
   };
 }
 
@@ -362,11 +362,11 @@ function totalMmcfePerDay(gas: number, ngl: number, oil: number): number {
   return gas + (ngl + oil) * 6;
 }
 
-/** Splits a total-Bcfe/d daily rate into gas/NGL/oil daily rates using the latest reported (Q1 2026) product mix ratio -- the same method an analyst uses when management guides only a total production number. Returns null if the reported mix is unavailable. */
+/** Splits a total-Bcfe/d daily rate into gas/NGL/oil daily rates using the latest reported (Q2 2026) product mix ratio -- the same method an analyst uses when management guides only a total production number. Returns null if the reported mix is unavailable. */
 function splitByReportedMix(totalBcfePerDay: number): { gasMmcfPerDay: number; nglMbblPerDay: number; oilMbblPerDay: number } | null {
-  const reportedGas = rrcQ1_2026Baseline.naturalGasMmcfPerDay.value;
-  const reportedNgl = rrcQ1_2026Baseline.nglMbblPerDay.value;
-  const reportedOil = rrcQ1_2026Baseline.oilMbblPerDay.value;
+  const reportedGas = rrcLatestDetailedBaseline.naturalGasMmcfPerDay.value;
+  const reportedNgl = rrcLatestDetailedBaseline.nglMbblPerDay.value;
+  const reportedOil = rrcLatestDetailedBaseline.oilMbblPerDay.value;
   if (reportedGas === null || reportedNgl === null || reportedOil === null) return null;
   const reportedTotal = totalMmcfePerDay(reportedGas, reportedNgl, reportedOil);
   if (reportedTotal <= 0) return null;
@@ -374,7 +374,7 @@ function splitByReportedMix(totalBcfePerDay: number): { gasMmcfPerDay: number; n
   return { gasMmcfPerDay: reportedGas * scale, nglMbblPerDay: reportedNgl * scale, oilMbblPerDay: reportedOil * scale };
 }
 
-/** Splits an annual total-Bcfe/d target into quarterly gas/NGL/oil overrides (same flat rate every quarter) using the latest reported Q1 2026 product mix ratio. Used for 2027/2028, which have no actual/estimate split. */
+/** Splits an annual total-Bcfe/d target into quarterly gas/NGL/oil overrides (same flat rate every quarter) using the latest reported Q2 2026 product mix ratio. Used for 2027/2028, which have no actual/estimate split. */
 function expandAnnualProductionToQuarterlyOverrides(
   year: RrcForecastYear,
   totalBcfePerDay: number,
@@ -739,7 +739,7 @@ export function runRrcAnnualForecast(request: RrcAnnualForecastRequest): RrcAnnu
         : Math.max(0, forecastEndingNetDebtMillion);
   const valuationNetDebtFloorApplied =
     userNetDebtOverride === undefined && forecastEndingNetDebtMillion !== null && forecastEndingNetDebtMillion < 0;
-  const dilutedSharesMillion = request.valuation.dilutedSharesMillionOverride ?? rrcQ1_2026Baseline.dilutedSharesMillion.value;
+  const dilutedSharesMillion = request.valuation.dilutedSharesMillionOverride ?? rrcLatestDetailedBaseline.dilutedSharesMillion.value;
 
   const multiple = calculateMultipleValuation({
     forecastEbitdaxMillion: forwardEbitdaxMillion,

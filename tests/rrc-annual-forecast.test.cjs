@@ -337,19 +337,19 @@ test("management gas differential midpoint (current Q2 2026 cycle: +0.375 premiu
   assert.ok(Math.abs(result.realizedGasPerMcf - (3.75 + 0.375)) < 1e-9);
 });
 
-test("oil differential is not guided this cycle, so it falls back to the existing modeled (Q1 2026 reported, held flat) anchor rather than the prior cycle's guided figure", () => {
+test("oil differential is not guided this cycle, so it falls back to the existing modeled (Q2 2026 reported, held flat) anchor rather than the prior cycle's guided figure", () => {
   const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
   const q3_2026 = scenario.periods.find((p) => p.period === "2026Q3");
-  assert.equal(q3_2026.pricing.oilDifferentialPerBbl.value, -10.68);
+  assert.equal(q3_2026.pricing.oilDifferentialPerBbl.value, -9.62);
   assert.equal(q3_2026.pricing.oilDifferentialPerBbl.source.classification, "modeled");
 });
 
-test("a year RRC did not guide a differential for (2027) does not silently use the Q1 2026 realized differential as guidance -- it falls back to the existing modeled anchor, classified 'modeled' not 'guided'", () => {
+test("a year RRC did not guide a differential for (2027) does not silently use the Q2 2026 realized differential as guidance -- it falls back to the existing modeled anchor, classified 'modeled' not 'guided'", () => {
   const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
   const q2_2027 = scenario.periods.find((p) => p.period === "2027Q2");
-  assert.equal(q2_2027.pricing.gasBasisPerMcf.value, 0.18);
+  assert.equal(q2_2027.pricing.gasBasisPerMcf.value, -0.47);
   assert.equal(q2_2027.pricing.gasBasisPerMcf.source.classification, "modeled");
-  assert.equal(q2_2027.pricing.oilDifferentialPerBbl.value, -10.68);
+  assert.equal(q2_2027.pricing.oilDifferentialPerBbl.value, -9.62);
   assert.equal(q2_2027.pricing.oilDifferentialPerBbl.source.classification, "modeled");
 });
 
@@ -453,12 +453,16 @@ test("negative forecast net debt (net cash) is floored to $0 for the EV/EBITDAX 
   assert.ok(Math.abs(result.valuation.equityValueMillion - result.valuation.enterpriseValueMillion) < 1e-6);
 });
 
+// Expected values below were regenerated on feat/rrc-q2-baseline (2026-08-12) after the
+// forecast engine's detailed anchor moved from Q1 2026 to Q2 2026 -- see rrc-baseline.ts's
+// rrcQ2_2026Baseline. The dominant driver of the change is the gas differential to NYMEX
+// moving from a $0.18/Mcf premium (Q1) to a $0.47/Mcf discount (Q2).
 test("operating forecast outputs (production/revenue/EBITDAX/CapEx/FCF) are completely unaffected by the net-debt floor", () => {
   const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
-  assert.equal(result.annual["2027"].revenueMillion, 3894.8527991640967);
-  assert.equal(result.annual["2027"].ebitdaxMillion, 2021.853224355502);
+  assert.equal(result.annual["2027"].revenueMillion, 3455.975122683384);
+  assert.equal(result.annual["2027"].ebitdaxMillion, 1700.3341986056437);
   assert.equal(result.annual["2027"].capexMillion, 675);
-  assert.equal(result.annual["2027"].freeCashFlowMillion, 1152.5265908941722);
+  assert.equal(result.annual["2027"].freeCashFlowMillion, 869.1701466893053);
 });
 
 test("displayed forecast net cash (forecastEndingNetDebtMillion) is identical whether or not the floor binds elsewhere -- the floor never touches the reported balance-sheet figure", () => {
@@ -466,8 +470,8 @@ test("displayed forecast net cash (forecastEndingNetDebtMillion) is identical wh
   const result2027 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
   // 2026 (floor does not bind) and 2027 (floor binds) both report their own true ending net
   // debt figure unmodified -- confirms the floor is scoped to the valuation bridge only.
-  assert.equal(result2026.valuation.forecastEndingNetDebtMillion, 226.8386792994055);
-  assert.equal(result2027.valuation.forecastEndingNetDebtMillion, -830.4879115947667);
+  assert.equal(result2026.valuation.forecastEndingNetDebtMillion, 238.39067471711746);
+  assert.equal(result2027.valuation.forecastEndingNetDebtMillion, -535.579471972188);
 });
 
 test("implied share price no longer increases solely because unallocated forecast cash accumulates beyond zero net debt (2027 vs. 2028, both net-cash years, same multiple)", () => {

@@ -30,7 +30,11 @@ test("generic GET exposes typed company metadata, dynamic periods, provenance, a
   assert.equal(response.company.ticker, "RRC");
   assert.deepEqual(response.company.periods.forecastYears, golden.get.forecastYears);
   assert.equal(response.company.periods.latestActualPeriod, golden.get.latestActualPeriod);
-  assert.equal(response.company.periods.latestDetailedActualPeriod, "2026Q1");
+  // Moved from "2026Q1" to "2026Q2" on feat/rrc-q2-baseline (2026-08-12): Q2's production
+  // mix/pricing/cost detail was independently verified against RRC's own Q2 2026 Form
+  // 10-Q on the same basis as the prior Q1 anchor -- see rrc-baseline.ts's
+  // rrcQ2_2026Baseline for the field-by-field sourcing.
+  assert.equal(response.company.periods.latestDetailedActualPeriod, "2026Q2");
   assert.deepEqual(response.provenanceClasses, ["actual", "management_guidance", "derived_guidance", "market", "model", "user_override"]);
   assert.equal(response.defaults.currentNetDebtMillion, golden.get.currentNetDebtMillion);
   assert.equal(response.defaults.dilutedSharesMillion, golden.get.dilutedSharesMillion);

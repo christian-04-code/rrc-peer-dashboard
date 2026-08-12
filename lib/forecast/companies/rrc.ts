@@ -22,7 +22,7 @@ import {
 import { latestReportedProduction, type RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
 import { buildCurrentMarketPrices, type LiveMarketMetric } from "@/lib/forecast/live-market-prices";
 import { rrcManagementGuidance } from "@/lib/forecast/guidance/rrc";
-import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
+import { rrcLatestDetailedBaseline } from "@/lib/forecast/data/rrc-baseline";
 import { RRC_LATEST_ACTUAL_PERIOD, RRC_LATEST_DETAILED_ACTUAL_PERIOD } from "@/lib/forecast/data/rrc-actuals";
 
 export const RRC_VALUATION_PRESETS = { bear: 4.5, base: 5.5, bull: 6.5 } as const;
@@ -265,8 +265,8 @@ export function getRrcLegacyDefaults(): Record<string, unknown> {
     costDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCostDefaults(year)])),
     capexDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCapexDefault(year, strategy)])),
     pricingDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualPricingDefaults(year)])),
-    currentNetDebtMillion: rrcQ1_2026Baseline.balanceSheetNetDebtMillion.value,
-    dilutedSharesMillion: rrcQ1_2026Baseline.dilutedSharesMillion.value,
+    currentNetDebtMillion: rrcLatestDetailedBaseline.balanceSheetNetDebtMillion.value,
+    dilutedSharesMillion: rrcLatestDetailedBaseline.dilutedSharesMillion.value,
     result: runRrcAnnualForecast(defaultRequest())
   };
 }
@@ -282,8 +282,8 @@ export const rrcForecastAdapter: ForecastCompanyAdapter<RrcAnnualForecastResult>
     guidance: rrcManagementGuidance,
     defaults: { production: available, pricing: available, costs: available, capex: available },
     balanceSheet: {
-      netDebtMillion: rrcQ1_2026Baseline.balanceSheetNetDebtMillion.value,
-      dilutedSharesMillion: rrcQ1_2026Baseline.dilutedSharesMillion.value,
+      netDebtMillion: rrcLatestDetailedBaseline.balanceSheetNetDebtMillion.value,
+      dilutedSharesMillion: rrcLatestDetailedBaseline.dilutedSharesMillion.value,
       status: available
     },
     hedges: available,

@@ -22,14 +22,18 @@ test("complete RRC scenario supports both post-2027 strategies", () => {
   assert.match(source, /runRrcCompleteScenario/);
 });
 
-test("complete RRC scenario uses filing-backed Q1 2026 anchors", () => {
-  assert.match(source, /rrcQ1_2026Baseline\.naturalGasMmcfPerDay/);
-  assert.match(source, /value: 0\.14/);
-  assert.match(source, /value: 1\.63/);
-  // Cash G&A uses the reported Q1 2026 cash-only $/Mcfe rate (excluding stock comp),
-  // matching the canonical quarterly dataset rather than total G&A dollars.
+// Moved from Q1 2026 to Q2 2026 on feat/rrc-q2-baseline (2026-08-12): every anchor value
+// below was independently re-verified against RRC's own Q2 2026 Form 10-Q on the same
+// definitional basis as the prior Q1 anchor -- see rrc-baseline.ts's rrcQ2_2026Baseline.
+test("complete RRC scenario uses filing-backed Q2 2026 anchors", () => {
+  assert.match(source, /rrcLatestDetailedBaseline\.naturalGasMmcfPerDay/);
+  assert.match(source, /value: 0\.133/);
+  assert.match(source, /value: 1\.516/);
+  // Cash G&A uses the reported Q2 2026 cash-only $/Mcfe rate (excluding stock comp,
+  // independently verified against the 10-Q's own G&A/stock-comp breakout table),
+  // numerically unchanged from the Q1 2026 anchor.
   assert.match(source, /value: 0\.18/);
-  assert.match(source, /value: 19\.419/);
+  assert.match(source, /value: 14\.4/);
 });
 
 test("2026Q1/2026Q2 are immutable reported actuals, sourced from the canonical dataset, not re-forecast", () => {
@@ -46,7 +50,7 @@ test("forward production is a flat hold of the latest reported baseline, and pri
   assert.doesNotMatch(source, /quarterlyTotalBcfePerDay/);
   assert.doesNotMatch(source, /scaleProductMix/);
   assert.match(source, /value: 0\.18/);
-  assert.match(source, /value: -10\.68/);
+  assert.match(source, /value: -9\.62/);
 });
 
 test("balance sheet roll-forward never creates an automatic financing plug", () => {

@@ -13,9 +13,17 @@
  *
  * Q2 2026's production/pricing/cost BREAKDOWN (gas/NGL/oil split, realized prices, LOE,
  * GP&T, cash G&A) was outside the accepted six-metric Q2 2026 actuals integration scope
- * and is intentionally null in the canonical source -- never fabricated here. Only Q1
- * 2026 carries that level of detail; see rrc-baseline.ts, which remains the "latest fully
- * detailed" anchor used to derive a product mix for forward quarters.
+ * at the time this file was first written, and was intentionally null in the canonical
+ * source -- never fabricated here.
+ *
+ * UPDATED 2026-08-12 (feat/rrc-q2-baseline): a subsequent Q2 data-foundation pass
+ * populated that detail for RRC, and this recalibration independently verified each
+ * field against RRC's own Q2 2026 Form 10-Q on the same definitional basis the forecast
+ * engine already used for Q1 -- see lib/forecast/data/rrc-baseline.ts's
+ * rrcQ2_2026Baseline and rrcLatestDetailedBaseline for the verified values and the
+ * field-by-field comparability notes (one field, productionTaxesPerMcfe, was left
+ * unresolved for Q2 and still uses the Q1-derived ratio). RRC_LATEST_DETAILED_ACTUAL_PERIOD
+ * below now reflects Q2 2026 as the anchor.
  */
 
 import { getQuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
@@ -58,8 +66,8 @@ function loadActualQuarter(period: RrcActualPeriod): RrcActualQuarter {
 /** The two immutable reported quarters as of this integration; extend when a new quarter is audited into the canonical dataset. */
 export const RRC_ACTUAL_PERIODS: RrcActualPeriod[] = ["2026Q1", "2026Q2"];
 export const RRC_LATEST_ACTUAL_PERIOD: RrcActualPeriod = "2026Q2";
-/** Latest quarter with full production-mix/per-unit-cost/realized-price detail. Q2 2026 only carries the six top-line metrics in the current integration scope, so forward per-unit assumptions still derive their product mix from Q1. */
-export const RRC_LATEST_DETAILED_ACTUAL_PERIOD: RrcActualPeriod = "2026Q1";
+/** Latest quarter with full production-mix/per-unit-cost/realized-price detail. Moved from 2026Q1 to 2026Q2 on feat/rrc-q2-baseline (2026-08-12) once Q2's detail was verified comparable field-by-field -- see rrc-baseline.ts's rrcLatestDetailedBaseline. */
+export const RRC_LATEST_DETAILED_ACTUAL_PERIOD: RrcActualPeriod = "2026Q2";
 
 export const rrcActualQuarters: Record<RrcActualPeriod, RrcActualQuarter> = {
   "2026Q1": loadActualQuarter("2026Q1"),
