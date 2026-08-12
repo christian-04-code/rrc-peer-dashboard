@@ -50,7 +50,22 @@ export type RrcForecastYear = (typeof RRC_FORECAST_YEARS)[number];
 
 export type RrcCommodityMode = "current-market" | "custom";
 
-export type RrcAnnualProductionInput = { totalBcfePerDay?: number };
+export type RrcAnnualProductionInput = {
+  totalBcfePerDay?: number;
+  /**
+   * Optional per-commodity go-forward daily rate overrides (Custom Production & Prices).
+   * Each is independent: setting only one commodity leaves the other two on the Default
+   * Forecast rate for that year. For 2026, this rate applies to Q3/Q4 only -- Q1/Q2 2026
+   * actuals are always immutable. For 2027/2028 (no actual/estimate split), it applies to
+   * the full year. Not reconciled against a full-year target the way totalBcfePerDay is
+   * for 2026 (there is no independently reported Q1/Q2 2026 per-commodity actual to
+   * reconcile against -- see rrc-actuals.ts), so this is a direct flat rate, the same
+   * convention every other Custom override in this engine already uses.
+   */
+  gasMmcfPerDay?: number;
+  nglMbblPerDay?: number;
+  oilMbblPerDay?: number;
+};
 export type RrcAnnualCostsInput = {
   loePerMcfe?: number;
   gatheringTransportPerMcfe?: number;
@@ -100,6 +115,8 @@ export type RrcAnnualPeriodSummary = {
   capexMillion: number | null;
   freeCashFlowMillion: number | null;
   fcfYield: number | null;
+  /** Ending net debt (negative = net cash) at this year's Q4, straight from the balance-sheet roll-forward -- never floored. 2026Q1/Q2 use the reported net debt directly; not the same as valuation.netDebtMillion, which is a floored convention applied only at the selected forward valuation year. */
+  endingNetDebtMillion: number | null;
 };
 
 export type RrcAnnualValuationResult = MultipleValuationResult & {
@@ -296,6 +313,48 @@ export function resolveAnnualPricingDefaults(year: RrcForecastYear): Record<"gas
   return {
     gasBasisPerMcf: resolveAnnualPricingDefault("gasBasisPerMcf", year),
     oilDifferentialPerBbl: resolveAnnualPricingDefault("oilDifferentialPerBbl", year)
+  };
+}
+
+function commodityResolved(rate: number | null | undefined, basis: ResolvedAnnualValue, label: string): ResolvedAnnualValue {
+  return {
+    value: rate === undefined ? null : rate,
+    classification: basis.classification,
+    sourceName: basis.sourceName,
+    sourceReference: basis.sourceReference,
+    sourceDate: basis.sourceDate,
+    notes: `${label} default rate, split from the Default Forecast total production using the latest reported (Q1 2026) product mix. ${basis.notes}`.trim()
+  };
+}
+
+/**
+ * Default (pre-override) gas/NGL/oil daily production rates for the Custom Production &
+ * Prices panel's placeholders -- the exact rate the engine uses by default for that year
+ * when the user has not touched that commodity. For 2026 this is the reconciled H2 rate
+ * (post Q1/Q2-actual reconciliation, see resolveRrc2026ProductionPlan); for 2027/2028 it
+ * is the flat annual rate. Read-only reference values -- computing them here does not
+ * change what the engine calculates.
+ */
+export function resolveAnnualCommodityProductionDefaults(year: RrcForecastYear): {
+  gasMmcfPerDay: ResolvedAnnualValue;
+  nglMbblPerDay: ResolvedAnnualValue;
+  oilMbblPerDay: ResolvedAnnualValue;
+} {
+  if (year === "2026") {
+    const plan = resolveRrc2026ProductionPlan(undefined);
+    const rep = plan.overrides.find((o) => o.period === "2026Q3") ?? plan.overrides.find((o) => o.period === "2026Q4");
+    return {
+      gasMmcfPerDay: commodityResolved(rep?.gasMmcfPerDay, plan.resolved, "Natural gas —"),
+      nglMbblPerDay: commodityResolved(rep?.nglMbblPerDay, plan.resolved, "NGL —"),
+      oilMbblPerDay: commodityResolved(rep?.oilMbblPerDay, plan.resolved, "Oil/condensate —")
+    };
+  }
+  const total = resolveAnnualProductionDefault(year);
+  const split = total.value === null ? null : splitByReportedMix(total.value);
+  return {
+    gasMmcfPerDay: commodityResolved(split?.gasMmcfPerDay, total, "Natural gas —"),
+    nglMbblPerDay: commodityResolved(split?.nglMbblPerDay, total, "NGL —"),
+    oilMbblPerDay: commodityResolved(split?.oilMbblPerDay, total, "Oil/condensate —")
   };
 }
 
@@ -517,14 +576,50 @@ export function resolveRrcAnnualInputs(request: RrcAnnualForecastRequest): {
     // else: no guidance and no user input -- leave the existing flat-hold-of-latest-reported default untouched (no override pushed).
   }
 
-  const currentMarketPrices: RrcCurrentMarketPrices =
-    request.commodityMode === "current-market"
-      ? request.liveCommodity ?? {}
-      : {
-          henryHubPerMmbtu: userSourced(request.customCommodity?.henryHubPerMmbtu, "$/MMBtu", "User-entered custom Henry Hub price."),
-          wtiPerBbl: userSourced(request.customCommodity?.wtiPerBbl, "$/bbl", "User-entered custom WTI price."),
-          nglPerBbl: userSourced(request.customCommodity?.nglPerBbl, "$/bbl", "User-entered custom NGL realization.")
-        };
+  // Per-commodity Custom Production & Prices overrides: an independent overlay on top of
+  // the total-production-driven overrides just built above. Only the commodities the user
+  // actually entered are replaced; anything not entered keeps whatever the Default Forecast
+  // pass above already resolved for that quarter (guided/default split, or the engine's own
+  // reported-baseline hold when neither guidance nor an override exists). Because a single
+  // override entry carries one attribution for whichever fields are set on it, a quarter
+  // that mixes one user-touched commodity with two already-defaulted ones will show "user"
+  // classification/notes on the whole entry in the engine's internal source metadata -- a
+  // labeling nuance in unexposed diagnostic notes, not a numeric fabrication; the resolved
+  // dollar values themselves are exactly the default for the untouched commodities.
+  for (const year of RRC_FORECAST_YEARS) {
+    const override = request.production[year];
+    if (!override) continue;
+    const { gasMmcfPerDay, nglMbblPerDay, oilMbblPerDay } = override;
+    if (gasMmcfPerDay === undefined && nglMbblPerDay === undefined && oilMbblPerDay === undefined) continue;
+
+    const quarters = year === "2026" ? ["2026Q3", "2026Q4"] : [`${year}Q1`, `${year}Q2`, `${year}Q3`, `${year}Q4`];
+    for (const period of quarters) {
+      let entry = productionOverrides.find((o) => o.period === period);
+      if (!entry) {
+        entry = { period };
+        productionOverrides.push(entry);
+      }
+      entry.attribution = {
+        classification: "user",
+        sourceName: "User production assumption",
+        notePrefix: "User-entered Custom Production & Prices override for this commodity; untouched commodities in this period keep the Default Forecast rate."
+      };
+      if (gasMmcfPerDay !== undefined) entry.gasMmcfPerDay = gasMmcfPerDay;
+      if (nglMbblPerDay !== undefined) entry.nglMbblPerDay = nglMbblPerDay;
+      if (oilMbblPerDay !== undefined) entry.oilMbblPerDay = oilMbblPerDay;
+    }
+  }
+
+  /** Custom commodity price wins per-field; otherwise falls back to the supplied current-market value. Replaces the old all-or-nothing commodityMode switch so overriding only one of the three prices (e.g. just natural gas) leaves NGL/oil on Default Forecast market pricing. */
+  function resolveCommodityPriceField(custom: number | undefined, unit: string, label: string, live: SourcedValue | undefined): SourcedValue | undefined {
+    return userSourced(custom, unit, `User-entered custom ${label} price override.`) ?? live;
+  }
+
+  const currentMarketPrices: RrcCurrentMarketPrices = {
+    henryHubPerMmbtu: resolveCommodityPriceField(request.customCommodity?.henryHubPerMmbtu, "$/MMBtu", "Henry Hub (natural gas)", request.liveCommodity?.henryHubPerMmbtu),
+    wtiPerBbl: resolveCommodityPriceField(request.customCommodity?.wtiPerBbl, "$/bbl", "WTI (oil)", request.liveCommodity?.wtiPerBbl),
+    nglPerBbl: resolveCommodityPriceField(request.customCommodity?.nglPerBbl, "$/bbl", "NGL realization", request.liveCommodity?.nglPerBbl)
+  };
 
   const annualOverrides: RrcAnnualOverrides = {};
   for (const year of RRC_FORECAST_YEARS) {
@@ -579,7 +674,14 @@ function sumQuarterly(periods: ForecastPeriodResult[], select: (p: ForecastPerio
   return (values as number[]).reduce((sum, v) => sum + v, 0);
 }
 
-function annualSummary(year: RrcForecastYear, periods: ForecastPeriodResult[], forwardYear: RrcForecastYear, forwardYearFcf: number | null, forwardYearEquityValue: number | null): RrcAnnualPeriodSummary {
+function annualSummary(
+  year: RrcForecastYear,
+  periods: ForecastPeriodResult[],
+  forwardYear: RrcForecastYear,
+  forwardYearFcf: number | null,
+  forwardYearEquityValue: number | null,
+  endingNetDebtMillion: number | null
+): RrcAnnualPeriodSummary {
   const production = summarizeAnnualProduction(periods.map((p) => ({ volumes: p.production })));
   const freeCashFlowMillion = sumQuarterly(periods, (p) => p.freeCashFlowMillion);
   const fcfYield =
@@ -594,7 +696,8 @@ function annualSummary(year: RrcForecastYear, periods: ForecastPeriodResult[], f
     ebitdaxMillion: sumQuarterly(periods, (p) => p.ebitdaxMillion),
     capexMillion: sumQuarterly(periods, (p) => p.capex.totalMillion),
     freeCashFlowMillion,
-    fcfYield
+    fcfYield,
+    endingNetDebtMillion
   };
 }
 
@@ -660,7 +763,10 @@ export function runRrcAnnualForecast(request: RrcAnnualForecastRequest): RrcAnnu
   const forwardYearFcf = sumQuarterly(periodsByYear(forwardYear), (p) => p.freeCashFlowMillion);
 
   const annual = Object.fromEntries(
-    RRC_FORECAST_YEARS.map((year) => [year, annualSummary(year, periodsByYear(year), forwardYear, forwardYearFcf, multiple.equityValueMillion)])
+    RRC_FORECAST_YEARS.map((year) => {
+      const yearEndingNetDebt = balanceSheet.find((b) => b.period === `${year}Q4`)?.netDebtMillion ?? null;
+      return [year, annualSummary(year, periodsByYear(year), forwardYear, forwardYearFcf, multiple.equityValueMillion, yearEndingNetDebt)];
+    })
   ) as Record<RrcForecastYear, RrcAnnualPeriodSummary>;
 
   // Secondary/advanced DCF only. Fixes the same class of valuation-date bug: the prior

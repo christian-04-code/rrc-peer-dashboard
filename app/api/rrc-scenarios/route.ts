@@ -5,8 +5,10 @@ import {
   resolveAnnualCostDefaults,
   resolveAnnualCapexDefault,
   resolveAnnualPricingDefaults,
+  resolveAnnualCommodityProductionDefaults,
   RRC_FORECAST_YEARS,
   type RrcAnnualForecastRequest,
+  type RrcAnnualProductionInput,
   type RrcAnnualCostsInput,
   type RrcAnnualCapexInput,
   type RrcAnnualPricingInput,
@@ -50,8 +52,13 @@ function sanitizeProduction(input: unknown): RrcAnnualForecastRequest["productio
   for (const year of RRC_FORECAST_YEARS) {
     const entry = (input as Record<string, unknown>)[year];
     if (typeof entry !== "object" || entry === null) continue;
-    const totalBcfePerDay = (entry as Record<string, unknown>).totalBcfePerDay;
-    if (validNumber(totalBcfePerDay) && totalBcfePerDay > 0) out[year] = { totalBcfePerDay };
+    const record = entry as Record<string, unknown>;
+    const sanitized: RrcAnnualProductionInput = {};
+    if (validNumber(record.totalBcfePerDay) && record.totalBcfePerDay > 0) sanitized.totalBcfePerDay = record.totalBcfePerDay;
+    if (validNumber(record.gasMmcfPerDay) && record.gasMmcfPerDay >= 0) sanitized.gasMmcfPerDay = record.gasMmcfPerDay;
+    if (validNumber(record.nglMbblPerDay) && record.nglMbblPerDay >= 0) sanitized.nglMbblPerDay = record.nglMbblPerDay;
+    if (validNumber(record.oilMbblPerDay) && record.oilMbblPerDay >= 0) sanitized.oilMbblPerDay = record.oilMbblPerDay;
+    if (Object.keys(sanitized).length > 0) out[year] = sanitized;
   }
   return out;
 }
@@ -152,6 +159,11 @@ function sanitizeRequest(body: ScenarioRequestBody): RrcAnnualForecastRequest {
     ? (body.valuation!.targetEvToEbitdax as number)
     : RRC_VALUATION_PRESETS[preset];
   const forwardYear = isYear(body.valuation?.forwardYear) ? (body.valuation!.forwardYear as RrcForecastYear) : "2027";
+  // commodityMode is accepted for backward compatibility but no longer gates behavior:
+  // customCommodity and liveCommodity are always both passed through, and rrc-annual.ts
+  // resolves each of the three prices independently (custom value wins per field, else the
+  // live/current-market value) so overriding e.g. only natural gas leaves NGL/oil on
+  // Default Forecast market pricing instead of requiring an all-or-nothing switch.
   const commodityMode = sanitizeCommodityMode(body.commodityMode);
 
   return {
@@ -161,8 +173,8 @@ function sanitizeRequest(body: ScenarioRequestBody): RrcAnnualForecastRequest {
     capex: sanitizeCapex(body.capex),
     pricing: sanitizePricing(body.pricing),
     commodityMode,
-    customCommodity: commodityMode === "custom" ? sanitizeCustomCommodity(body.customCommodity) : undefined,
-    liveCommodity: commodityMode === "current-market" ? buildCurrentMarketPrices(body.liveCommodity ?? {}) : undefined,
+    customCommodity: sanitizeCustomCommodity(body.customCommodity),
+    liveCommodity: buildCurrentMarketPrices(body.liveCommodity ?? {}),
     valuation: {
       targetEvToEbitdax,
       forwardYear,
@@ -206,6 +218,7 @@ export async function GET() {
     valuationPresets: RRC_VALUATION_PRESETS,
     guidance: rrcManagementGuidance,
     productionDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualProductionDefault(year)])),
+    commodityProductionDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCommodityProductionDefaults(year)])),
     costDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCostDefaults(year)])),
     capexDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualCapexDefault(year, strategy)])),
     pricingDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualPricingDefaults(year)])),

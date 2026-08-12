@@ -92,13 +92,13 @@ test("12. ForecastWorkspacePanel wires commoditySources from the existing resolv
   assert.match(panelSource, /from "@\/lib\/forecast\/live-market-prices"/);
 });
 
-test("current-market and custom modes are explicit, and custom values flow to the forecast API", () => {
-  assert.match(workbenchSource, /type CommodityMode = "current-market" \| "custom"/);
-  assert.match(workbenchSource, /<option value="current-market">Current market<\/option>/);
-  assert.match(workbenchSource, /<option value="custom">Custom<\/option>/);
-  assert.match(workbenchSource, /henryHubPerMmbtu:\s*parsedOrUndefined\(customHenryHub\)/);
-  assert.match(workbenchSource, /wtiPerBbl:\s*parsedOrUndefined\(customWti\)/);
-  assert.match(workbenchSource, /nglPerBbl:\s*parsedOrUndefined\(customNgl\)/);
+test("commodity price overrides are per-field (no all-or-nothing mode switch): each of gas/oil/NGL price flows to the forecast API independently, defaulting to current-market pricing when left blank", () => {
+  assert.match(workbenchSource, /henryHubPerMmbtu:\s*parsedOrUndefined\(gasPrice\)/);
+  assert.match(workbenchSource, /wtiPerBbl:\s*parsedOrUndefined\(oilPrice\)/);
+  assert.match(workbenchSource, /nglPerBbl:\s*parsedOrUndefined\(nglPrice\)/);
+  // liveCommodity (current-market pricing) is always sent alongside customCommodity so the
+  // backend can fall back to it per-field for any price the user left blank.
+  assert.match(workbenchSource, /liveCommodity,/);
 });
 
 test("Commodity cards reuse the existing workbench latest-stat styling", () => {

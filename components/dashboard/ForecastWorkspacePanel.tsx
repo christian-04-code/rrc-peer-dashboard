@@ -11,10 +11,10 @@ import type { Ticker } from "@/lib/dashboard/types";
 const FORECAST_SUPPORTED_TICKERS: ReadonlySet<Ticker> = new Set(["RRC"]);
 
 /**
- * Single-company forecasting workbench, opened from the top-nav Forecast tab. Reuses the
- * existing deterministic RRC forecast engine and RrcScenarioWorkbench rather than the old
- * top-level peer-ranking page. The engine only supports RRC today, so selecting any other
- * company renders an explicit unsupported state instead of a fabricated forecast.
+ * Opened from the top-nav Forecast tab. Reuses the existing deterministic RRC forecast
+ * engine and RrcScenarioWorkbench rather than the old top-level peer-ranking page. The
+ * engine only supports RRC today, so selecting any other company renders an explicit
+ * unsupported state instead of a fabricated forecast.
  */
 export function ForecastWorkspacePanel() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);
@@ -23,15 +23,7 @@ export function ForecastWorkspacePanel() {
   const isSupported = FORECAST_SUPPORTED_TICKERS.has(ticker);
 
   return (
-    <section className="forecast-panel" aria-labelledby="forecast-workspace-title">
-      <div className="forecast-head">
-        <div>
-          <span className="eyebrow">Single-company forecasting workbench</span>
-          <h1 id="forecast-workspace-title">Forecast</h1>
-          <p>Select a company, adjust the supported assumptions, and see the effect on forecast outputs immediately.</p>
-        </div>
-      </div>
-
+    <section className="forecast-panel" aria-label="Forecast">
       <section className="company-selector" aria-label="Forecast company selection">
         <CompanySelector companies={selectableCompanies} ticker={ticker} onSelect={setTicker} />
       </section>

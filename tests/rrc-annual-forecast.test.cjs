@@ -420,10 +420,12 @@ test("the displayed/API default cash-tax assumption (resolveAnnualCostDefaults) 
   }
 });
 
-test("the workbench presents the decimal cash-tax model input as a human-readable percent", () => {
+test("the redesigned workbench keeps cash tax rate (and other secondary assumptions) fully automatic in the backend -- no direct user control is exposed for it", () => {
   const workbench = fs.readFileSync(path.join(process.cwd(), "components", "forecast", "RrcScenarioWorkbench.tsx"), "utf8");
-  assert.match(workbench, /Cash tax rate \(decimal input\)/);
-  assert.match(workbench, /pct\(defaults\?\.costDefaults\[year\]\?\.cashTaxRate\.value \?\? null, 0\)/);
+  assert.doesNotMatch(workbench, /Cash tax rate/i);
+  assert.doesNotMatch(workbench, /setCosts|cashTaxRate:\s*event/);
+  // The user-facing controls are limited to production and commodity prices, per the redesign.
+  assert.match(workbench, /Customize Production/);
 });
 
 test("modeledCashTaxRateForYear is the single shared source of truth: both rrc-complete.ts's engine and rrc-annual.ts's reference default call it (a numeric-year comparison, not the prior string-comparison bug)", () => {
