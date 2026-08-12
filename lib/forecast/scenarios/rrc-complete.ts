@@ -146,6 +146,39 @@ function guidedAnnualValue(metric: GuidanceMetricKey, year: GuidanceYear, unit: 
 }
 
 /**
+ * For market-driven pricing differentials only (gasBasisPerMcf today; oilDifferentialPerBbl
+ * would use this too if RRC ever guides one): when RRC did not guide this exact year, prefer
+ * the current reporting cycle's OWN guided figure (year "2026", the only year this cycle
+ * guides) held flat over falling straight to a single reported quarter's realized outcome.
+ * Rationale (feat/rrc-q2-baseline follow-up, 2026-08-12): a realized quarterly differential is
+ * a backward-looking, market-driven, potentially one-off outcome (basis-hedge settlement
+ * timing, seasonal takeaway constraints, etc.); management's own current guidance -- issued
+ * the SAME day as the Q2 2026 actuals, and explicitly "improved"/"raised" this cycle -- is a
+ * more informative forward view of a structurally-driven basis position (gathering/takeaway
+ * contracts) than one quarter's noisy realized print. Falls through to null (letting the
+ * caller use its reported-anchor default) only when the metric has NO guidance in ANY year of
+ * the current cycle -- e.g. RRC does not guide an oil differential at all, so
+ * oilDifferentialPerBbl is unaffected by this helper and keeps using the reported anchor.
+ * Cost/opex per-Mcfe fields (LOE, GP&T, cash G&A, ...) are NOT routed through this: those are
+ * comparatively stable across quarters (the Q1->Q2 move was a few cents, not a sign flip) and
+ * changing their fallback policy is outside this narrow review's scope.
+ */
+function guidedOrCurrentCycleValue(metric: GuidanceMetricKey, yearKey: GuidanceYear, unit: string, period: string): SourcedValue | null {
+  const exact = guidedAnnualValue(metric, yearKey, unit, period);
+  if (exact) return exact;
+  if (yearKey === "2026") return null;
+  const currentCycle = guidedAnnualValue(metric, "2026", unit, period);
+  if (!currentCycle) return null;
+  return {
+    ...currentCycle,
+    source: {
+      ...currentCycle.source,
+      notes: `${currentCycle.source.notes} RRC did not separately guide this differential for ${yearKey}; the current cycle's only guided figure (FY 2026) is held flat rather than falling back to a single realized quarter's differential.`.trim()
+    }
+  };
+}
+
+/**
  * Modeled cash tax rate fallback when no current-cycle guidance exists, by year: 2%
  * (2026) -> 6% (2027) -> 8% (2028), as NOL shelter is used up. Single source of truth for
  * this scenario assumption -- both the engine's own periodAssumptions (below) and
@@ -285,7 +318,7 @@ function periodAssumptions(
             notes: "Reported Q1 2026 premium to NYMEX including basis hedges. Historical actual; never overridden by guidance or a user assumption."
           })
         : annualOverride?.gasBasisPerMcf ??
-          guidedAnnualValue("gasBasisPerMcf", yearKey, "$/Mcf", period) ??
+          guidedOrCurrentCycleValue("gasBasisPerMcf", yearKey, "$/Mcf", period) ??
           value({
             value: -0.47,
             unit: "$/Mcf",
@@ -342,7 +375,7 @@ function periodAssumptions(
             notes: "Reported Q1 2026 oil differential to WTI. Historical actual; never overridden by guidance or a user assumption."
           })
         : annualOverride?.oilDifferentialPerBbl ??
-          guidedAnnualValue("oilDifferentialPerBbl", yearKey, "$/bbl", period) ??
+          guidedOrCurrentCycleValue("oilDifferentialPerBbl", yearKey, "$/bbl", period) ??
           value({
             value: -9.62,
             unit: "$/bbl",

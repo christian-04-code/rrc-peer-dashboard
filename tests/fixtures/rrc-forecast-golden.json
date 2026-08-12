@@ -1,6 +1,6 @@
 {
   "capturedFrom": "main@cd8eb43",
-  "_baselineNote": "Regenerated on feat/rrc-q2-baseline (2026-08-12): the forecast engine's 'latest detailed actual' anchor moved from Q1 2026 to Q2 2026 (see lib/forecast/data/rrc-baseline.ts's rrcQ2_2026Baseline / rrcLatestDetailedBaseline, and RRC_LATEST_DETAILED_ACTUAL_PERIOD in rrc-actuals.ts) after every consumed field was independently verified against RRC's Q2 2026 Form 10-Q on the same definitional basis as the prior Q1 anchor. The values below reflect that recalibration, not a golden-fixture drift; the dominant driver of the 2027E/2028E delta from the prior fixture is the natural gas differential to NYMEX moving from a $0.18/Mcf premium (Q1) to a $0.47/Mcf discount (Q2) -- a real, verified change in RRC's realized basis, not a data artifact. productionBcfePerDay is unchanged because those totals are guidance-driven, not baseline-mix-driven.",
+  "_baselineNote": "Regenerated twice on feat/rrc-q2-baseline (2026-08-12). First pass moved the forecast engine's 'latest detailed actual' anchor from Q1 2026 to Q2 2026 (see lib/forecast/data/rrc-baseline.ts's rrcQ2_2026Baseline / rrcLatestDetailedBaseline). That pass carried RRC's single-quarter Q2 2026 REALIZED gas differential to NYMEX (-$0.47/Mcf) flat into 2027/2028 as the no-guidance fallback -- a methodology error caught on review: RRC guides its OWN forward gas differential (+$0.35-$0.40/Mcf premium vs. Henry Hub, FY2026, 'improved'/'raised', same 2026-07-22 earnings call as the Q2 actuals), and that guided figure was not being extended to 2027/2028 even though it is management's own current forward view and objectively better evidence than one volatile realized quarter for an inherently market-driven differential. Second pass (this fixture) fixes the precedence: guidedOrCurrentCycleValue in rrc-complete.ts now prefers the current cycle's own guided differential (year 2026) over the single-quarter realized fallback for any later year the metric isn't separately guided for. Net effect vs. the original Q1-anchor fixture: 2027E/2028E EBITDAX/FCF/implied share price are now HIGHER than either the original Q1-anchor or the (corrected) Q2-realized-anchor fixture, because +0.375 (guided) exceeds both +0.18 (the old Q1 modeled fallback) and -0.47 (the Q2 realized outcome). Oil is unaffected (RRC guides no oil differential in any year, so it still falls through to the Q2 2026 reported anchor). productionBcfePerDay is unchanged because those totals are guidance-driven, not pricing-driven.",
   "get": {
     "latestActualPeriod": "2026Q2",
     "forecastYears": ["2026", "2027", "2028"],
@@ -10,33 +10,33 @@
   },
   "post": {
     "default": {
-      "ebitdaxMillion": { "2026": 1979.778028409472, "2027": 1700.3341986056437, "2028": 1668.239717103157 },
-      "freeCashFlowMillion": { "2026": 1206.9623252828824, "2027": 869.1701466893053, "2028": 881.7885397349047 },
-      "impliedSharePrice": 39.591203134207014
+      "ebitdaxMillion": { "2026": 1979.778028409472, "2027": 2238.0841069637336, "2028": 2207.4629128814067 },
+      "freeCashFlowMillion": { "2026": 1206.9623252828824, "2027": 1374.65506054591, "2028": 1377.8738798508941 },
+      "impliedSharePrice": 52.11236860548044
     },
     "productionOverride": {
       "request": { "production": { "2027": { "gasMmcfPerDay": 1900 } } },
-      "ebitdax2027Million": 1776.8369878050366,
-      "impliedSharePrice": 41.372522047871385
+      "ebitdax2027Million": 2359.466794246895,
+      "impliedSharePrice": 54.938687474526574
     },
     "commodityOverride": {
       "request": { "customCommodity": { "henryHubPerMmbtu": 5 } },
-      "ebitdax2027Million": 2358.828923251339,
-      "impliedSharePrice": 54.923835053056024
+      "ebitdax2027Million": 2896.5788316094286,
+      "impliedSharePrice": 67.44500052432943
     },
     "multipleSparseOverrides": {
       "request": { "production": { "2028": { "oilMbblPerDay": 12 } }, "customCommodity": { "wtiPerBbl": 80 } },
-      "ebitdax2028Million": 2078.5925090557216,
-      "impliedSharePrice": 46.77873868165025
+      "ebitdax2028Million": 2617.8157048339704,
+      "impliedSharePrice": 59.29990415292368
     },
     "valuationMultiple": {
       "request": { "valuation": { "targetEvToEbitdax": 6.5, "forwardYear": "2027" } },
-      "impliedSharePrice": 46.78960370406284
+      "impliedSharePrice": 61.58734471556779
     },
     "forwardYear": {
       "request": { "valuation": { "targetEvToEbitdax": 5.5, "forwardYear": "2028" } },
-      "forwardEbitdaxMillion": 1668.239717103157,
-      "impliedSharePrice": 38.84390349294003
+      "forwardEbitdaxMillion": 2207.4629128814067,
+      "impliedSharePrice": 51.39937352714846
     }
   }
 }

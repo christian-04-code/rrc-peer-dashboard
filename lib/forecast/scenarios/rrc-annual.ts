@@ -294,10 +294,31 @@ const MODELED_PRICING_FALLBACKS: Record<"gasBasisPerMcf" | "oilDifferentialPerBb
   oilDifferentialPerBbl: { value: -9.62, unit: "$/bbl" }
 };
 
-/** Mirrors rrc-complete.ts exactly: guidance midpoint when RRC guided that differential for the year, else the Q2 2026 reported differential held flat (modeled). Realized gas price = Henry Hub + this value; realized oil price = WTI + this value; sign exactly as disclosed. */
+/**
+ * Mirrors rrc-complete.ts's guidedOrCurrentCycleValue exactly (feat/rrc-q2-baseline
+ * follow-up, 2026-08-12): guidance midpoint for the exact requested year when it exists;
+ * else the current cycle's own guided figure (year "2026", the only year this cycle
+ * guides) held flat, in preference to a single realized quarter -- management's own
+ * current forward view is more informative than one quarter's noisy print for an
+ * inherently market-driven differential. Only falls to the Q2 2026 reported differential
+ * when the metric has no guidance in ANY year of the current cycle (true for
+ * oilDifferentialPerBbl today; RRC does not guide an oil differential). Realized gas price
+ * = Henry Hub + this value; realized oil price = WTI + this value; sign exactly as
+ * disclosed.
+ */
 export function resolveAnnualPricingDefault(metric: "gasBasisPerMcf" | "oilDifferentialPerBbl", year: RrcForecastYear): ResolvedAnnualValue {
   const guidance = findGuidance(rrcManagementGuidance, metric, year);
   if (guidance && guidance.midpoint !== null) return guidanceToResolved(guidance);
+  if (year !== "2026") {
+    const currentCycleGuidance = findGuidance(rrcManagementGuidance, metric, "2026");
+    if (currentCycleGuidance && currentCycleGuidance.midpoint !== null) {
+      const resolved = guidanceToResolved(currentCycleGuidance);
+      return {
+        ...resolved,
+        notes: `${resolved.notes} RRC did not separately guide this differential for ${year}; the current cycle's only guided figure (FY 2026) is held flat rather than falling back to a single realized quarter's differential.`.trim()
+      };
+    }
+  }
   const fallback = MODELED_PRICING_FALLBACKS[metric];
   return {
     value: fallback.value,
