@@ -95,6 +95,6 @@ test("chart rendering is driven by selectedTickers without a privileged first se
   assert.match(chartSource, /selectedTickers\.flatMap/);
   assert.match(chartSource, /getSelectedChartGuidance\(selectedTickers, metric\)/);
   assert.doesNotMatch(chartSource, /comparisonTickers|primary-legend|seriesIndex === 0/);
-  assert.match(chartSource, /Internal Model Forecast/);
+  assert.doesNotMatch(chartSource, /Internal Model Forecast|buildForecastChartSeries|model-forecast/);
   assert.match(chartSource, /Actual/);
 });

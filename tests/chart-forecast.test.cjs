@@ -85,16 +85,12 @@ test("Q1 and Q2 2026 stay historical actuals for every peer and neither can appe
   assert.equal(forecastPeriods[0], "Q3 2026");
 });
 
-test("ChartWorkspace renders internal model forecasts with a non-dashed treatment", () => {
+test("Overview charts exclude internal model forecasts while the Forecast engine remains intact", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "ChartWorkspace.tsx"), "utf8");
-  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
-  assert.match(source, /model-forecast-line/);
-  assert.doesNotMatch(source, /className=\{`\$\{lineClass\} forecast-line`\}/);
-  assert.match(css, /\.company-line\.model-forecast-line\s*\{[^}]*opacity/);
-  assert.doesNotMatch(css, /\.model-forecast-line\s*\{[^}]*stroke-dasharray/);
-  assert.match(css, /\.management-guidance-line[^}]*stroke-dasharray/);
-  assert.match(source, /buildForecastChartSeries/);
-  assert.match(source, /"revenue"/);
-  assert.match(source, /"ebitdax"/);
-  assert.doesNotMatch(source, /"valuation"/);
+  const home = fs.readFileSync(path.join(process.cwd(), "components", "HomeDashboard.tsx"), "utf8");
+  const forecastPanel = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "ForecastWorkspacePanel.tsx"), "utf8");
+  assert.doesNotMatch(source, /buildForecastChartSeries|FORECAST_CHART_PERIODS|model-forecast|Internal Model Forecast|modeled/i);
+  assert.doesNotMatch(home, /currentMarketPrices=\{currentMarketPrices\}|buildCurrentMarketPricesFromMarketResponse/);
+  assert.match(forecastPanel, /RrcScenarioWorkbench/);
+  assert.equal(buildForecastChartSeries("RRC", "revenue").length, FORECAST_CHART_PERIODS.length);
 });

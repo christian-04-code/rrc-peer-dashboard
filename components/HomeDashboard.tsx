@@ -19,7 +19,6 @@ import {
 import type { Metric, Ticker, View } from "@/lib/dashboard/types";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
-import { buildCurrentMarketPricesFromMarketResponse } from "@/lib/forecast/live-market-prices";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
@@ -96,11 +95,6 @@ export function HomeDashboard() {
     setDrawer(value);
   }
 
-  const currentMarketPrices = useMemo(
-    () => buildCurrentMarketPricesFromMarketResponse(market.data),
-    [market.data]
-  );
-
   function activateCompany(nextTicker: Ticker) {
     setCompanyComparison((current) => updateCompanyComparison(current, nextTicker));
   }
@@ -164,7 +158,7 @@ export function HomeDashboard() {
                     <div className="tabs">{(["production", "revenue", "fcf", "capex", "debt", "ebitdax"] as Metric[]).map((key) => <button key={key} className={metric === key ? "active" : ""} onClick={() => setMetric(key)}>{labelMetric(key)}</button>)}</div>
                   </div>
 
-                  <ChartWorkspace selectedTickers={selectedTickers} title={`Company comparison · ${labelMetric(metric)}`} metric={metric} currentMarketPrices={currentMarketPrices} />
+                  <ChartWorkspace selectedTickers={selectedTickers} title={`Company comparison · ${labelMetric(metric)}`} metric={metric} />
                   <PeerComparisonMatrix selectedTickers={selectedTickers} metric={metric} />
                 </div>
 

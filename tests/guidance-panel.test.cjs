@@ -111,3 +111,13 @@ test("HomeDashboard still renders the existing compact GuidancePanel", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "HomeDashboard.tsx"), "utf8");
   assert.match(source, /GuidancePanel/);
 });
+
+test("full guidance drawer uses bright white labels and the existing light-blue value accent", () => {
+  const drawer = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "DetailDrawer.tsx"), "utf8");
+  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
+  assert.match(drawer, /className="guidance-label"/);
+  assert.match(drawer, /className="guidance-value"/);
+  assert.match(css, /\.guidance-row \.guidance-label\s*\{[^}]*color:\s*var\(--text\)/);
+  assert.match(css, /\.guidance-row \.guidance-value\s*\{[^}]*color:\s*#8fd6ff/);
+  assert.match(css, /--text:\s*#eef5fb/);
+});

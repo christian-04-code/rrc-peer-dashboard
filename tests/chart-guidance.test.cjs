@@ -169,8 +169,31 @@ test("the management guidance toggle changes only overlay visibility", () => {
   assert.match(source, /aria-pressed=\{showManagementGuidance\}/);
   assert.match(source, /guidance\.status === "provided"/);
   assert.match(source, /actualPaths\.map/);
-  assert.match(source, /modeledPaths\.map/);
+  assert.doesNotMatch(source, /modeledPaths|buildForecastChartSeries|Internal Model Forecast/);
   assert.match(source, /management-guidance-line/);
+});
+
+test("point and range guidance retain period, conversion, ticker, status, source, and date metadata", () => {
+  const point = getChartGuidance("CNX", "fcf").points[0];
+  assert.equal(point.kind, "point");
+  assert.equal(point.ticker, "CNX");
+  assert.equal(point.period, "FY 2026");
+  assert.equal(point.plotPeriod, "Q4 2026");
+  assert.equal(point.unit, "$MM");
+  assert.ok(Number.isFinite(point.chartValue));
+  assert.ok(point.status);
+  assert.ok(point.source);
+  assert.match(point.sourceDate, /^2026-/);
+
+  const range = getChartGuidance("AR", "production").points.find((candidate) => candidate.period === "FY 2026");
+  assert.equal(range.kind, "range");
+  assert.equal(range.ticker, "AR");
+  assert.equal(range.plotPeriod, "Q4 2026");
+  assert.equal(range.chartLow, 4150);
+  assert.equal(range.chartHigh, 4200);
+  assert.equal(range.status, "raised");
+  assert.ok(range.sourceLocation);
+  assert.match(range.sourceDate, /^2026-/);
 });
 
 test("removed explanatory copy remains absent and current tooltips preserve status and official source", () => {

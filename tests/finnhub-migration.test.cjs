@@ -15,10 +15,11 @@ test("ForecastWorkspacePanel no longer polls FMP; commodity inputs use OilPriceA
   assert.match(source, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
 });
 
-test("HomeDashboard's forecast chart commodity prices use OilPriceAPI-first/EIA-fallback (FMP removed from that flow)", () => {
-  const source = readComponent("components", "HomeDashboard.tsx");
-  assert.doesNotMatch(source, /buildCurrentMarketPricesFromFmpAndEia/);
-  assert.match(source, /buildCurrentMarketPricesFromMarketResponse\(market\.data\)/);
+test("Overview no longer sends commodity prices to chart forecasts; ForecastWorkspacePanel retains the live-price flow", () => {
+  const home = readComponent("components", "HomeDashboard.tsx");
+  const forecast = readComponent("components", "dashboard", "ForecastWorkspacePanel.tsx");
+  assert.doesNotMatch(home, /buildCurrentMarketPricesFromFmpAndEia|buildCurrentMarketPricesFromMarketResponse|currentMarketPrices=/);
+  assert.match(forecast, /extractLiveMarketMetricsFromMarketResponse\(market\.data\)/);
 });
 
 test("MarketRibbon still reads through useMarketData/EIA (not a direct Finnhub/FMP hook); Brent stays EIA-only", () => {

@@ -30,20 +30,18 @@ test("historical series tooltips preserve each metric's approved source precisio
   assert.match(source, /maximumFractionDigits: precision/);
 });
 
-test("modeled/forecast points are labeled Modeled, while historical actuals are not", () => {
-  assert.match(source, /point\.modeled/);
-  assert.match(source, /\bModeled\b/);
-  assert.match(source, /modeled = index >= splitIndex/);
+test("Overview tooltips contain no modeled forecast point state or label", () => {
+  assert.doesNotMatch(source, /point\.modeled|\bModeled\b|model-forecast/);
 });
 
 test("null values never render a circle/point (no fake tooltips for unsupported data)", () => {
   assert.match(source, /if \(value === null\) return null;/);
 });
 
-test("existing SVG structure and single-charting-library constraint are preserved while dashed styling belongs to guidance", () => {
+test("existing SVG structure and single-charting-library constraint are preserved while dashed styling belongs only to guidance", () => {
   const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
   assert.doesNotMatch(source, /from "recharts"|from "chart\.js"|from "d3"|from "victory"/);
-  assert.match(source, /model-forecast-line/);
+  assert.doesNotMatch(source, /model-forecast-line|Internal Model Forecast/);
   assert.match(source, /management-guidance-line/);
   assert.match(css, /management-guidance-line[^}]*stroke-dasharray/);
   assert.match(source, /<svg/);

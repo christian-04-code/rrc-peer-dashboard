@@ -4,14 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { getAllQuartersForTicker, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
 import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
 import { getCompanyColor } from "@/lib/dashboard/company-colors";
-import {
-  buildForecastChartSeries,
-  FORECAST_CHART_PERIODS,
-  forecastQuarterLabel,
-  type ForecastChartMetric
-} from "@/lib/dashboard/chart-forecast";
 import { getSelectedChartGuidance, getVisibleChartGuidance, type ChartGuidancePoint } from "@/lib/dashboard/chart-guidance";
-import type { RrcCurrentMarketPrices } from "@/lib/forecast/scenarios/rrc-complete";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
 const WIDTH = 760;
@@ -20,9 +13,6 @@ const LEFT = 62;
 const RIGHT = 28;
 const TOP = 40;
 const BOTTOM = 48;
-
-const FORECAST_METRICS = new Set<Metric>(["revenue", "ebitdax", "fcf"]);
-const FORECAST_AXIS_LABELS = FORECAST_CHART_PERIODS.map(forecastQuarterLabel);
 
 const metricConfig: Record<Metric, {
   label: string;
@@ -88,7 +78,6 @@ type SeriesHoverPoint = {
   ticker: Ticker;
   period: string;
   value: number;
-  modeled: boolean;
 };
 
 type GuidanceHoverPoint = {
@@ -104,16 +93,13 @@ type HoverPoint = SeriesHoverPoint | GuidanceHoverPoint;
 export function ChartWorkspace({
   selectedTickers,
   title,
-  metric,
-  currentMarketPrices
+  metric
 }: {
   selectedTickers: Ticker[];
   title: string;
   metric: Metric;
-  currentMarketPrices?: RrcCurrentMarketPrices;
 }) {
   const config = metricConfig[metric];
-  const showsForecast = FORECAST_METRICS.has(metric);
   const tickerKey = selectedTickers.join(",");
   const [hover, setHover] = useState<HoverPoint | null>(null);
   const [showManagementGuidance, setShowManagementGuidance] = useState(false);
@@ -138,22 +124,15 @@ export function ChartWorkspace({
       const actualByQuarter = new Map(
         getAllQuartersForTicker(seriesTicker).map((row) => [row.quarter, config.value(row)])
       );
-      const actualValues = actualAxisQuarters.map((quarter) => actualByQuarter.get(quarter) ?? null);
-      if (!showsForecast) return { ticker: seriesTicker, values: actualValues };
-
-      const forecastPoints = buildForecastChartSeries(seriesTicker, metric as ForecastChartMetric, currentMarketPrices);
-      const forecastValues = FORECAST_CHART_PERIODS.map((_, index) => forecastPoints[index]?.value ?? null);
-      return { ticker: seriesTicker, values: [...actualValues, ...forecastValues] };
+      return { ticker: seriesTicker, values: actualAxisQuarters.map((quarter) => actualByQuarter.get(quarter) ?? null) };
     });
-  }, [selectedTickers, metric, showsForecast, currentMarketPrices, actualAxisQuarters, config]);
+  }, [selectedTickers, actualAxisQuarters, config]);
 
   const guidanceAxisPeriods = buildGuidanceAxisPeriods(visibleGuidance.map((point) => point.plotPeriod));
   const axisQuarters = Array.from(new Set([
     ...actualAxisQuarters,
-    ...(showsForecast ? FORECAST_AXIS_LABELS : []),
     ...guidanceAxisPeriods
   ]));
-  const splitIndex = actualAxisQuarters.length;
   const numericValues = [
     ...series.flatMap((item) => item.values.filter((value): value is number => value !== null)),
     ...visibleGuidance.flatMap((point) => point.kind === "point" ? [point.chartValue] : [point.chartLow, point.chartHigh])
@@ -222,21 +201,14 @@ export function ChartWorkspace({
           const lineClass = "company-line";
           const pointClass = "company-line-point";
           const color = getCompanyColor(item.ticker);
-          const actualPaths = buildPathSegments(item.values.slice(0, splitIndex), xFor, yFor);
-          const modeledPaths = showsForecast
-            ? buildPathSegments(item.values.slice(splitIndex), (index) => xFor(index + splitIndex), yFor)
-            : [];
+          const actualPaths = buildPathSegments(item.values, xFor, yFor);
           return (
             <Fragment key={item.ticker}>
               {actualPaths.map((path, segmentIndex) => (
                 <path key={`actual-${item.ticker}-${segmentIndex}`} className={lineClass} style={{ stroke: color }} d={path} fill="none" />
               ))}
-              {modeledPaths.map((path, segmentIndex) => (
-                <path key={`modeled-${item.ticker}-${segmentIndex}`} className={`${lineClass} model-forecast-line`} style={{ stroke: color }} d={path} fill="none" />
-              ))}
               {item.values.map((value, index) => {
                 if (value === null) return null;
-                const modeled = index >= splitIndex;
                 const pointKey = `${item.ticker}-${axisQuarters[index]}`;
                 const point: SeriesHoverPoint = {
                   kind: "series",
@@ -245,20 +217,19 @@ export function ChartWorkspace({
                   y: yFor(value),
                   ticker: item.ticker,
                   period: axisQuarters[index],
-                  value,
-                  modeled
+                  value
                 };
                 return (
                   <circle
                     key={pointKey}
-                    className={`${pointClass}${modeled ? " model-forecast-point" : ""}`}
+                    className={pointClass}
                     style={{ fill: color }}
                     cx={point.x}
                     cy={point.y}
                     r={3}
                     tabIndex={0}
                     role="img"
-                  aria-label={`${item.ticker} ${axisQuarters[index]} ${formatSeriesValue(value, config.precision)} ${config.unit}${modeled ? " modeled" : ""}`}
+                    aria-label={`${item.ticker} ${axisQuarters[index]} ${formatSeriesValue(value, config.precision)} ${config.unit}`}
                     onMouseEnter={() => setHover(point)}
                     onMouseLeave={() => setHover((current) => (current?.key === pointKey ? null : current))}
                     onFocus={() => setHover(point)}
@@ -331,7 +302,6 @@ export function ChartWorkspace({
           </span>
         ))}
         <span className="chart-semantic-legend actual-legend">Actual</span>
-        {showsForecast ? <span className="chart-semantic-legend model-legend">Internal Model Forecast</span> : null}
         {guidance.status === "provided" ? <span className="chart-semantic-legend guidance-legend">Management Guidance</span> : null}
       </div>
     </div>
@@ -365,8 +335,8 @@ function guidanceMarkOffset(point: ChartGuidancePoint, points: ChartGuidancePoin
   return (position - (samePeriod.length - 1) / 2) * 8;
 }
 
-// Single reusable tooltip renderer for every selected company, actual/modeled point,
-// and management-guidance mark so hover behavior stays consistent across metrics.
+// Single reusable tooltip renderer for every selected company actual point and
+// management-guidance mark so hover behavior stays consistent across metrics.
 function ChartPointTooltip({
   point,
   unit,
@@ -382,8 +352,7 @@ function ChartPointTooltip({
 }) {
   const lines = point.kind === "guidance" ? guidanceTooltipLines(point.point) : [
     `${point.ticker} · ${point.period}`,
-    `${formatSeriesValue(point.value, seriesPrecision)} ${unit}`,
-    ...(point.modeled ? ["Modeled"] : [])
+    `${formatSeriesValue(point.value, seriesPrecision)} ${unit}`
   ];
   const boxWidth = point.kind === "guidance" ? 250 : 140;
   const lineHeight = 15;
@@ -399,7 +368,7 @@ function ChartPointTooltip({
     <g className="chart-tooltip" pointerEvents="none">
       <rect x={left} y={clampedTop} width={boxWidth} height={boxHeight} rx={6} />
       {lines.map((line, index) => (
-        <text key={`${line}-${index}`} className={line === "Modeled" ? "chart-tooltip-modeled" : undefined} x={left + padding} y={clampedTop + padding + lineHeight * (index + 1) - 4}>
+        <text key={`${line}-${index}`} x={left + padding} y={clampedTop + padding + lineHeight * (index + 1) - 4}>
           {line}
         </text>
       ))}
