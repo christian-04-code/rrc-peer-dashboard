@@ -328,3 +328,39 @@ test("opening the Customize panel does not by itself change the displayed result
   // recomputes anything, so expanding it cannot change what's on screen.
   assert.doesNotMatch(workbenchSource, /onToggle/);
 });
+
+// --- Commodity pricing cards cleanup pass ---
+
+test("the production-override and commodity-price helper paragraphs are removed (methodology now lives in tooltips only)", () => {
+  assert.doesNotMatch(workbenchSource, /Overriding commodity production changes the resulting total production scenario/);
+  assert.doesNotMatch(workbenchSource, /Default pricing uses the current-market methodology/);
+});
+
+test("the visible 'Override ($/MMBtu)' / 'Override ($/bbl)' labels are removed from the three price cards, but the override inputs remain (with an aria-label for accessibility)", () => {
+  assert.doesNotMatch(workbenchSource, />\s*Override \(\$\/MMBtu\)/);
+  assert.doesNotMatch(workbenchSource, />\s*Override \(\$\/bbl\)/);
+  assert.match(workbenchSource, /aria-label="Natural Gas price override \(\$\/MMBtu\)"/);
+  assert.match(workbenchSource, /aria-label="NGL price override \(\$\/bbl\)"/);
+  assert.match(workbenchSource, /aria-label="Oil price override \(\$\/bbl\)"/);
+  // Placeholders still make the purpose obvious.
+  assert.match(workbenchSource, /placeholder="Default: current market"/);
+  assert.match(workbenchSource, /placeholder="Default: modeled from WTI"/);
+});
+
+test("24h price change is colored using the dashboard's existing positive/negative classes, not a hardcoded inline color, and stays muted at exactly zero", () => {
+  const fnStart = workbenchSource.indexOf("function change24hClass");
+  assert.notEqual(fnStart, -1, "expected a change24hClass function in RrcScenarioWorkbench.tsx");
+  const fnBody = workbenchSource.slice(fnStart, workbenchSource.indexOf("\n}", fnStart));
+  assert.match(fnBody, /if \(percent === null \|\| percent === 0\) return undefined;/);
+  assert.match(fnBody, /return percent > 0 \? "positive" : "negative";/);
+  assert.match(workbenchSource, /<small className=\{change24hClass\(data\.change24hPercent\)\}>\{change\}<\/small>/);
+  assert.doesNotMatch(workbenchSource, /change24hPercent[^;]*style=\{\{\s*color/);
+});
+
+test("commodity price cards still show the commodity name, benchmark, current price, source, and 24h change", () => {
+  assert.match(workbenchSource, /<span className="wb-price-card-label">Natural Gas<\/span>/);
+  assert.match(workbenchSource, /<span className="wb-price-card-label">NGL<\/span>/);
+  assert.match(workbenchSource, /<span className="wb-price-card-label">Oil<\/span>/);
+  assert.match(workbenchSource, /<CommodityPriceCard label="Henry Hub" data=\{commoditySources\.henryHub\} \/>/);
+  assert.match(workbenchSource, /<CommodityPriceCard label="WTI" data=\{commoditySources\.wti\} \/>/);
+});

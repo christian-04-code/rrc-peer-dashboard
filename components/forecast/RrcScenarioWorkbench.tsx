@@ -116,6 +116,12 @@ function formatChange24h(percent: number | null): string | null {
   return `${sign}${percent.toFixed(2)}% 24h`;
 }
 
+/** Reuses the dashboard's existing positive/negative semantic color classes (see app/globals.css) rather than hardcoding a color. */
+function change24hClass(percent: number | null): string | undefined {
+  if (percent === null || percent === 0) return undefined;
+  return percent > 0 ? "positive" : "negative";
+}
+
 function CommodityPriceCard({ label, data }: { label: string; data: ResolvedCommodityPrice }) {
   const change = formatChange24h(data.change24hPercent);
   return (
@@ -123,7 +129,7 @@ function CommodityPriceCard({ label, data }: { label: string; data: ResolvedComm
       <span>{label}</span>
       <strong>{formatCommodityPrice(data.value, data.unit)}</strong>
       <small>{COMMODITY_SOURCE_LABELS[data.classification]}</small>
-      {change ? <small>{change}</small> : null}
+      {change ? <small className={change24hClass(data.change24hPercent)}>{change}</small> : null}
     </div>
   );
 }
@@ -454,9 +460,6 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 </tbody>
               </table>
             </div>
-            <p className="wb-callout">
-              Overriding commodity production changes the resulting total production scenario. Reported historical periods remain unchanged.
-            </p>
           </div>
 
           <div className="wb-customize-col">
@@ -466,8 +469,14 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                 <span className="wb-price-card-label">Natural Gas</span>
                 <CommodityPriceCard label="Henry Hub" data={commoditySources.henryHub} />
                 <label className="wb-price-override">
-                  Override ($/MMBtu)
-                  <input type="number" step="0.01" placeholder="Default: current market" value={gasPrice} onChange={(event) => setGasPrice(event.target.value)} />
+                  <input
+                    type="number"
+                    step="0.01"
+                    aria-label="Natural Gas price override ($/MMBtu)"
+                    placeholder="Default: current market"
+                    value={gasPrice}
+                    onChange={(event) => setGasPrice(event.target.value)}
+                  />
                 </label>
               </div>
               <div className="wb-price-card">
@@ -478,20 +487,31 @@ export function RrcScenarioWorkbench({ currentMarketPrices, commoditySources: pr
                   <small>Management Sensitivity · Modeled</small>
                 </div>
                 <label className="wb-price-override">
-                  Override ($/bbl)
-                  <input type="number" step="0.01" placeholder="Default: modeled from WTI" value={nglPrice} onChange={(event) => setNglPrice(event.target.value)} />
+                  <input
+                    type="number"
+                    step="0.01"
+                    aria-label="NGL price override ($/bbl)"
+                    placeholder="Default: modeled from WTI"
+                    value={nglPrice}
+                    onChange={(event) => setNglPrice(event.target.value)}
+                  />
                 </label>
               </div>
               <div className="wb-price-card">
                 <span className="wb-price-card-label">Oil</span>
                 <CommodityPriceCard label="WTI" data={commoditySources.wti} />
                 <label className="wb-price-override">
-                  Override ($/bbl)
-                  <input type="number" step="0.01" placeholder="Default: current market" value={oilPrice} onChange={(event) => setOilPrice(event.target.value)} />
+                  <input
+                    type="number"
+                    step="0.01"
+                    aria-label="Oil price override ($/bbl)"
+                    placeholder="Default: current market"
+                    value={oilPrice}
+                    onChange={(event) => setOilPrice(event.target.value)}
+                  />
                 </label>
               </div>
             </div>
-            <p className="wb-callout">Default pricing uses the current-market methodology. Override any price to use your own assumption.</p>
           </div>
         </div>
 
