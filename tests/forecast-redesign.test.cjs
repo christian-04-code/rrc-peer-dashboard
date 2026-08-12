@@ -85,9 +85,11 @@ test("4. 2027 production default is management's guided midpoint (2.6 Bcfe/d), u
 // --- 5. Custom Production & Prices dropdown is closed by default ---
 
 test("5. the Customize Production & Prices disclosure has no `open` attribute -- closed by default", () => {
-  const detailsStart = workbenchSource.indexOf("<details className=\"ann-details\">\n        <summary>\n          Customize Production");
-  assert.notEqual(detailsStart, -1, "expected to find the Customize Production & Prices <details> block");
-  const openingTag = workbenchSource.slice(detailsStart, detailsStart + 40);
+  const labelIndex = workbenchSource.indexOf("Customize Production &amp; Prices");
+  assert.notEqual(labelIndex, -1, "expected to find the Customize Production & Prices label");
+  const detailsStart = workbenchSource.lastIndexOf("<details", labelIndex);
+  assert.notEqual(detailsStart, -1, "expected a <details> wrapping the Customize Production & Prices label");
+  const openingTag = workbenchSource.slice(detailsStart, workbenchSource.indexOf(">", detailsStart) + 1);
   assert.doesNotMatch(openingTag, /\bopen\b/, "the disclosure must not be open by default");
 });
 
@@ -288,4 +290,41 @@ test("resolveRrcAnnualInputs merges commodity prices per-field: a custom natural
   assert.equal(resolved.currentMarketPrices.henryHubPerMmbtu.source.classification, "user");
   assert.equal(resolved.currentMarketPrices.wtiPerBbl.value, 68);
   assert.equal(resolved.currentMarketPrices.wtiPerBbl.source.classification, "live");
+});
+
+// --- UI polish pass: source cards, working tooltips, override count, Run Scenario ---
+
+test("source cards render with semantic colors: Latest Reported = positive/green, Management Guidance = negative/red, Market Pricing = accent/blue", () => {
+  assert.match(workbenchSource, /wb-source-card wb-source-card--positive[\s\S]{0,120}Latest Reported/);
+  assert.match(workbenchSource, /wb-source-card wb-source-card--negative[\s\S]{0,120}Management Guidance/);
+  assert.match(workbenchSource, /wb-source-card wb-source-card--accent[\s\S]{0,120}Market Pricing/);
+});
+
+test("tooltips are a working hover/focus popover component, not the native title attribute", () => {
+  assert.doesNotMatch(workbenchSource, /title=\{text\}/, "must not rely on the native title attribute, which previously failed to display");
+  assert.match(workbenchSource, /className="info-tip-bubble" role="tooltip"/);
+  // Every InfoTip usage carries its own explanation text.
+  const infoTipCount = (workbenchSource.match(/<InfoTip/g) || []).length;
+  assert.ok(infoTipCount >= 11, `expected at least 11 InfoTip usages (one per required tooltip area), found ${infoTipCount}`);
+});
+const cssSource = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "ForecastPanel.css"), "utf8");
+test("the tooltip bubble shows on CSS :hover and :focus-within (works via mouse and keyboard, no native title dependency)", () => {
+  assert.match(cssSource, /\.info-tip:hover \.info-tip-bubble,\s*\.info-tip:focus-within \.info-tip-bubble/);
+});
+
+test("Customize Production & Prices shows a live override count starting at 0", () => {
+  assert.match(workbenchSource, /Overrides: \{overrideCount\}/);
+  assert.match(workbenchSource, /const overrideCount =/);
+});
+
+test("Run Scenario is restored as the primary action; the old 'Apply overrides' wording is gone", () => {
+  assert.match(workbenchSource, /▶ Run Scenario/);
+  assert.match(workbenchSource, /className="wb-btn-primary" onClick=\{\(\) => void runScenario\(\)\}/);
+  assert.doesNotMatch(workbenchSource, /Apply overrides/);
+});
+
+test("opening the Customize panel does not by itself change the displayed result -- only runScenario (Run Scenario) does", () => {
+  // The <details> disclosure toggles via native open/close only; no onToggle handler
+  // recomputes anything, so expanding it cannot change what's on screen.
+  assert.doesNotMatch(workbenchSource, /onToggle/);
 });

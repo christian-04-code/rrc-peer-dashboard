@@ -61,18 +61,77 @@
 .ann-details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text); }
 .ann-details[open] summary { margin-bottom: 6px; }
 
-.info-tip { display: inline-flex; align-items: center; justify-content: center; margin-left: 5px; color: var(--muted); cursor: help; vertical-align: middle; }
-.info-tip:hover, .info-tip:focus-visible { color: var(--accent); }
+/* Working hover/focus tooltip -- CSS-driven (not the native title attribute), matching the
+   dashboard's existing card styling (panel/border/text tokens). */
+.info-tip { position: relative; display: inline-flex; margin-left: 6px; vertical-align: middle; }
+.info-tip-trigger { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); font-size: 10px; font-weight: 700; font-style: italic; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: help; padding: 0; }
+.info-tip-trigger:hover, .info-tip-trigger:focus-visible { color: #fff; background: var(--accent); border-color: var(--accent); }
+.info-tip-bubble { position: absolute; left: 50%; transform: translateX(-50%) translateY(4px); width: max-content; max-width: 260px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--text); box-shadow: 0 10px 28px rgba(0,0,0,.4); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease; z-index: 60; text-align: left; text-transform: none; letter-spacing: normal; }
+.info-tip--top .info-tip-bubble { bottom: calc(100% + 9px); }
+.info-tip--bottom .info-tip-bubble { top: calc(100% + 9px); transform: translateX(-50%) translateY(-4px); }
+.info-tip--left .info-tip-bubble { left: 0; transform: translateY(4px); }
+.info-tip--left.info-tip--bottom .info-tip-bubble, .info-tip--left.info-tip--top .info-tip-bubble { left: 0; }
+.info-tip:hover .info-tip-bubble, .info-tip:focus-within .info-tip-bubble { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.info-tip--left:hover .info-tip-bubble, .info-tip--left:focus-within .info-tip-bubble { transform: translateY(0); }
 
-.wb-context-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.wb-context-row .badge { display: inline-flex; align-items: center; }
+/* Three color-coded source/status cards at the top of the page. */
+.wb-source-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.wb-source-card { border: 1px solid var(--border); border-left-width: 3px; background: var(--panel); border-radius: 12px; padding: 13px 15px; display: grid; gap: 4px; }
+.wb-source-label { display: flex; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.wb-source-card strong { font-size: 15px; }
+.wb-source-card small { color: var(--muted); font-size: 11px; }
+.wb-source-card--positive { border-left-color: var(--positive); }
+.wb-source-card--positive .wb-source-label { color: var(--positive); }
+.wb-source-card--negative { border-left-color: var(--negative); }
+.wb-source-card--negative .wb-source-label { color: var(--negative); }
+.wb-source-card--accent { border-left-color: var(--accent); }
+.wb-source-card--accent .wb-source-label { color: var(--accent); }
 
-.wb-btn-primary, .wb-btn-secondary { padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+/* Default Forecast: a stronger, denser table treatment than the plain forecast-table default. */
+.wb-primary-table { width: 100%; border-collapse: collapse; }
+.wb-primary-table thead th { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 6px 12px 10px; border-bottom: 2px solid var(--border); }
+.wb-primary-table thead th:first-child { text-align: left; }
+.wb-primary-table tbody th, .wb-primary-table tbody td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.wb-primary-table tbody th { text-align: left; font-weight: 500; color: var(--text); white-space: nowrap; }
+.wb-primary-table tbody td { text-align: right; font-variant-numeric: tabular-nums; }
+.wb-primary-table tbody tr:last-child th, .wb-primary-table tbody tr:last-child td { border-bottom: 0; }
+.wb-primary-table tr.wb-row-emphasis th, .wb-primary-table tr.wb-row-emphasis td { font-weight: 700; }
+.wb-table-scroll { overflow-x: visible; }
+@media (max-width: 720px) { .wb-table-scroll { overflow-x: auto; } }
+
+.wb-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wb-summary-title { display: inline-flex; align-items: center; }
+.wb-override-count { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); background: var(--panel-2); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.wb-override-count.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+.wb-customize-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wb-customize-col { display: grid; gap: 10px; align-content: start; }
+
+.wb-callout { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+.wb-price-card { border: 1px solid var(--border); background: var(--panel-2); border-radius: 10px; padding: 11px 12px; display: grid; gap: 8px; }
+.wb-price-card .wb-latest-stat { border: 0; background: transparent; padding: 0; }
+.wb-price-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.wb-price-override { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
+.wb-price-override input { width: 100%; padding: 7px 9px; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 7px; }
+
+.wb-valuation-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+.wb-btn-primary, .wb-btn-secondary { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .wb-btn-primary { border: 1px solid var(--accent); background: var(--accent); color: #04111d; }
 .wb-btn-primary:disabled { border-color: var(--border); background: var(--panel-2); color: var(--muted); }
 .wb-btn-secondary { border: 1px solid var(--border); background: transparent; color: var(--text); }
 .wb-btn-secondary:disabled { color: var(--muted); }
 
+.wb-result-card--primary { border-color: var(--accent); background: var(--accent-soft); }
+.wb-result-card--primary strong { font-size: clamp(24px, 3vw, 30px); color: var(--accent); }
+
+@media (max-width: 860px) {
+  .wb-customize-grid { grid-template-columns: 1fr; }
+  .wb-valuation-controls { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 720px) {
   .forecast-head { flex-direction: column; align-items: stretch; }
+  .wb-source-grid { grid-template-columns: 1fr; }
 }

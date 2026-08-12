@@ -19,6 +19,7 @@ import { latestReportedProduction, type RrcPost2027Strategy } from "@/lib/foreca
 import { buildCurrentMarketPrices, type LiveMarketMetric } from "@/lib/forecast/live-market-prices";
 import { rrcManagementGuidance } from "@/lib/forecast/guidance/rrc";
 import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
+import { RRC_LATEST_ACTUAL_PERIOD } from "@/lib/forecast/data/rrc-actuals";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,7 @@ export async function GET() {
 
   return NextResponse.json({
     latestReportedProduction: LATEST_REPORTED_PRODUCTION_SUMMARY,
+    latestActualPeriod: RRC_LATEST_ACTUAL_PERIOD,
     valuationPresets: RRC_VALUATION_PRESETS,
     guidance: rrcManagementGuidance,
     productionDefaults: Object.fromEntries(RRC_FORECAST_YEARS.map((year) => [year, resolveAnnualProductionDefault(year)])),

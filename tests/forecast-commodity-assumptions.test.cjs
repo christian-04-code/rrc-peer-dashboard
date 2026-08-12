@@ -38,10 +38,10 @@ test("5. Modeled fallback preserves the app's existing 'Management Sensitivity' 
   assert.match(workbenchSource, /modeled:\s*"Management Sensitivity · Modeled"/);
 });
 
-test("6. The model input / price actually used for this scenario run is visible, not just an abstract 'current market' figure", () => {
+test("6. the resolved price actually used for this scenario run is visible via the shared CommodityPriceCard, not just an abstract label", () => {
   const commoditySection = section("function CommodityPriceCard");
   assert.match(commoditySection, /formatCommodityPrice\(data\.value, data\.unit\)/);
-  assert.match(commoditySection, /Model input for this scenario run/);
+  assert.match(commoditySection, /COMMODITY_SOURCE_LABELS\[data\.classification\]/);
 });
 
 test("7. 24h percent change renders when supplied, using the already-normalized change24hPercent field (no re-derivation)", () => {
