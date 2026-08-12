@@ -15,7 +15,7 @@ test("RRC Valuations widget resolves EPS, EBITDAX, Market Cap, and P/E for the c
   assert.equal(metrics.length, 4);
 
   const eps = byKey(metrics, "eps");
-  assert.equal(eps.current, null);
+  assert.equal(eps.current, 0.79);
   assert.equal(eps.previous, 0.66);
   assert.equal(eps.currentPeriod, "Q2 2026");
   assert.equal(eps.previousPeriod, "Q2 2025");
@@ -33,14 +33,14 @@ test("RRC Valuations widget resolves EPS, EBITDAX, Market Cap, and P/E for the c
   assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
 });
 
-test("a peer ticker without extracted EPS/net-income renders '--' (null) for EPS and P/E, not a fabricated value", () => {
+test("peer EPS and historical P/E resolve from FactSet actuals while unsupported current market cap stays blank", () => {
   const metrics = getValuationSnapshot("AR");
   const eps = byKey(metrics, "eps");
   const pe = byKey(metrics, "pe");
-  assert.equal(eps.current, null);
-  assert.equal(eps.previous, null);
+  assert.equal(eps.current, 0.761931);
+  assert.equal(eps.previous, 0.351268);
   assert.equal(pe.current, null);
-  assert.equal(pe.previous, null);
+  assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
 
   // Q2 market cap remains unsupported; EBITDAX is independently sourced and resolves.
   const marketCap = byKey(metrics, "marketCap");

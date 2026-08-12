@@ -5241,7 +5241,8 @@
             "Q2 2025": -68.498,
             "Q3 2025": -92.35,
             "Q4 2025": -67,
-            "Q1 2026": -151.4
+            "Q1 2026": -151.4,
+            "Q2 2026": -211
           },
           "source_by_quarter": {
             "Q1 2024": "SEC Form 8-K Exhibit 99.1 filed 2024-05-01; CRK earnings release; company-reported free cash flow reconciliation for the quarter.",
@@ -5252,7 +5253,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value -78.99",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value -73.672",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value -66.804",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value -206.126"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value -206.126",
+            "Q2 2026": "FactSet E&P Company Model (Actual); standalone Q2 2026A free cash flow."
           },
           "notes": "Company-reported free cash flow (or adjusted free cash flow where that is the company's primary disclosed measure); standalone quarterly values in $MM.",
           "factset_overridden_quarters": [
@@ -5263,7 +5265,8 @@
             "Q2 2025",
             "Q3 2025",
             "Q4 2025",
-            "Q1 2026"
+            "Q1 2026",
+            "Q2 2026"
           ]
         },
         "Capital Expenditures": {

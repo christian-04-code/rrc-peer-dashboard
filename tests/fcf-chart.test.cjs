@@ -31,11 +31,11 @@ test("historical FCF remains numeric across the shared nine-quarter auxiliary ra
   assert.ok(sawNegative, "at least one historical quarter (e.g. CRK) should be negative and render correctly, not get dropped");
 });
 
-test("remaining priority peers store the approved Q2 2026 FCF values without inventing CRK FCF", () => {
+test("Q2 2026 peer FCF uses approved actuals plus the verified CRK FactSet fallback", () => {
   const approved = {
     AR: 219.759,
     CNX: 138,
-    CRK: null,
+    CRK: -211,
     EQT: 329.666,
     EXE: 343,
     GPOR: 6.4

@@ -71,7 +71,7 @@ const crk: Partial<Record<Quarter, SourcedValue>> = {
   "Q3 2025": { value: -92.35, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q4 2025": { value: -67.0, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
   "Q1 2026": { value: -151.4, source: "factset", basis: "derived", note: CRK_FCF_NOTE },
-  "Q2 2026": { value: null, source: "codex", basis: "actual", note: "CRK Q2 2026 free cash flow was not safely resolved in the approved audit; intentionally unavailable, never zero, carried forward, or estimated." }
+  "Q2 2026": { value: -211.0, source: "factset", basis: "derived", note: `${CRK_FCF_NOTE} Q2 2026A is the workbook's reported standalone-quarter value; it replaces the prior unresolved placeholder.` }
 };
 
 const eqt: Partial<Record<Quarter, SourcedValue>> = {

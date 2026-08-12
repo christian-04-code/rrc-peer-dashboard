@@ -22,8 +22,8 @@
  *   suspect (EXE Q1 2024, pre-merger entity). Both were left null with source "codex"
  *   rather than silently pulled in as a fallback -- see extraction report for detail.
  *
- * EXTRACTION DATE: 2026-08-04 (RRC netIncome/operatingCashFlow/cashAndEquivalents/
- * totalDebt added 2026-08-10 -- see below)
+ * EXTRACTION DATE: 2026-08-04 (supporting fields added 2026-08-10; FactSet
+ * reported net income expanded to every supported peer/quarter 2026-08-12)
  *
  * Every leaf value is a SourcedValue: { value, source, basis, note? }.
  *   - value: the number as it appears in the source workbook, or null when the
@@ -32,12 +32,11 @@
  *   - source: "codex" | "factset" -- which workbook the cell came from. Almost every
  *     cell in this fixture is "codex"; the tag is kept per-cell (not file-level) so a
  *     future FactSet backfill can be merged in without silently blending series. The
- *     one exception: RRC.netIncome is "factset" (E&P_Facset_Company_Model.xlsx, RRC
- *     sheet, "Reported Net Income ($mm)" row, Q1 2024A-Q1 2026A columns) because the
- *     Codex workbook does not carry net income as its own line -- it only appears,
- *     unstored, inside the Normalized EBITDAX bridge methodology note. This is
- *     FactSet's transcription of company-reported net income (an "A"/actual column,
- *     not an estimate), not a consensus figure.
+ *     netIncome is "factset" (E&P_Facset_Company_Model.xlsx, each peer sheet,
+ *     "Reported Net Income ($mm)" row, Q1 2024A-Q2 2026A actual columns) because
+ *     the Codex workbook does not carry net income as its own line. GPOR Q2 2026 is
+ *     explicitly #N/A and remains absent. These are FactSet transcriptions of
+ *     company-reported actuals, not consensus estimates.
  *   - basis: "actual" | "derived" | "guidance" -- "actual" means taken directly from
  *     a company-reported or filed figure; "derived" means Codex (or this extraction)
  *     calculated the figure from other reported figures (e.g. net debt = gross debt
@@ -64,6 +63,7 @@
  */
 
 import type { Ticker } from "./company-registry";
+import { getQuarterlyNetIncome } from "./eps-quarterly";
 
 export type Quarter =
   | "Q1 2024" | "Q2 2024" | "Q3 2024" | "Q4 2024"
@@ -2541,11 +2541,12 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
 export function getQuarterlyFinancials(ticker: Ticker, quarter: Quarter): QuarterlyFinancials {
   const row = data[ticker][quarter];
   if (!row) throw new Error(`No reported financials for ${ticker} ${quarter}`);
-  return row;
+  const netIncome = row.netIncome ?? getQuarterlyNetIncome(ticker, quarter);
+  return netIncome === undefined || row.netIncome ? row : { ...row, netIncome };
 }
 
 export function getAllQuartersForTicker(ticker: Ticker): QuarterlyFinancials[] {
-  return Object.values(data[ticker]);
+  return quarters.map((quarter) => getQuarterlyFinancials(ticker, quarter));
 }
 
 export const financialsQuarterly = data;

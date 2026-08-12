@@ -43,11 +43,42 @@ test("multiple selected tickers preserve selection order and deselection removes
 });
 
 test("unsupported values format as double dash rather than falling back to another quarter", () => {
-  const matrix = getPeerComparisonMatrix(["RRC", "AR"], "Q2 2026");
+  const matrix = getPeerComparisonMatrix(["RRC", "GPOR"], "Q2 2026");
   assert.equal(findRow(matrix, "marketCap").values.RRC.value, null);
   assert.equal(findRow(matrix, "marketCap").values.RRC.displayValue, "--");
-  assert.equal(findRow(matrix, "eps").values.AR.value, null);
-  assert.equal(findRow(matrix, "eps").values.AR.displayValue, "--");
+  assert.equal(findRow(matrix, "eps").values.GPOR.value, null);
+  assert.equal(findRow(matrix, "eps").values.GPOR.displayValue, "--");
+});
+
+test("all 840 peer-quarter-metric cells are audited with only unsupported values left blank", () => {
+  const tickers = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
+  const missingByMetric = {};
+  let total = 0;
+  let missing = 0;
+
+  for (const quarter of getPeerComparisonQuarters()) {
+    const matrix = getPeerComparisonMatrix(tickers, quarter);
+    for (const row of matrix.groups.flatMap((group) => group.rows)) {
+      for (const ticker of tickers) {
+        total += 1;
+        if (row.values[ticker].value === null) {
+          missing += 1;
+          missingByMetric[row.key] = (missingByMetric[row.key] ?? 0) + 1;
+        }
+      }
+    }
+  }
+
+  assert.equal(total, 840);
+  assert.equal(missing, 113);
+  assert.deepEqual(missingByMetric, {
+    netDebtToEbitdax: 21,
+    fcfYield: 28,
+    marketCap: 7,
+    eps: 1,
+    pe: 28,
+    evToEbitdax: 28
+  });
 });
 
 test("historical valuation and LTM metrics resolve at the selected quarter", () => {

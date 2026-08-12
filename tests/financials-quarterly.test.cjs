@@ -1,28 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const Module = require("node:module");
 const path = require("node:path");
-const ts = require("typescript");
-
-function load(relativePath) {
-  const filename = path.resolve(process.cwd(), relativePath);
-  const source = fs.readFileSync(filename, "utf8");
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-      esModuleInterop: true
-    },
-    fileName: filename
-  }).outputText;
-
-  const loaded = new Module(filename, module);
-  loaded.filename = filename;
-  loaded.paths = Module._nodeModulePaths(path.dirname(filename));
-  loaded._compile(output, filename);
-  return loaded.exports;
-}
+const { load } = require("./helpers/ts-loader.cjs");
 
 const { getQuarterlyFinancials, getAllQuartersForTicker, quarters } = load("lib/dashboard/financials-quarterly.ts");
 
@@ -55,12 +35,18 @@ test("cashAndEquivalents and totalDebt are quarter-end balance-sheet point-in-ti
   assert.equal(q1_2026.totalDebt.value - q1_2026.cashAndEquivalents.value, q1_2026.netDebt.value);
 });
 
-test("non-RRC tickers do not have the four new fields fabricated -- they remain undefined, not zero or copied from RRC", () => {
+test("peer net income uses FactSet actuals while unsupported balance-sheet helpers remain absent", () => {
   for (const ticker of ["AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
     const rows = getAllQuartersForTicker(ticker);
     assert.equal(rows.length, 10, `${ticker} should have 10 quarters through Q2 2026`);
     for (const row of rows) {
-      assert.equal(row.netIncome, undefined, `${ticker} ${row.quarter} netIncome should remain unset`);
+      if (ticker === "GPOR" && row.quarter === "Q2 2026") {
+        assert.equal(row.netIncome, undefined, "GPOR Q2 2026 net income is #N/A in FactSet");
+      } else {
+        assert.ok(Number.isFinite(row.netIncome?.value), `${ticker} ${row.quarter} netIncome should be present`);
+        assert.equal(row.netIncome.source, "factset");
+        assert.equal(row.netIncome.basis, "actual");
+      }
       assert.equal(row.operatingCashFlow, undefined, `${ticker} ${row.quarter} operatingCashFlow should remain unset`);
       assert.equal(row.cashAndEquivalents, undefined, `${ticker} ${row.quarter} cashAndEquivalents should remain unset`);
       assert.equal(row.totalDebt, undefined, `${ticker} ${row.quarter} totalDebt should remain unset`);
@@ -98,12 +84,12 @@ test("remaining priority peers add only the approved Q2 2026 actuals and preserv
   }
 });
 
-test("duplicated historical JSON stores the approved Q2 values and omits CRK FCF", () => {
+test("duplicated historical JSON stores the approved Q2 values including the verified CRK FCF fallback", () => {
   const historical = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "data/historical.json"), "utf8"));
   const approved = {
     AR: [4144, 1559.842, 219.759, 326, 2634.7, 595.437],
     CNX: [1664.8, 618.484, 138, 142, 2239.488, 290],
-    CRK: [1242.879, 470.262, undefined, 446.869, 3088.872, 244.811],
+    CRK: [1242.879, 470.262, -211, 446.869, 3088.872, 244.811],
     EQT: [6972.242, 1809.94, 329.666, 666.258, 5542.851, 1202.99],
     EXE: [7482, 2960, 343, 851, 3075, 1183],
     GPOR: [962.8, 323.228, 6.4, 148.6, 928.946, 179.1]
@@ -114,7 +100,7 @@ test("duplicated historical JSON stores the approved Q2 values and omits CRK FCF
     const stored = metrics.map((metric) => historical.companies[ticker].metrics[metric].values["Q2 2026"]);
     assert.deepEqual(stored, values);
   }
-  assert.equal(Object.hasOwn(historical.companies.CRK.metrics["Free Cash Flow"].values, "Q2 2026"), false);
+  assert.match(historical.companies.CRK.metrics["Free Cash Flow"].source_by_quarter["Q2 2026"], /FactSet E&P Company Model/);
 });
 
 test("RRC adds only the accepted Q2 2026 actuals and preserves Q1 2026", () => {
