@@ -19,7 +19,7 @@ export type PeerMetricKey =
   | "pe"
   | "evToEbitdax";
 
-export type PeerMetricCell = { value: number | null; displayValue: string; period: Quarter | null };
+export type PeerMetricCell = { value: number | null; displayValue: string };
 export type PeerMetricRow = {
   key: PeerMetricKey;
   label: string;
@@ -30,6 +30,12 @@ export type PeerMetricGroup = { label: string; rows: PeerMetricRow[] };
 export type PeerComparisonMatrix = { tickers: Ticker[]; groups: PeerMetricGroup[] };
 
 const latestQuarter = quarters[quarters.length - 1];
+
+export const DEFAULT_PEER_COMPARISON_QUARTER = latestQuarter;
+
+export function getPeerComparisonQuarters(): Quarter[] {
+  return [...quarters].reverse();
+}
 
 export const chartMetricRow: Record<Metric, PeerMetricKey> = {
   production: "production",
@@ -58,26 +64,24 @@ export function calculateEvToEbitdax(
   return (marketCap + netDebt) / ltmEbitdax;
 }
 
-export function getPeerComparisonMatrix(selectedTickers: Ticker[]): PeerComparisonMatrix {
+export function getPeerComparisonMatrix(
+  selectedTickers: Ticker[],
+  quarter: Quarter = DEFAULT_PEER_COMPARISON_QUARTER
+): PeerComparisonMatrix {
   const row = (
     key: PeerMetricKey,
     label: string,
     unit: string,
-    read: (ticker: Ticker) => { value: number | null; period: Quarter | null },
+    read: (ticker: Ticker) => number | null,
     format: (value: number | null) => string
   ): PeerMetricRow => ({
     key,
     label,
     unit,
     values: Object.fromEntries(selectedTickers.map((ticker) => {
-      const cell = read(ticker);
-      return [ticker, { ...cell, displayValue: format(cell.value) }];
+      const value = read(ticker);
+      return [ticker, { value, displayValue: format(value) }];
     })) as Record<Ticker, PeerMetricCell>
-  });
-
-  const latestActual = (read: (ticker: Ticker, quarter: Quarter) => number | null) => (ticker: Ticker) => ({
-    value: read(ticker, latestQuarter),
-    period: latestQuarter
   });
 
   return {
@@ -86,39 +90,39 @@ export function getPeerComparisonMatrix(selectedTickers: Ticker[]): PeerComparis
       {
         label: "Operating",
         rows: [
-          row("production", "Production", "MMcfe/d", latestActual((ticker, quarter) => getQuarterlyFinancials(ticker, quarter).production.total.value), formatNumber),
-          row("revenue", "Revenue", "$MM", latestActual((ticker, quarter) => getQuarterlyFinancials(ticker, quarter).revenue.value), formatMoney),
-          row("ebitdax", "Adjusted EBITDAX", "$MM", latestActual((ticker, quarter) => getQuarterlyFinancials(ticker, quarter).adjustedEbitdax.value), formatMoney),
-          row("fcf", "Free Cash Flow", "$MM", latestActual((ticker, quarter) => getQuarterlyFreeCashFlow(ticker, quarter).value), formatMoney),
-          row("capex", "Capital Expenditures", "$MM", latestActual((ticker, quarter) => getQuarterlyFinancials(ticker, quarter).capitalExpenditures.value), formatMoney)
+          row("production", "Production", "MMcfe/d", (ticker) => getQuarterlyFinancials(ticker, quarter).production.total.value, formatNumber),
+          row("revenue", "Revenue", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).revenue.value, formatMoney),
+          row("ebitdax", "Adjusted EBITDAX", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).adjustedEbitdax.value, formatMoney),
+          row("fcf", "Free Cash Flow", "$MM", (ticker) => getQuarterlyFreeCashFlow(ticker, quarter).value, formatMoney),
+          row("capex", "Capital Expenditures", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).capitalExpenditures.value, formatMoney)
         ]
       },
       {
         label: "Balance Sheet / Capital",
         rows: [
-          row("netDebt", "Net Debt", "$MM", latestActual((ticker, quarter) => getQuarterlyFinancials(ticker, quarter).netDebt.value), formatMoney),
-          row("netDebtToEbitdax", "Net Debt / EBITDAX", "LTM", latestActual((ticker, quarter) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value), formatMultiple),
-          row("fcfYield", "FCF Yield", "LTM", (ticker) => latestSupported((quarter) => {
+          row("netDebt", "Net Debt", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).netDebt.value, formatMoney),
+          row("netDebtToEbitdax", "Net Debt / EBITDAX", "LTM", (ticker) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value, formatMultiple),
+          row("fcfYield", "FCF Yield", "LTM", (ticker) => {
             const marketCap = getQuarterlyMarketCap(ticker, quarter)?.value ?? null;
             return calculateFcfYield(getLtmFreeCashFlow(ticker, quarter), marketCap);
-          }), formatPercent)
+          }, formatPercent)
         ]
       },
       {
         label: "Valuation",
         rows: [
-          row("marketCap", "Market Cap", "$MM", (ticker) => latestSupported((quarter) => getQuarterlyMarketCap(ticker, quarter)?.value ?? null), formatMoney),
-          row("eps", "EPS", "$/share", (ticker) => latestSupported((quarter) => getQuarterlyEps(ticker, quarter)?.value ?? null), formatPerShare),
-          row("pe", "P/E", "LTM", (ticker) => latestSupported((quarter) => {
+          row("marketCap", "Market Cap", "$MM", (ticker) => getQuarterlyMarketCap(ticker, quarter)?.value ?? null, formatMoney),
+          row("eps", "EPS", "$/share", (ticker) => getQuarterlyEps(ticker, quarter)?.value ?? null, formatPerShare),
+          row("pe", "P/E", "LTM", (ticker) => {
             const marketCap = getQuarterlyMarketCap(ticker, quarter)?.value ?? null;
             const netIncome = getLtmNetIncome(ticker, quarter).value;
             return finite(marketCap) && finite(netIncome) && netIncome !== 0 ? marketCap / netIncome : null;
-          }), formatMultiple),
-          row("evToEbitdax", "EV / EBITDAX", "LTM", (ticker) => latestSupported((quarter) => calculateEvToEbitdax(
+          }, formatMultiple),
+          row("evToEbitdax", "EV / EBITDAX", "LTM", (ticker) => calculateEvToEbitdax(
             getQuarterlyMarketCap(ticker, quarter)?.value ?? null,
             getQuarterlyFinancials(ticker, quarter).netDebt.value,
             getLtmAdjustedEbitdax(ticker, quarter).value
-          )), formatMultiple)
+          ), formatMultiple)
         ]
       }
     ]
@@ -131,14 +135,6 @@ function getLtmFreeCashFlow(ticker: Ticker, quarter: Quarter): number | null {
   const values = quarters.slice(index - 3, index + 1).map((period) => getQuarterlyFreeCashFlow(ticker, period).value);
   if (values.some((value) => !finite(value))) return null;
   return (values as number[]).reduce((sum, value) => sum + value, 0);
-}
-
-function latestSupported(read: (quarter: Quarter) => number | null): { value: number | null; period: Quarter | null } {
-  for (const period of [...quarters].reverse()) {
-    const value = read(period);
-    if (finite(value)) return { value, period };
-  }
-  return { value: null, period: null };
 }
 
 function finite(value: number | null): value is number {

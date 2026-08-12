@@ -1,10 +1,17 @@
-import { Fragment, memo, useMemo } from "react";
+import { Fragment, memo, useMemo, useState } from "react";
 import { getCompanyColor } from "@/lib/dashboard/company-colors";
-import { getActivePeerMetricRow, getPeerComparisonMatrix } from "@/lib/dashboard/peer-comparison-metrics";
+import {
+  DEFAULT_PEER_COMPARISON_QUARTER,
+  getActivePeerMetricRow,
+  getPeerComparisonMatrix,
+  getPeerComparisonQuarters
+} from "@/lib/dashboard/peer-comparison-metrics";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
 
 export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selectedTickers, metric }: { selectedTickers: Ticker[]; metric: Metric }) {
-  const matrix = useMemo(() => getPeerComparisonMatrix(selectedTickers), [selectedTickers]);
+  const [quarter, setQuarter] = useState(DEFAULT_PEER_COMPARISON_QUARTER);
+  const availableQuarters = useMemo(() => getPeerComparisonQuarters(), []);
+  const matrix = useMemo(() => getPeerComparisonMatrix(selectedTickers, quarter), [quarter, selectedTickers]);
   const activeRow = getActivePeerMetricRow(metric);
 
   return (
@@ -12,9 +19,13 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
       <div className="peer-matrix-head">
         <div>
           <span id="peer-matrix-title">Peer Comparison Matrix</span>
-          <small>Latest supported reported and calculated metrics</small>
+          <small>Reported and calculated metrics</small>
         </div>
-        <small>Values show source period</small>
+        <span className="peer-matrix-period">
+          <select aria-label="Matrix quarter" value={quarter} onChange={(event) => setQuarter(event.target.value as typeof quarter)}>
+            {availableQuarters.map((period) => <option key={period} value={period}>{period}</option>)}
+          </select>
+        </span>
       </div>
       <div className="peer-matrix-scroll" tabIndex={0} aria-label="Scrollable peer comparison matrix">
         <table style={{ minWidth: `${180 + matrix.tickers.length * 116}px` }}>
@@ -42,7 +53,6 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
                         return (
                           <td key={ticker} className={cell.value === null ? "unsupported" : undefined}>
                             <span>{cell.displayValue}</span>
-                            <small>{cell.period ?? "Unsupported"}</small>
                           </td>
                         );
                       })}

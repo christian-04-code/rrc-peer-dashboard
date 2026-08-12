@@ -126,6 +126,11 @@ h2 { font-size: 15px; }
 .peer-matrix-head > div { display: grid; gap: 2px; }
 .peer-matrix-head span { font-size: 12px; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
 .peer-matrix-head small { color: var(--muted); font-size: 9px; }
+.peer-matrix-period { position: relative; flex: 0 0 auto; }
+.peer-matrix-period::after { content: "⌄"; position: absolute; right: 8px; top: 50%; color: #8fd6ff; font-size: 13px; line-height: 1; pointer-events: none; transform: translateY(-58%); }
+.peer-matrix-period select { appearance: none; min-width: 92px; border: 1px solid rgba(53,183,255,.58); border-radius: 7px; padding: 5px 25px 5px 9px; background: var(--panel-2); color: #8fd6ff; font: inherit; font-size: 10px; font-weight: 750; letter-spacing: .025em; cursor: pointer; }
+.peer-matrix-period select:hover { border-color: #35b7ff; background: var(--accent-soft); }
+.peer-matrix-period select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .peer-matrix-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; scrollbar-color: #38516d transparent; }
 .peer-matrix-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .peer-matrix table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
@@ -140,9 +145,7 @@ h2 { font-size: 15px; }
 .peer-matrix-row th span, .peer-matrix-row th small { display: block; }
 .peer-matrix-row th small { margin-top: 1px; color: var(--muted); font-size: 8px; font-weight: 500; }
 .peer-matrix-row td { height: 34px; text-align: right; }
-.peer-matrix-row td span, .peer-matrix-row td small { display: block; }
-.peer-matrix-row td span { font-size: 11px; font-weight: 680; }
-.peer-matrix-row td small { margin-top: 1px; color: var(--muted); font-size: 8px; }
+.peer-matrix-row td span { display: block; font-size: 11px; font-weight: 680; }
 .peer-matrix-row td.unsupported span { color: var(--muted); font-weight: 500; }
 .peer-matrix-row.active th, .peer-matrix-row.active td { background: rgba(0,129,198,.095); }
 .peer-matrix-row.active th { box-shadow: inset 2px 0 var(--accent), 1px 0 var(--border); color: #9fddff; }
@@ -461,7 +464,6 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-segmented { flex: 0 0 auto; }
   .workspace-toolbar { align-items: flex-start; flex-direction: column; }
   .workspace { padding: 12px; }
-  .peer-matrix-head > small { display: none; }
   aside { grid-template-columns: 1fr; }
   .map-toolbar { align-items: flex-start; flex-direction: column; }
 }

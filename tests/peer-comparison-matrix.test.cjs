@@ -7,8 +7,10 @@ const { load } = require("./helpers/ts-loader.cjs");
 const {
   calculateEvToEbitdax,
   calculateFcfYield,
+  DEFAULT_PEER_COMPARISON_QUARTER,
   getActivePeerMetricRow,
-  getPeerComparisonMatrix
+  getPeerComparisonMatrix,
+  getPeerComparisonQuarters
 } = load("lib/dashboard/peer-comparison-metrics.ts");
 
 function findRow(matrix, key) {
@@ -19,15 +21,43 @@ test("selected ticker creates a matrix column", () => {
   assert.deepEqual(getPeerComparisonMatrix(["RRC"]).tickers, ["RRC"]);
 });
 
+test("quarter selector defaults to the latest canonical peer quarter and derives all options from that dataset", () => {
+  assert.equal(DEFAULT_PEER_COMPARISON_QUARTER, "Q2 2026");
+  assert.deepEqual(getPeerComparisonQuarters(), [
+    "Q2 2026", "Q1 2026", "Q4 2025", "Q3 2025", "Q2 2025",
+    "Q1 2025", "Q4 2024", "Q3 2024", "Q2 2024", "Q1 2024"
+  ]);
+});
+
+test("changing the selected quarter updates every matrix value from that requested period", () => {
+  const current = getPeerComparisonMatrix(["RRC"], "Q2 2026");
+  const historical = getPeerComparisonMatrix(["RRC"], "Q4 2025");
+  assert.equal(findRow(current, "production").values.RRC.value, 2296.399);
+  assert.equal(findRow(historical, "production").values.RRC.value, 2316.485);
+  assert.notEqual(findRow(current, "revenue").values.RRC.value, findRow(historical, "revenue").values.RRC.value);
+});
+
 test("multiple selected tickers preserve selection order and deselection removes the column", () => {
   assert.deepEqual(getPeerComparisonMatrix(["RRC", "EQT", "CNX"]).tickers, ["RRC", "EQT", "CNX"]);
   assert.deepEqual(getPeerComparisonMatrix(["RRC", "CNX"]).tickers, ["RRC", "CNX"]);
 });
 
-test("unsupported values format as double dash rather than zero", () => {
-  const matrix = getPeerComparisonMatrix(["RRC", "AR"]);
+test("unsupported values format as double dash rather than falling back to another quarter", () => {
+  const matrix = getPeerComparisonMatrix(["RRC", "AR"], "Q2 2026");
+  assert.equal(findRow(matrix, "marketCap").values.RRC.value, null);
+  assert.equal(findRow(matrix, "marketCap").values.RRC.displayValue, "--");
   assert.equal(findRow(matrix, "eps").values.AR.value, null);
   assert.equal(findRow(matrix, "eps").values.AR.displayValue, "--");
+});
+
+test("historical valuation and LTM metrics resolve at the selected quarter", () => {
+  const q4 = getPeerComparisonMatrix(["RRC"], "Q4 2025");
+  const q1 = getPeerComparisonMatrix(["RRC"], "Q1 2026");
+  assert.equal(findRow(q4, "marketCap").values.RRC.value, 8410);
+  assert.equal(findRow(q1, "marketCap").values.RRC.value, 10650);
+  for (const key of ["netDebtToEbitdax", "fcfYield", "pe", "evToEbitdax"]) {
+    assert.notEqual(findRow(q4, key).values.RRC.value, findRow(q1, key).values.RRC.value, `${key} must change with the selected trailing period`);
+  }
 });
 
 test("chart metrics map to their corresponding matrix highlight row", () => {
@@ -58,4 +88,11 @@ test("RRC plus multiple peers produces all columns and responsive overflow style
 test("HomeDashboard passes the same selectedTickers and active metric to the matrix", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "HomeDashboard.tsx"), "utf8");
   assert.match(source, /<PeerComparisonMatrix selectedTickers=\{selectedTickers\} metric=\{metric\} \/>/);
+});
+
+test("matrix UI renders one quarter selector and no repeated source-period labels", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "PeerComparisonMatrix.tsx"), "utf8");
+  assert.match(source, /<select aria-label="Matrix quarter"/);
+  assert.doesNotMatch(source, /Values show source period/);
+  assert.doesNotMatch(source, /cell\.period|Unsupported<\/small>/);
 });
