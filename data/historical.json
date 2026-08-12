@@ -295,7 +295,8 @@
             "Q2 2025": 1497.771,
             "Q3 2025": 1534.065,
             "Q4 2025": 1603.233,
-            "Q1 2026": 1508.842
+            "Q1 2026": 1508.842,
+            "Q2 2026": 1548.871
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -306,7 +307,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily natural gas production, 1,548,871 Mcf/d for the three months ended June 30, 2026 (converted to MMcf/d)."
           },
           "notes": null
         },
@@ -324,7 +326,8 @@
             "Q2 2025": 110.209,
             "Q3 2025": 110.42,
             "Q4 2025": 113.523,
-            "Q1 2026": 108.193
+            "Q1 2026": 108.193,
+            "Q2 2026": 118.113
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -335,7 +338,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily NGL production, 118,113 Bbl/d for the three months ended June 30, 2026 (converted to Mbbl/d)."
           },
           "notes": null
         },
@@ -353,7 +357,8 @@
             "Q2 2025": 6.382,
             "Q3 2025": 5.208,
             "Q4 2025": 5.352,
-            "Q1 2026": 8.239
+            "Q1 2026": 8.239,
+            "Q2 2026": 6.475
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -364,7 +369,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily oil production, 6,475 Bbl/d for the three months ended June 30, 2026 (converted to Mbbl/d)."
           },
           "notes": null
         },
@@ -382,7 +388,8 @@
             "Q2 2025": 3.13,
             "Q3 2025": 2.96,
             "Q4 2025": 3.43,
-            "Q1 2026": 4.85
+            "Q1 2026": 4.85,
+            "Q2 2026": 2.79
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.05",
@@ -393,7 +400,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.92",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.56",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.259372",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.18"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.18",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A average prices table: natural gas price including derivative settlements but before third-party transportation costs, three months ended June 30, 2026 -- matching this metric's established convention (rrc-baseline.ts's \"realizedGasIncludingDerivativesPerMcf\" definition). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": null,
           "factset_overridden_quarters": [
@@ -422,7 +430,8 @@
             "Q2 2025": 23.88,
             "Q3 2025": 22.48,
             "Q4 2025": 23.1,
-            "Q1 2026": 26.62
+            "Q1 2026": 26.62,
+            "Q2 2026": 29.1
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 26.24",
@@ -433,7 +442,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 23.73",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 22.09",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 23.09904",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A average prices table: NGL price excluding derivative settlements, three months ended June 30, 2026 -- matching this metric's established convention."
           },
           "notes": null,
           "factset_overridden_quarters": [
@@ -461,7 +471,8 @@
             "Q2 2025": 54.22,
             "Q3 2025": 57.61,
             "Q4 2025": 47.81,
-            "Q1 2026": 58.41
+            "Q1 2026": 58.41,
+            "Q2 2026": 83.96
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 64.64",
@@ -472,7 +483,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 52.77",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 54.25",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 47.81236",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 63.3"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 63.3",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, MD&A average prices table: oil price excluding derivative settlements, three months ended June 30, 2026 -- matching this metric's established convention. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": null,
           "factset_overridden_quarters": [
@@ -501,7 +513,8 @@
             "Q2 2025": 0.11,
             "Q3 2025": 0.11,
             "Q4 2025": 0.14,
-            "Q1 2026": 0.14
+            "Q1 2026": 0.14,
+            "Q2 2026": 0.133
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -512,7 +525,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025 operating-cost disclosure, pp. 44-45; standalone Q4 LOE excluding workovers/stock compensation not directly disclosed with sufficient precision",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q: Direct operating expense $27,791 thousand / total production 208,972.309 MMcfe (2,296.399 MMcfe/d x 91 days), three months ended June 30, 2026."
           },
           "notes": "Lease operating expense excludes workovers and stock-based compensation. Direct 10-Q quarterly values retained; Q4 left blank where the filing does not provide an exact standalone value at sufficient precision."
         },
@@ -530,7 +544,8 @@
             "Q2 2025": 1.52,
             "Q3 2025": 1.47,
             "Q4 2025": 1.461129,
-            "Q1 2026": 1.63
+            "Q1 2026": 1.63,
+            "Q2 2026": 1.516
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -541,7 +556,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q: Transportation, gathering, processing and compression $316,812 thousand / total production 208,972.309 MMcfe, three months ended June 30, 2026."
           },
           "notes": null
         },
@@ -559,7 +575,8 @@
             "Q2 2025": 0.16,
             "Q3 2025": 0.17,
             "Q4 2025": 0.183181,
-            "Q1 2026": 0.18
+            "Q1 2026": 0.18,
+            "Q2 2026": 0.2283
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -570,7 +587,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q: General and administrative $47,707 thousand / total production 208,972.309 MMcfe, three months ended June 30, 2026 -- matching this metric's established RRC historical.json convention of using the reported G&A/Mcfe figure directly (this is a simpler convention than the stricter cash-only treatment used in the separate forecast-engine baseline at lib/forecast/data/rrc-baseline.ts, which leaves this field unavailable; the two datasets document different conventions for this field and are each internally consistent)."
           },
           "notes": null
         },
@@ -588,7 +606,8 @@
             "Q2 2025": 1.840014803256717,
             "Q3 2025": 1.795136635750216,
             "Q4 2025": 1.827516469903714,
-            "Q1 2026": 1.971787244109549
+            "Q1 2026": 1.971787244109549,
+            "Q2 2026": 1.9105
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, operations, pp. 24-28; direct three-month/quarter-end filing value",
@@ -599,7 +618,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, operations, pp. 21-25; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, operations, pp. 42-45 and p. F-7 / PDF 61; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, operations, pp. 20-23; direct three-month/quarter-end filing value",
+            "Q2 2026": "Calculated per this metric's established RRC formula (LOE + transportation/gathering/processing/compression + taxes other than income + cash G&A, divided by production) from the RRC Q2 2026 Form 10-Q: (27,791 + 316,812 + 6,926 + 47,707) thousand / 208,972.309 MMcfe."
           },
           "notes": "Cash production costs = LOE excluding workovers/stock compensation + transportation/gathering/processing/compression + taxes other than income + cash G&A, divided by production. Exact filing amounts; Q4 from exact FY less nine-month amounts."
         },
@@ -617,7 +637,8 @@
             "Q2 2025": 20.0,
             "Q3 2025": 16.0,
             "Q4 2025": null,
-            "Q1 2026": 9.0
+            "Q1 2026": 9.0,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
@@ -628,7 +649,8 @@
             "Q2 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q3 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
             "Q4 2025": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
-            "Q1 2026": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only"
+            "Q1 2026": "Not disclosed as comparable unique quarterly wells drilled; 10-K annual control only",
+            "Q2 2026": "Left null, consistent with this metric's established RRC policy: RRC's Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-22) discloses \"Range drilled ~190,000 lateral feet across 11 wells\" during the quarter, but this metric's notes explicitly reject earnings-release wells-drilled language for RRC because it does not reconcile to the 10-K's annual gross-productive-development-wells definition used for other quarters. Not populated to avoid mixing two incompatible definitions of the same metric."
           },
           "notes": "Unavailable quarterly: RRC 10-K drilling table reports annual gross productive development wells (52 in 2024; 54 in 2025), but reviewed quarterly materials do not disclose comparable unique wells drilled by quarter. Quarterly activity-across-wells language was not used because it does not reconcile to the 10-K definition."
         },
@@ -646,7 +668,8 @@
             "Q2 2025": 12.0,
             "Q3 2025": 15.0,
             "Q4 2025": 10.0,
-            "Q1 2026": 17.0
+            "Q1 2026": 17.0,
+            "Q2 2026": 21.0
           },
           "source_by_quarter": {
             "Q1 2024": "RRC Q1 2024 release Wells TIL table",
@@ -657,7 +680,8 @@
             "Q2 2025": "Calculated: 1H 2025 Wells TIL less Q1 2025",
             "Q3 2025": "Calculated: YTD Q3 2025 Wells TIL less 1H 2025",
             "Q4 2025": "Calculated: FY 2025 Wells TIL less YTD Q3 2025",
-            "Q1 2026": "RRC Q1 2026 release Wells TIL table"
+            "Q1 2026": "RRC Q1 2026 release Wells TIL table",
+            "Q2 2026": "RRC Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-22): \"turning to sales ~300,000 feet across 21 wells\" during the quarter; independently cross-checked against the release's own \"Wells TIL 1H 2026\" total of 38 (31 Liquids Rich + 7 Dry Gas) less the already-stored Q1 2026 value of 17 = 21, an exact match."
           },
           "notes": "Wells turned to sales / wells TIL. Standalone quarters from RRC Wells TIL tables; Q2/Q3/Q4 derived from 1H/YTD/FY totals only when definitions match."
         },
@@ -675,7 +699,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": 52.0,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "Not disclosed as quarter-end DUC well count",
@@ -704,7 +729,8 @@
             "Q2 2025": 0.4680509628,
             "Q3 2025": 0.63043334,
             "Q4 2025": 0.4822744379,
-            "Q1 2026": 0.2440613208
+            "Q1 2026": 0.2440613208,
+            "Q2 2026": 0.6666666666666666
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated from RRC CapEx row and FCF row",
@@ -715,7 +741,8 @@
             "Q2 2025": "Calculated from RRC CapEx row and FCF row",
             "Q3 2025": "Calculated from RRC CapEx row and FCF row",
             "Q4 2025": "Calculated from RRC CapEx row and FCF row",
-            "Q1 2026": "Calculated from RRC CapEx row and FCF row"
+            "Q1 2026": "Calculated from RRC CapEx row and FCF row",
+            "Q2 2026": "Calculated: Total company capital expenditures ($222MM) / (Total company capital expenditures + Free Cash Flow [$111MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts, matching this metric's established RRC/AR methodology."
           },
           "notes": "Calculated exactly as AR: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow). Since RRC FCF is discretionary cash flow less CapEx, denominator equals discretionary cash flow."
         },
@@ -733,7 +760,8 @@
             "Q2 2025": 238.508,
             "Q3 2025": 236.936,
             "Q4 2025": 235.458212,
-            "Q1 2026": 235.622
+            "Q1 2026": 235.622,
+            "Q2 2026": 233.674
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_RRC_10-Q.pdf, Q1 2024, shares, p. 7, stockholders' equity; direct three-month/quarter-end filing value",
@@ -744,7 +772,8 @@
             "Q2 2025": "2025_Q2_RRC_10-Q.pdf, Q2 2025, shares, p. 7, stockholders' equity; direct three-month/quarter-end filing value",
             "Q3 2025": "2025_Q3_RRC_10-Q.pdf, Q3 2025, shares, p. 7, stockholders' equity; direct three-month/quarter-end filing value",
             "Q4 2025": "2025_Q4_RRC_10-K.pdf, FY 2025, shares, Form 10-K, common-stock roll-forward; calculated as exact FY less exact Q1-Q3/YTD filing amounts",
-            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, shares, p. 7, stockholders' equity; direct three-month/quarter-end filing value"
+            "Q1 2026": "2026_Q1_RRC_10-Q.pdf, Q1 2026, shares, p. 7, stockholders' equity; direct three-month/quarter-end filing value",
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, consolidated statements of stockholders' equity: balance as of June 30, 2026 -- 269,589 thousand common shares less 35,915 thousand treasury shares = 233,674 thousand shares outstanding."
           },
           "notes": "Quarter-end common shares outstanding in millions. 10-Q quarters use period-end common stock shares less treasury shares from stockholders equity tables (reported in thousands); Q4 quarters use exact 10-K year-end common shares outstanding. No weighted-average EPS shares used."
         },
@@ -762,7 +791,8 @@
             "Q2 2025": 7.982337538222111,
             "Q3 2025": 7.280166480126274,
             "Q4 2025": 6.638906535674511,
-            "Q1 2026": 7.268116994906246
+            "Q1 2026": 7.268116994906246,
+            "Q2 2026": 5.984099898713284
           },
           "source_by_quarter": {
             "Q1 2024": "Blank: fewer than four quarterly EBITDAX observations in workbook period",
@@ -773,9 +803,32 @@
             "Q2 2025": "Calculated using RRC quarter-end shares, net debt, EBITDAX, and Digrin RRC real month-end close prices",
             "Q3 2025": "Calculated using RRC quarter-end shares, net debt, EBITDAX, and Digrin RRC real month-end close prices",
             "Q4 2025": "Calculated using RRC quarter-end shares, net debt, EBITDAX, and Digrin RRC real month-end close prices",
-            "Q1 2026": "Calculated using RRC quarter-end shares, net debt, EBITDAX, and Digrin RRC real month-end close prices"
+            "Q1 2026": "Calculated using RRC quarter-end shares, net debt, EBITDAX, and Digrin RRC real month-end close prices",
+            "Q2 2026": "Calculated: EV = Q2 2026 quarter-end shares (233.674mm, RRC Q2 2026 10-Q statement of stockholders' equity) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($37.19) + quarter-end net debt ($880.753MM, lib/dashboard/financials-quarterly.ts approved audited series); / LTM Adjusted EBITDAX ($1599.42MM, trailing Q3 2025-Q2 2026). Prior quarters used Digrin RRC month-end close price; Digrin was not accessible this session, so Nasdaq's historical trades table was substituted (documented source discontinuity, same quarter-end-close measurement convention)."
           },
           "notes": "Calculated where four-quarter EBITDAX history is available. EV = quarter-end shares x quarter-end/prior-trading-day close + net debt; LTM EBITDAX = trailing four standalone quarters. Historical stock prices standardized to one source: Digrin RRC price history real month-end close. Q1-Q3 2024 blank due unavailable full LTM history in worksheet period."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 236.21
+          },
+          "source_by_quarter": {
+            "Q2 2026": "RRC Q2 2026 Form 10-Q, earnings-per-share note: weighted average common shares outstanding - diluted, three months ended June 30, 2026 (236,210 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end equity-statement count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. This is a data/historical.json entry only; it does not modify lib/forecast/data/rrc-baseline.ts's own dilutedSharesMillion field (236.396mm for Q1 2026), which remains the forecast engine's authoritative input and is unchanged by this pass. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -2001,7 +2054,8 @@
             "Q2 2025": 2230,
             "Q3 2025": 2195,
             "Q4 2025": 2265,
-            "Q1 2026": 2617
+            "Q1 2026": 2617,
+            "Q2 2026": 2846.154
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2219.78021978022",
@@ -2012,7 +2066,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2230.769230769231",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2195.652173913043",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2260.869565217391",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2622.222222222222"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 2622.222222222222",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: 259 Bcf for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session); see note."
           },
           "notes": "Average daily natural gas production calculated from disclosed Bcf divided by calendar days; Q4 2024 and Q4 2025 from full-year less Q1-Q3 volumes.",
           "factset_overridden_quarters": [
@@ -2041,7 +2096,8 @@
             "Q2 2025": 192.7,
             "Q3 2025": 198.9,
             "Q4 2025": 199.4,
-            "Q1 2026": 120.8
+            "Q1 2026": 120.8,
+            "Q2 2026": 207.901
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 190.3736263736264",
@@ -2052,7 +2108,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 192.6593406593407",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 198.945652173913",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 199.4130434782609",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 196.7555555555556"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 196.7555555555556",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: C2 ethane 7,896 MBbl plus C3+ NGLs 11,023 MBbl for the three months ended June 30, 2026, divided by 91 calendar days (combined-NGL convention, matching this metric's original Codex methodology). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters, which applied a narrower C3+-only NGL definition (FactSet was not accessible this session) -- this is a documented methodology discontinuity, not a silent blend."
           },
           "notes": "Average daily NGL production calculated as C2 ethane plus C3+ NGL volumes divided by calendar days; Q4 2024 and Q4 2025 from full-year less Q1-Q3 volumes.",
           "factset_overridden_quarters": [
@@ -2081,7 +2138,8 @@
             "Q2 2025": 7.385,
             "Q3 2025": 6.7,
             "Q4 2025": 8.217,
-            "Q1 2026": 9.067
+            "Q1 2026": 9.067,
+            "Q2 2026": 8.33
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 11.37362637362637",
@@ -2092,7 +2150,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 7.384615384615385",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6.728260869565218",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 8.217391304347826",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 9.066666666666666"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 9.066666666666666",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: 758 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session); see note."
           },
           "notes": "Average daily oil production calculated from disclosed oil MBbl divided by calendar days; Q4 2024 and Q4 2025 from full-year less Q1-Q3 volumes.",
           "factset_overridden_quarters": [
@@ -2121,7 +2180,8 @@
             "Q2 2025": 3.36,
             "Q3 2025": 3.12,
             "Q4 2025": 3.72,
-            "Q1 2026": 4.86
+            "Q1 2026": 4.86,
+            "Q2 2026": 2.66
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.35",
@@ -2132,7 +2192,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.39",
             "Q3 2025": "Q3 2025 AR 10-Q, E&P selected operating data",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.719211538461539",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.57"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.57",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: natural gas price before effects of derivative settlements, three months ended June 30, 2026. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session); pre-hedge convention preserved to match this metric's established definition."
           },
           "notes": "Pre-hedge realized natural gas price. Q4 2024 and Q4 2025 derived from gas sales and gas volumes using full-year less Q1-Q3 data.",
           "factset_overridden_quarters": [
@@ -2160,7 +2221,8 @@
             "Q2 2025": 37.92,
             "Q3 2025": 36.6,
             "Q4 2025": 35.41,
-            "Q1 2026": 37.9
+            "Q1 2026": 37.9,
+            "Q2 2026": 31.06
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 29.8882475180097",
@@ -2171,7 +2233,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 27.4225690189368",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 25.70048735180025",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 25.85081216613976",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 28.44147278066524"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 28.44147278066524",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: volume-weighted average of C2 ethane ($12.54/Bbl, 7,896 MBbl) and C3+ NGLs ($44.33/Bbl, 11,023 MBbl) before effects of derivative settlements, three months ended June 30, 2026, matching this metric's established weighted-average methodology. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized NGL price calculated as weighted average of disclosed C2 ethane and C3+ NGL prices using volumes; Q4 2024 and Q4 2025 derived from NGL sales and volumes using full-year less Q1-Q3 data.",
           "factset_overridden_quarters": [
@@ -2200,7 +2263,8 @@
             "Q2 2025": 50.15,
             "Q3 2025": 50.65,
             "Q4 2025": 45.99,
-            "Q1 2026": 57.22
+            "Q1 2026": 57.22,
+            "Q2 2026": 78.6
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 62.53",
@@ -2211,7 +2275,8 @@
             "Q2 2025": "Q2 2025 AR 10-Q, E&P selected operating data",
             "Q3 2025": "Q3 2025 AR 10-Q, E&P selected operating data",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 45.994708994709",
-            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data"
+            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: oil price before effects of derivative settlements, three months ended June 30, 2026."
           },
           "notes": "Pre-hedge realized oil price. Q4 2024 and Q4 2025 derived from oil sales and oil volumes using full-year less Q1-Q3 data.",
           "factset_overridden_quarters": [
@@ -2237,7 +2302,8 @@
             "Q2 2025": 0.12,
             "Q3 2025": 0.1,
             "Q4 2025": 0.09745820433436533,
-            "Q1 2026": 0.13
+            "Q1 2026": 0.13,
+            "Q2 2026": 0.13
           },
           "source_by_quarter": {
             "Q1 2024": "Q1 2024 AR 10-Q, E&P selected operating data",
@@ -2248,7 +2314,8 @@
             "Q2 2025": "Q2 2025 AR 10-Q, E&P selected operating data",
             "Q3 2025": "Q3 2025 AR 10-Q, E&P selected operating data",
             "Q4 2025": "2025 AR 10-K FY operating data less Q1-Q3 2025 AR 10-Qs standalone data",
-            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data"
+            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: average costs per Mcfe, lease operating, three months ended June 30, 2026."
           },
           "notes": "LOE per Mcfe from E&P selected operating data; Q4 2024 and Q4 2025 calculated from full-year less Q1-Q3 LOE dollars divided by Q4 combined Bcfe."
         },
@@ -2266,7 +2333,8 @@
             "Q2 2025": 2.25,
             "Q3 2025": 2.25,
             "Q4 2025": 2.321001547987616,
-            "Q1 2026": 2.28
+            "Q1 2026": 2.28,
+            "Q2 2026": 1.99
           },
           "source_by_quarter": {
             "Q1 2024": "Q1 2024 AR 10-Q, E&P selected operating data",
@@ -2277,7 +2345,8 @@
             "Q2 2025": "Q2 2025 AR 10-Q, E&P selected operating data",
             "Q3 2025": "Q3 2025 AR 10-Q, E&P selected operating data",
             "Q4 2025": "2025 AR 10-K FY operating data less Q1-Q3 2025 AR 10-Qs standalone data",
-            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data"
+            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: sum of gathering and compression ($0.72), processing ($0.78), and transportation ($0.49) per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Sum of gathering and compression, processing, and transportation costs per Mcfe; Q4 2024 and Q4 2025 calculated from full-year less Q1-Q3 dollars divided by Q4 combined Bcfe."
         },
@@ -2295,7 +2364,8 @@
             "Q2 2025": 0.13,
             "Q3 2025": 0.13,
             "Q4 2025": 0.1289256965944272,
-            "Q1 2026": 0.15
+            "Q1 2026": 0.15,
+            "Q2 2026": 0.12
           },
           "source_by_quarter": {
             "Q1 2024": "Q1 2024 AR 10-Q, E&P selected operating data",
@@ -2306,7 +2376,8 @@
             "Q2 2025": "Q2 2025 AR 10-Q, E&P selected operating data",
             "Q3 2025": "Q3 2025 AR 10-Q, E&P selected operating data",
             "Q4 2025": "2025 AR 10-K FY operating data less Q1-Q3 2025 AR 10-Qs standalone data",
-            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data"
+            "Q1 2026": "Q1 2026 AR 10-Q, E&P selected operating data",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, selected operating data table: general and administrative (excluding equity-based compensation) per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Cash G&A is general and administrative expense excluding equity-based compensation per Mcfe; Q4 2024 and Q4 2025 calculated from full-year less Q1-Q3 dollars divided by Q4 combined Bcfe."
         },
@@ -2324,7 +2395,8 @@
             "Q2 2025": 2.67,
             "Q3 2025": 2.62,
             "Q4 2025": 2.728925696594427,
-            "Q1 2026": 2.85
+            "Q1 2026": 2.85,
+            "Q2 2026": 2.38
           },
           "source_by_quarter": {
             "Q1 2024": "AR Q1 2024 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A.",
@@ -2335,7 +2407,8 @@
             "Q2 2025": "AR Q2 2025 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A.",
             "Q3 2025": "AR Q3 2025 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A.",
             "Q4 2025": "AR Q4 2025 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A.",
-            "Q1 2026": "AR Q1 2026 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A."
+            "Q1 2026": "AR Q1 2026 earnings release: calculated as all-in cash expense + net marketing expense + cash G&A.",
+            "Q2 2026": "Calculated per this metric's established AR formula (all-in cash expense [LOE + GP&T + production/ad valorem taxes] + net marketing expense + cash G&A) from the AR Q2 2026 Form 10-Q selected operating data table: 0.13 + 1.99 + 0.10 + 0.04 + 0.12."
           },
           "notes": "Calculated consistently as AR all-in cash expense (LOE + GP&T + production/ad valorem taxes) + net marketing expense + cash G&A, all $/Mcfe."
         },
@@ -2353,7 +2426,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Unavailable: no reliable standalone quarterly wells-drilled disclosure found in provided AR filings/releases; drilling records/spud/completion language not used."
@@ -2372,7 +2446,8 @@
             "Q2 2025": 18.0,
             "Q3 2025": 16.0,
             "Q4 2025": 18.0,
-            "Q1 2026": 20.0
+            "Q1 2026": 20.0,
+            "Q2 2026": 26.0
           },
           "source_by_quarter": {
             "Q1 2024": "AR Q1 2024 earnings release: wells placed to sales during quarter.",
@@ -2383,7 +2458,8 @@
             "Q2 2025": "AR Q2 2025 earnings release: wells placed to sales during quarter.",
             "Q3 2025": "AR Q3 2025 earnings release: wells placed to sales during quarter.",
             "Q4 2025": "AR Q4 2025 earnings release: wells placed to sales during quarter.",
-            "Q1 2026": "AR Q1 2026 earnings release: wells placed to sales during quarter."
+            "Q1 2026": "AR Q1 2026 earnings release: wells placed to sales during quarter.",
+            "Q2 2026": "AR Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-29): \"Antero placed 26 Marcellus wells to sales during the second quarter.\""
           },
           "notes": "Gross operated wells placed to sales / turned to sales during quarter; treated as TIL equivalent."
         },
@@ -2401,7 +2477,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Unavailable: no consistent quarter-end DUC inventory disclosure found; wells in process/completion backlog not used as DUC inventory."
@@ -2420,7 +2497,8 @@
             "Q2 2025": 0.5244239243,
             "Q3 2025": 0.6818753142,
             "Q4 2025": 0.4571888806,
-            "Q1 2026": 0.3483463226
+            "Q1 2026": 0.3483463226,
+            "Q2 2026": 0.5973332551547478
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow).",
@@ -2431,7 +2509,8 @@
             "Q2 2025": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow).",
             "Q3 2025": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow).",
             "Q4 2025": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow).",
-            "Q1 2026": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow)."
+            "Q1 2026": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow).",
+            "Q2 2026": "Calculated: Total company capital expenditures ($326MM) / (Total company capital expenditures + Free Cash Flow [$219.759MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts."
           },
           "notes": "Calculated: Total company capital expenditures / (Total company capital expenditures + Free Cash Flow). Uses corrected CapEx row and company-reported FCF row."
         },
@@ -2449,7 +2528,8 @@
             "Q2 2025": 309.869,
             "Q3 2025": 308.385,
             "Q4 2025": 308.51,
-            "Q1 2026": 309.825
+            "Q1 2026": 309.825,
+            "Q2 2026": 308.739
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 AR 10-Q statement of stockholders equity: balances March 31, 2024 common stock shares.",
@@ -2460,7 +2540,8 @@
             "Q2 2025": "2025 Q2 AR 10-Q statement of stockholders equity: balances June 30, 2025 common stock shares.",
             "Q3 2025": "2025 Q3 AR 10-Q statement of stockholders equity: balances September 30, 2025 common stock shares.",
             "Q4 2025": "2025 AR 10-K statement of stockholders equity: balances December 31, 2025 common stock shares.",
-            "Q1 2026": "2026 Q1 AR 10-Q statement of stockholders equity: balances March 31, 2026 common stock shares."
+            "Q1 2026": "2026 Q1 AR 10-Q statement of stockholders equity: balances March 31, 2026 common stock shares.",
+            "Q2 2026": "AR Q2 2026 Form 10-Q, condensed consolidated balance sheet: 308,739 thousand common shares issued and outstanding as of June 30, 2026."
           },
           "notes": "Corrected to actual quarter-end common shares outstanding from stockholders equity statements, in millions; excludes weighted-average EPS shares and later cover-page counts."
         },
@@ -2478,7 +2559,8 @@
             "Q2 2025": 9.384964538740665,
             "Q3 2025": 7.385973259861101,
             "Q4 2025": 7.209832351102098,
-            "Q1 2026": 8.590981433791258
+            "Q1 2026": 8.590981433791258,
+            "Q2 2026": 6.547944125016997
           },
           "source_by_quarter": {
             "Q4 2024": "Calculated: Yahoo Finance chart close $35.05 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX.",
@@ -2486,9 +2568,32 @@
             "Q2 2025": "Calculated: Yahoo Finance chart close $40.28 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX.",
             "Q3 2025": "Calculated: Yahoo Finance chart close $33.56 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX.",
             "Q4 2025": "Calculated: Yahoo Finance chart close $34.46 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX.",
-            "Q1 2026": "Calculated: Yahoo Finance chart close $42.44 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX."
+            "Q1 2026": "Calculated: Yahoo Finance chart close $42.44 on quarter-end/prior trading day; market cap = quarter-end shares x price; + total debt - cash; / LTM Adjusted EBITDAX.",
+            "Q2 2026": "Calculated: EV = Q2 2026 quarter-end shares (308.739mm, AR Q2 2026 10-Q balance sheet) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($35.14) + quarter-end net debt ($2634.7MM, lib/dashboard/financials-quarterly.ts approved audited series); / LTM Adjusted EBITDAX ($2059.24MM, trailing Q3 2025-Q2 2026). First populated quarter for this metric's Q1-Q3 2024 through Q1 2026 history was already Yahoo/Digrin-sourced for RRC/CNX-style tickers; AR's own prior-quarter convention used Yahoo Finance chart close, so this is a documented source discontinuity to Nasdaq (Yahoo was not accessible this session)."
           },
           "notes": "Calculated where four-quarter Adjusted EBITDAX history is available. EV = quarter-end shares x quarter-end close + total debt - cash; LTM EBITDAX = trailing four standalone quarters. Q1-Q3 2024 left blank due unavailable full LTM history in worksheet period."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 313.184
+          },
+          "source_by_quarter": {
+            "Q2 2026": "AR Q2 2026 Form 10-Q, Note (Earnings Per Share): diluted weighted average number of common shares outstanding, three months ended June 30, 2026 (313,184 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -3696,7 +3801,8 @@
             "Q2 2025": 1717.6,
             "Q3 2025": 1619.5826,
             "Q4 2025": 1521.7,
-            "Q1 2026": 1544.2
+            "Q1 2026": 1544.2,
+            "Q2 2026": 1497.451
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1416.945054945055",
@@ -3707,7 +3813,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1717.703296703297",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1618.913043478261",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1521.119565217391",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1543.8"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1543.8",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: natural gas sales volume 136,268 MMcf for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily natural gas production from CNX natural gas sales volumes.",
           "factset_overridden_quarters": [
@@ -3736,7 +3843,8 @@
             "Q2 2025": 20.3,
             "Q3 2025": 21.7,
             "Q4 2025": 21.9,
-            "Q1 2026": 24.3
+            "Q1 2026": 24.3,
+            "Q2 2026": 27.099
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 20.58241758241758",
@@ -3747,7 +3855,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 20.35164835164835",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 21.81521739130435",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 21.89130434782609",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 24.22222222222222"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 24.22222222222222",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: NGL sales volume 2,466 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily NGL production from CNX NGL sales volumes.",
           "factset_overridden_quarters": [
@@ -3775,7 +3884,8 @@
             "Q2 2025": 0.3831502,
             "Q3 2025": 0.5,
             "Q4 2025": 0.4,
-            "Q1 2026": 0.6
+            "Q1 2026": 0.6,
+            "Q2 2026": 0.714
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 0.3186813186813187",
@@ -3786,7 +3896,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.3406593406593407",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.5760869565217391",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.3804347826086957",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 0.6444444444444445"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 0.6444444444444445",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: oil/condensate sales volume 65 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily oil/condensate production from CNX oil/condensate sales volumes.",
           "factset_overridden_quarters": [
@@ -3815,7 +3926,8 @@
             "Q2 2025": 2.61,
             "Q3 2025": 2.57,
             "Q4 2025": 2.7,
-            "Q1 2026": 3.15
+            "Q1 2026": 3.15,
+            "Q2 2026": 2.4
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.17",
@@ -3826,7 +3938,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.84",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.43",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.120106043174721",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.74"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.74",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: natural gas gross sales price, three months ended June 30, 2026 (pre-hedge). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge gross realized natural gas price.",
           "factset_overridden_quarters": [
@@ -3855,7 +3968,8 @@
             "Q2 2025": 21.48,
             "Q3 2025": 18.24,
             "Q4 2025": 18.9,
-            "Q1 2026": 27.54
+            "Q1 2026": 27.54,
+            "Q2 2026": 23.4
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3866,7 +3980,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 18.91310824230387",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: NGL gross price, three months ended June 30, 2026 (pre-hedge)."
           },
           "notes": "Pre-hedge gross realized NGL price in $/Bbl.",
           "factset_overridden_quarters": [
@@ -3888,7 +4003,8 @@
             "Q2 2025": 52.44,
             "Q3 2025": 56.94,
             "Q4 2025": 52.98,
-            "Q1 2026": 58.08
+            "Q1 2026": 58.08,
+            "Q2 2026": 73.74
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3899,7 +4015,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 53.91428571428571",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: oil/condensate gross price, three months ended June 30, 2026 (pre-hedge)."
           },
           "notes": "Pre-hedge gross realized oil/condensate price in $/Bbl.",
           "factset_overridden_quarters": [
@@ -3921,7 +4038,8 @@
             "Q2 2025": 0.1566587112171838,
             "Q3 2025": 0.1681773093614383,
             "Q4 2025": 0.1359225213394615,
-            "Q1 2026": 0.1428477690288714
+            "Q1 2026": 0.1428477690288714,
+            "Q2 2026": 0.1404
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3932,7 +4050,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q: Lease Operating Expense $21,262 thousand (consolidated statements of income) divided by total sales volumes 151,453 MMcfe (136,268 MMcf natural gas + 14,796 MMcfe NGL + 389 MMcfe oil, selected natural gas/NGL/oil production financial data table), three months ended June 30, 2026."
           },
           "notes": "LOE dollars divided by total sales volumes; Q4 values derived from FY less 9M where definitions match."
         },
@@ -3950,7 +4069,8 @@
             "Q2 2025": 0.5784785202863962,
             "Q3 2025": 0.601692498450093,
             "Q4 2025": 0.6168023637557449,
-            "Q1 2026": 0.6719225721784776
+            "Q1 2026": 0.6719225721784776,
+            "Q2 2026": 0.6816
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3961,7 +4081,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q: Transportation, Gathering and Compression $103,223 thousand divided by total sales volumes 151,453 MMcfe, three months ended June 30, 2026."
           },
           "notes": "CNX transportation, gathering and compression cost dollars divided by total sales volumes."
         },
@@ -3979,7 +4100,8 @@
             "Q2 2025": 0.1436038186157518,
             "Q3 2025": 0.157315561066336,
             "Q4 2025": 0.241930400525279,
-            "Q1 2026": 0.1722112860892388
+            "Q1 2026": 0.1722112860892388,
+            "Q2 2026": 0.185
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -3990,7 +4112,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q: Selling, General and Administrative Costs $33,837 thousand less Long-Term Equity-Based Compensation (non-cash) $5,825 thousand (statement of stockholders' equity, amortization of stock-based compensation awards) = $28,012 thousand cash SG&A, divided by total sales volumes 151,453 MMcfe, three months ended June 30, 2026."
           },
           "notes": "Calculated from SG&A less CNX stock-based compensation adjustment, divided by total sales volumes."
         },
@@ -4008,7 +4131,8 @@
             "Q2 2025": 0.9364260143198092,
             "Q3 2025": 0.9750774953502789,
             "Q4 2025": 1.037557452396585,
-            "Q1 2026": 1.044652230971128
+            "Q1 2026": 1.044652230971128,
+            "Q2 2026": 1.0501
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -4019,7 +4143,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "Calculated per this metric's established CNX formula (LOE + production/ad valorem/other fees + transportation/gathering/compression + cash G&A, divided by total sales volumes) from the CNX Q2 2026 Form 10-Q: (21,262 + 6,546 + 103,223 + 28,012) thousand / 151,453 MMcfe."
           },
           "notes": "Calculated as LOE + production/ad valorem/other fees + transportation/gathering/compression + cash G&A, divided by total sales volumes."
         },
@@ -4037,7 +4162,8 @@
             "Q2 2025": 3.0,
             "Q3 2025": 0.0,
             "Q4 2025": 12.0,
-            "Q1 2026": 14.0
+            "Q1 2026": 14.0,
+            "Q2 2026": 2.0
           },
           "source_by_quarter": {
             "Q1 2024": "CNX Q1 2024 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
@@ -4048,7 +4174,8 @@
             "Q2 2025": "CNX Q2 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
             "Q3 2025": "CNX Q3 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
             "Q4 2025": "CNX Q4 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
-            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Production Volumes and Activity Summary"
+            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
+            "Q2 2026": "CNX 2Q 2026 Earnings Results & Supplemental Information (8-K Ex-99.1, filed 2026-07-30), Q2 2026 Activity Summary: 'TD' (total depth) total across SWPA Marcellus, Utica, and CPA Marcellus/Utica."
           },
           "notes": "CNX Activity Summary 'TD' total; used as closest wells-drilled metric because TD reflects wells drilled to total depth. Not explicitly labeled gross/net or operated/total."
         },
@@ -4066,7 +4193,8 @@
             "Q2 2025": 8.0,
             "Q3 2025": 0.0,
             "Q4 2025": 6.0,
-            "Q1 2026": 12.0
+            "Q1 2026": 12.0,
+            "Q2 2026": 5.0
           },
           "source_by_quarter": {
             "Q1 2024": "CNX Q1 2024 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
@@ -4077,7 +4205,8 @@
             "Q2 2025": "CNX Q2 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
             "Q3 2025": "CNX Q3 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
             "Q4 2025": "CNX Q4 2025 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
-            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Production Volumes and Activity Summary"
+            "Q1 2026": "CNX Q1 2026 Earnings Results & Supplemental Information: Production Volumes and Activity Summary",
+            "Q2 2026": "CNX 2Q 2026 Earnings Results & Supplemental Information (8-K Ex-99.1, filed 2026-07-30), Q2 2026 Activity Summary: 'TIL' total."
           },
           "notes": "CNX Activity Summary 'TIL' total; CNX defines TIL as turn-in-line, a well turned to sales."
         },
@@ -4095,7 +4224,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": 10.0,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "Blank: no quarter-end drilled-but-uncompleted well count disclosed",
@@ -4124,7 +4254,8 @@
             "Q2 2025": 0.343373494,
             "Q3 2025": 0.255033557,
             "Q4 2025": 0.595890411,
-            "Q1 2026": 0.425
+            "Q1 2026": 0.425,
+            "Q2 2026": 0.5071428571428571
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -4135,7 +4266,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "Calculated: Total company capital expenditures ($142MM) / (Total company capital expenditures + Free Cash Flow [$138MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts."
           },
           "notes": "Calculated as Capital Expenditures / (Capital Expenditures + Free Cash Flow), matching AR/RRC workbook methodology."
         },
@@ -4153,7 +4285,8 @@
             "Q2 2025": 141.906101,
             "Q3 2025": 135.887339,
             "Q4 2025": 142.590509,
-            "Q1 2026": 141.942305
+            "Q1 2026": 141.942305,
+            "Q2 2026": 149.1
           },
           "source_by_quarter": {
             "Q1 2024": "2024 Q1 CNX 10-Q",
@@ -4164,7 +4297,8 @@
             "Q2 2025": "2025 Q2 CNX 10-Q",
             "Q3 2025": "2025 Q3 CNX 10-Q",
             "Q4 2025": "2025 CNX 10-K FY less 2025 Q3 CNX 10-Q 9M where needed",
-            "Q1 2026": "2026 Q1 CNX 10-Q"
+            "Q1 2026": "2026 Q1 CNX 10-Q",
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, condensed consolidated statement of stockholders' equity: common stock balance $1,491 thousand at $0.01 par value as of June 30, 2026 = 149,100,000 shares. CNX retires repurchased shares (no treasury stock line item), so the common stock par-value balance is already net of buybacks."
           },
           "notes": "Quarter-end common shares outstanding from CNX stockholders equity / cover-page share disclosures, in millions."
         },
@@ -4182,7 +4316,8 @@
             "Q2 2025": 6.21923821989916,
             "Q3 2025": 5.623638322817813,
             "Q4 2025": 6.152121103392141,
-            "Q1 2026": 5.935670089069591
+            "Q1 2026": 5.935670089069591,
+            "Q2 2026": 5.701914843749999
           },
           "source_by_quarter": {
             "Q1 2024": "Blank: fewer than four quarterly Adjusted EBITDAX observations in workbook period",
@@ -4193,9 +4328,32 @@
             "Q2 2025": "Calculated using CNX quarter-end shares, net debt, company-reported Adjusted EBITDAX, and Macrotrends CNX close price",
             "Q3 2025": "Calculated using CNX quarter-end shares, net debt, company-reported Adjusted EBITDAX, and Macrotrends CNX close price",
             "Q4 2025": "Calculated using CNX quarter-end shares, net debt, company-reported Adjusted EBITDAX, and Yahoo/Macrotrends CNX close price",
-            "Q1 2026": "Calculated using CNX quarter-end shares, net debt, company-reported Adjusted EBITDAX, and Yahoo/Seeking Alpha CNX close price"
+            "Q1 2026": "Calculated using CNX quarter-end shares, net debt, company-reported Adjusted EBITDAX, and Yahoo/Seeking Alpha CNX close price",
+            "Q2 2026": "Calculated: EV = Q2 2026 quarter-end shares (149.1mm, CNX Q2 2026 10-Q statement of stockholders' equity) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($33.93) + quarter-end net debt ($2239.488MM, lib/dashboard/financials-quarterly.ts approved audited series); / LTM Adjusted EBITDAX ($1280MM, trailing Q3 2025-Q2 2026). Prior quarters used a Yahoo/Seeking Alpha close price; Yahoo/Seeking Alpha were not accessible this session, so Nasdaq's historical trades table was substituted (documented source discontinuity, same quarter-end-close measurement convention)."
           },
           "notes": "Calculated where four quarters are available: EV = quarter-end shares x quarter-end close + net debt; EV/LTM = EV / trailing four-quarter company-reported Adjusted EBITDAX."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 153.961273
+          },
+          "source_by_quarter": {
+            "Q2 2026": "CNX Q2 2026 Form 10-Q, Note 2 (Earnings Per Share): weighted-average diluted shares of common stock outstanding, three months ended June 30, 2026 (153,961,273)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -5415,7 +5573,8 @@
             "Q2 2025": 1233,
             "Q3 2025": 1214.9,
             "Q4 2025": 1209.1,
-            "Q1 2026": 1087.3
+            "Q1 2026": 1087.3,
+            "Q2 2026": 1242.516
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 1532.340659340659",
@@ -5426,7 +5585,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1232.571428571429",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1214.891304347826",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 1209.119565217391",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1087.277777777778"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 1087.277777777778",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A net production data table: natural gas 113,069 MMcf for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily natural gas production.",
           "factset_overridden_quarters": [
@@ -5454,7 +5614,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Average daily NGL production. [not_disclosed: CRK does not disclose NGL production/pricing]",
@@ -5474,7 +5635,8 @@
             "Q2 2025": 0.1,
             "Q3 2025": 0.1,
             "Q4 2025": 0,
-            "Q1 2026": 0.1
+            "Q1 2026": 0.1,
+            "Q2 2026": 0.0549
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 0.1318681318681319",
@@ -5485,7 +5647,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.1428571428571428",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.1195652173913044",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 0.03260869565217391",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 0.1222222222222222"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 0.1222222222222222",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A net production data table: oil 5 MBbls for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily crude oil + condensate production where disclosed.",
           "factset_overridden_quarters": [
@@ -5514,7 +5677,8 @@
             "Q2 2025": 3.06,
             "Q3 2025": 2.99,
             "Q4 2025": 3.27,
-            "Q1 2026": 3.45
+            "Q1 2026": 3.45,
+            "Q2 2026": 2.54
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.06",
@@ -5525,7 +5689,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.02",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.75",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.294168412157607",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.27"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.27",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A average sales price table: natural gas per Mcf, three months ended June 30, 2026 (pre-hedge, before cash settlements on derivatives). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized natural gas price unless only post-hedge is disclosed; identify basis in notes.",
           "factset_overridden_quarters": [
@@ -5554,7 +5719,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Pre-hedge realized NGL price. [not_disclosed: CRK does not disclose NGL production/pricing]",
@@ -5574,7 +5740,8 @@
             "Q2 2025": 57.0,
             "Q3 2025": 61.91,
             "Q4 2025": 56.0,
-            "Q1 2026": 68.91
+            "Q1 2026": 68.91,
+            "Q2 2026": 95.2
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, MD&A realized oil price excluding derivatives; three months ended",
@@ -5585,7 +5752,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, MD&A realized oil price excluding derivatives; three months ended",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, MD&A realized oil price excluding derivatives; three months ended",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, Oil sales and production tables; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A realized oil price excluding derivatives; three months ended"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A realized oil price excluding derivatives; three months ended",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A average sales price table: oil per Bbl, three months ended June 30, 2026 (pre-hedge)."
           },
           "notes": "Pre-hedge realized oil / condensate price."
         },
@@ -5603,7 +5771,8 @@
             "Q2 2025": 0.28,
             "Q3 2025": 0.26,
             "Q4 2025": 0.2496472132090565,
-            "Q1 2026": 0.29
+            "Q1 2026": 0.29,
+            "Q2 2026": 0.25
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, MD&A lease operating expense per Mcfe; three months ended",
@@ -5614,7 +5783,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, MD&A lease operating expense per Mcfe; three months ended",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, MD&A lease operating expense per Mcfe; three months ended",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, Lease operating expense and production tables; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A lease operating expense per Mcfe; three months ended"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A lease operating expense per Mcfe; three months ended",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A expenses per Mcfe table: lease operating expense, three months ended June 30, 2026 ($28,150 thousand / 113,102 MMcfe)."
           },
           "notes": "Quarterly LOE / Mcfe."
         },
@@ -5632,7 +5802,8 @@
             "Q2 2025": 0.37,
             "Q3 2025": 0.36,
             "Q4 2025": 0.37537413376237,
-            "Q1 2026": 0.43
+            "Q1 2026": 0.43,
+            "Q2 2026": 0.38
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, MD&A gathering and transportation expense per Mcfe; three months ended",
@@ -5643,7 +5814,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, MD&A gathering and transportation expense per Mcfe; three months ended",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, MD&A gathering and transportation expense per Mcfe; three months ended",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, Gathering/transportation expense and production tables; standalone quarter calculated as FY less Q1-Q3",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A gathering and transportation expense per Mcfe; three months ended"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, MD&A gathering and transportation expense per Mcfe; three months ended",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, MD&A expenses per Mcfe table: gathering and transportation, three months ended June 30, 2026 ($43,331 thousand / 113,102 MMcfe)."
           },
           "notes": "Combined or closest comparable G&P / transportation unit cost; explain composition in notes."
         },
@@ -5661,7 +5833,8 @@
             "Q2 2025": 0.06058554143872841,
             "Q3 2025": 0.05279111564151399,
             "Q4 2025": 0.0728133960110375,
-            "Q1 2026": 0.1105199195253219
+            "Q1 2026": 0.1105199195253219,
+            "Q2 2026": 0.0778
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, Statements/footnotes; G&A less stock compensation divided by three-month production",
@@ -5672,7 +5845,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, Statements/footnotes; G&A less stock compensation divided by three-month production",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, Statements/footnotes; G&A less stock compensation divided by three-month production",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, G&A and stock-compensation tables; standalone cash G&A calculated as FY less Q1-Q3, net of SBC, divided by production",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Statements/footnotes; G&A less stock compensation divided by three-month production"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Statements/footnotes; G&A less stock compensation divided by three-month production",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q MD&A: general and administrative expenses $17.2 million less stock-based compensation $8.4 million = $8.8 million cash G&A, divided by 113,102 MMcfe total production, three months ended June 30, 2026."
           },
           "notes": "Cash G&A per Mcfe when disclosed or directly calculable from sourced data."
         },
@@ -5690,7 +5864,8 @@
             "Q2 2025": 0.8046267752454606,
             "Q3 2025": 0.7730799288249863,
             "Q4 2025": 0.765273196293267,
-            "Q1 2026": 0.936985467580347
+            "Q1 2026": 0.936985467580347,
+            "Q2 2026": 0.7734
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, Calculated: LOE + gathering/transportation + production tax + cash G&A",
@@ -5701,7 +5876,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, Calculated: LOE + gathering/transportation + production tax + cash G&A",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, Calculated: LOE + gathering/transportation + production tax + cash G&A",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, Calculated: LOE + gathering/transportation + production tax + cash G&A using standalone quarter",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Calculated: LOE + gathering/transportation + production tax + cash G&A"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Calculated: LOE + gathering/transportation + production tax + cash G&A",
+            "Q2 2026": "Calculated per this metric's established CRK formula (LOE + gathering/transportation + production tax + cash G&A) from the CRK Q2 2026 Form 10-Q: (28,150 + 43,331 + 7,196 + 8,800) thousand / 113,102 MMcfe."
           },
           "notes": "Company-reported total cash unit costs where available; do not force comparability if definitions differ."
         },
@@ -5719,9 +5895,12 @@
             "Q2 2025": 12.0,
             "Q3 2025": 17.0,
             "Q4 2025": 16.0,
-            "Q1 2026": 17.0
+            "Q1 2026": 17.0,
+            "Q2 2026": 17.0
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "CRK Q2 2026 Form 10-Q MD&A: six months ended June 30, 2026 gross wells drilled (34) less the three months ended March 31, 2026 gross wells drilled already reported for Q1 2026 (17, verified directly against the CRK Q1 2026 Form 10-Q: \"We drilled 17 (15.3 net) wells... during the first three months of 2026\") = 17 standalone Q2 2026 wells drilled (gross). CRK's 10-Q does not separately disclose a three-month-only figure for Q2, only the six-month cumulative, so this quarter is derived by subtraction from two independently filing-sourced cumulative counts using the same gross-well convention."
+          },
           "notes": "Gross or net wells drilled; specify basis in notes."
         },
         "Wells Turned-in-Line (TIL)": {
@@ -5738,9 +5917,12 @@
             "Q2 2025": 13.0,
             "Q3 2025": 11.0,
             "Q4 2025": 15.0,
-            "Q1 2026": 13.0
+            "Q1 2026": 13.0,
+            "Q2 2026": 16.0
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "CRK Q2 2026 Form 10-Q MD&A: six months ended June 30, 2026 gross wells completed (29) less the three months ended March 31, 2026 gross wells completed already reported for Q1 2026 (13, verified directly against the CRK Q1 2026 Form 10-Q: \"...completed 13 (11.7 net)... during the first three months of 2026\") = 16 standalone Q2 2026 wells completed/turned-in-line (gross), same derivation method as Wells Drilled."
+          },
           "notes": "Wells placed on production / turned in line during the quarter."
         },
         "DUC Inventory": {
@@ -5757,7 +5939,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Quarter-end drilled-but-uncompleted well inventory when disclosed."
@@ -5776,7 +5959,8 @@
             "Q2 2025": 1.276495726,
             "Q3 2025": 1.384922626,
             "Q4 2025": 1.324562734,
-            "Q1 2026": 1.660008358
+            "Q1 2026": 1.660008358,
+            "Q2 2026": 1.8945643556380871
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated from Q1 2024 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
@@ -5787,7 +5971,8 @@
             "Q2 2025": "Calculated from Q2 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
             "Q3 2025": "Calculated from Q3 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
             "Q4 2025": "Calculated from Q4 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
-            "Q1 2026": "Calculated from Q1 2026 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx)."
+            "Q1 2026": "Calculated from Q1 2026 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
+            "Q2 2026": "Calculated: Total company capital expenditures ($446.869MM) / (Total company capital expenditures + Free Cash Flow [-$211MM]), using the approved audited Q2 2026 CapEx (Codex) and FCF (FactSet fallback series) rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts. Exceeds 100% because Q2 2026 free cash flow was negative, consistent with this metric's established Q1 2026 CRK value (also >100%)."
           },
           "notes": "Company-reported or consistently calculated reinvestment rate; document methodology."
         },
@@ -5805,7 +5990,8 @@
             "Q2 2025": 293.069,
             "Q3 2025": 293.055,
             "Q4 2025": 293.055,
-            "Q1 2026": 293.696
+            "Q1 2026": 293.696,
+            "Q2 2026": 293.620548
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, Statement of Stockholders\u2019 Equity; common shares outstanding at period end",
@@ -5816,7 +6002,8 @@
             "Q2 2025": "2025_Q2_CRK_10-Q.pdf; 10-Q, Statement of Stockholders\u2019 Equity; common shares outstanding at period end",
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, Statement of Stockholders\u2019 Equity; common shares outstanding at period end",
             "Q4 2025": "2025_Q4_CRK_10-K.pdf; 10-K, Statement of Stockholders\u2019 Equity; common shares outstanding at period end",
-            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Statement of Stockholders\u2019 Equity; common shares outstanding at period end"
+            "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Statement of Stockholders\u2019 Equity; common shares outstanding at period end",
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, condensed consolidated balance sheet: 293,620,548 common shares issued and outstanding as of June 30, 2026."
           },
           "notes": "Blank: source company filing packet not available in provided workbook/upload set."
         },
@@ -5834,10 +6021,35 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": 7.308716103970059
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "Calculated: EV = Q2 2026 quarter-end shares (293.620548mm, CRK Q2 2026 10-Q balance sheet) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($14.92) + quarter-end net debt ($3088.872MM, lib/dashboard/financials-quarterly.ts approved audited series); / LTM Adjusted EBITDAX ($1022.025MM, trailing Q3 2025-Q2 2026). This metric was blank for CRK across all prior quarters (Q1 2024-Q1 2026) because no accessible historical closing-price source had been established for this ticker; this is the first populated value, and prior quarters remain blank rather than being backfilled in this pass."
+          },
           "notes": "Calculated = (market capitalization + total debt - cash and cash equivalents) / LTM Adjusted EBITDAX. Blank where source inputs are unavailable."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 291.612
+          },
+          "source_by_quarter": {
+            "Q2 2026": "CRK Q2 2026 Form 10-Q, consolidated statements of operations: diluted weighted average shares outstanding, three months ended June 30, 2026 (291,612 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -7055,7 +7267,8 @@
             "Q2 2025": 5873,
             "Q3 2025": 6474.179,
             "Q4 2025": 6219.95,
-            "Q1 2026": 6459.094
+            "Q1 2026": 6459.094,
+            "Q2 2026": 6560.264
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 5486.527472527472",
@@ -7066,7 +7279,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 5872.978021978022",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6474.369565217391",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6219.902173913043",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 6459.188888888889"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 6459.188888888889",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: natural gas sales volume 596,984 MMcf for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily natural gas production.",
           "factset_overridden_quarters": [
@@ -7095,7 +7309,8 @@
             "Q2 2025": 58.2,
             "Q3 2025": 64.9,
             "Q4 2025": 60,
-            "Q1 2026": 62
+            "Q1 2026": 62,
+            "Q2 2026": 63.527
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 58.79120879120879",
@@ -7106,7 +7321,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 58.43956043956044",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 64.8695652173913",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 60.24637681159783",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 61.58888888888889"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 61.58888888888889",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: NGLs-excluding-ethane sales volume 3,459 MBbl plus ethane sales volume 2,322 MBbl for the three months ended June 30, 2026, divided by 91 calendar days (combined-NGL convention, matching this metric's original Codex methodology). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily NGL production.",
           "factset_overridden_quarters": [
@@ -7134,7 +7350,8 @@
             "Q2 2025": 3.4,
             "Q3 2025": 5,
             "Q4 2025": 6.18,
-            "Q1 2026": 6
+            "Q1 2026": 6,
+            "Q2 2026": 5.143
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, Average Realized Price Reconciliation; oil volume converted to daily rate",
@@ -7145,7 +7362,8 @@
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.43956043956044",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 5.336956521739131",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6.353260869565218",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.755555555555556"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.755555555555556",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: oil sales volume 468 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily crude oil + condensate production where disclosed.",
           "factset_overridden_quarters": [
@@ -7173,7 +7391,8 @@
             "Q2 2025": 3.63,
             "Q3 2025": 3.24,
             "Q4 2025": 3.76,
-            "Q1 2026": 5.22
+            "Q1 2026": 5.22,
+            "Q2 2026": 2.38
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.255",
@@ -7184,7 +7403,8 @@
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.54",
             "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 5.6",
             "Q4 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.77",
-            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.71"
+            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.71",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: \"Average adjusted price\" ($/Mcf), i.e. NYMEX price plus Btu uplift and basis differential but before cash-settled derivatives (pre-hedge), three months ended June 30, 2026. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized natural gas price unless only post-hedge is disclosed; identify basis in notes.",
           "factset_overridden_quarters": [
@@ -7213,7 +7433,8 @@
             "Q2 2025": 35.86,
             "Q3 2025": 31.82,
             "Q4 2025": 40.9,
-            "Q1 2026": 38.25
+            "Q1 2026": 38.25,
+            "Q2 2026": 26.45
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
@@ -7222,7 +7443,8 @@
             "Q1 2025": "2025_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table"
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: volume-weighted average of NGLs-excluding-ethane ($39.29/Bbl, 3,459 MBbl) and ethane ($7.33/Bbl, 2,322 MBbl) before cash-settled derivatives (pre-hedge), three months ended June 30, 2026, matching this metric's established weighted-average methodology."
           },
           "notes": "Pre-hedge realized NGL price."
         },
@@ -7240,7 +7462,8 @@
             "Q2 2025": 51.7,
             "Q3 2025": 49.12,
             "Q4 2025": 44.98,
-            "Q1 2026": 54.94
+            "Q1 2026": 54.94,
+            "Q2 2026": 70.14
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
@@ -7249,7 +7472,8 @@
             "Q1 2025": "2025_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table"
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Realized prices table",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: oil price ($/Bbl), three months ended June 30, 2026 (pre-hedge; no separate hedge-adjusted oil price line is disclosed)."
           },
           "notes": "Pre-hedge realized oil / condensate price."
         },
@@ -7267,7 +7491,8 @@
             "Q2 2025": 0.09,
             "Q3 2025": 0.09,
             "Q4 2025": 0.1,
-            "Q1 2026": 0.09
+            "Q1 2026": 0.09,
+            "Q2 2026": 0.099
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
@@ -7276,7 +7501,8 @@
             "Q1 2025": "2025_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q,"
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q,",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, business segment results \"Per Unit ($/Mcfe)\" table: LOE $62,837 thousand / 634,474 MMcfe total sales volume, three months ended June 30, 2026."
           },
           "notes": "Quarterly LOE / Mcfe."
         },
@@ -7294,7 +7520,8 @@
             "Q2 2025": 0.685,
             "Q3 2025": 0.594,
             "Q4 2025": 0.637,
-            "Q1 2026": 0.648
+            "Q1 2026": 0.648,
+            "Q2 2026": 0.6068
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
@@ -7303,7 +7530,8 @@
             "Q1 2025": "2025_Q1_EQT_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q,"
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; 10-Q,",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, business segment results \"Per Unit ($/Mcfe)\" table: Gathering ($57,991 thousand) + Transmission ($253,844 thousand) + Processing ($73,182 thousand), excluding the intercompany \"Transportation and processing to affiliate\" elimination line, divided by 634,474 MMcfe total sales volume, three months ended June 30, 2026. Matches this metric's established EQT methodology (reverse-engineered from the Q1 2026 stored value of 0.648, which reconciles to Gathering+Transmission+Processing and not to a total that includes the affiliate elimination line)."
           },
           "notes": "Combined or closest comparable G&P / transportation unit cost; explain composition in notes."
         },
@@ -7321,7 +7549,8 @@
             "Q2 2025": 0.119,
             "Q3 2025": 0.108,
             "Q4 2025": 0.078,
-            "Q1 2026": 0.125
+            "Q1 2026": 0.125,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -7332,7 +7561,8 @@
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_EQT_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "Left null: the EQT Q1 2026 stored value (0.125) does not reconcile to any per-unit line item disclosed in either the 10-Q or the earnings release (SG&A alone is $0.16-0.17/Mcfe in both periods), and its own source note already states the filing does not disclose a comparable cash G&A figure. Rather than extend an unverified methodology to Q2 2026, this is left unavailable; the Q1 2026 entry's source citation appears to be a data-entry error carried over from a different metric and should be reviewed separately from this Q2 2026 pass."
           },
           "notes": "Cash G&A per Mcfe when disclosed or directly calculable from sourced data."
         },
@@ -7350,7 +7580,8 @@
             "Q2 2025": 1.08,
             "Q3 2025": 1.0,
             "Q4 2025": 1.1,
-            "Q1 2026": 1.09
+            "Q1 2026": 1.09,
+            "Q2 2026": 1.03
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -7361,7 +7592,8 @@
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_EQT_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "EQT Second Quarter 2026 Results earnings release (8-K Ex-99.1, filed 2026-07-21), Per Unit Operating Costs table: company-disclosed \"Operating costs\" of $1.03/Mcfe for the three months ended June 30, 2026 (sum of Gathering, Transmission, Processing, LOE, Production taxes, Operating and maintenance (O&M), and SG&A, excluding production depletion). This is the same authoritative source and definition that reconciles exactly to the existing Q1 2026 stored value (1.09, verified against the EQT Q1 2026 earnings release's own \"Operating costs\" line) -- the Q1 2026 entry's source citation text was incorrect (copy-pasted from a different note) even though its value was correct; this Q2 2026 entry corrects the citation going forward."
           },
           "notes": "Company-reported total cash unit costs where available; do not force comparability if definitions differ."
         },
@@ -7379,7 +7611,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Gross or net wells drilled; specify basis in notes."
@@ -7398,7 +7631,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Wells placed on production / turned in line during the quarter."
@@ -7417,7 +7651,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Quarter-end drilled-but-uncompleted well inventory when disclosed."
@@ -7436,7 +7671,8 @@
             "Q2 2025": 0.4778383464,
             "Q3 2025": 0.4653740885,
             "Q4 2025": 0.3998708914,
-            "Q1 2026": 0.2268853267
+            "Q1 2026": 0.2268853267,
+            "Q2 2026": 0.6689847819713152
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated from Q1 2024 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
@@ -7447,7 +7683,8 @@
             "Q2 2025": "Calculated from Q2 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
             "Q3 2025": "Calculated from Q3 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
             "Q4 2025": "Calculated from Q4 2025 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
-            "Q1 2026": "Calculated from Q1 2026 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx)."
+            "Q1 2026": "Calculated from Q1 2026 company-reported free cash flow and capital expenditures in this tab: CapEx / (FCF + CapEx).",
+            "Q2 2026": "Calculated: Total company capital expenditures ($666.258MM) / (Total company capital expenditures + Free Cash Flow [$329.666MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts."
           },
           "notes": "Company-reported or consistently calculated reinvestment rate; document methodology."
         },
@@ -7465,7 +7702,8 @@
             "Q2 2025": 624.057,
             "Q3 2025": 624.067,
             "Q4 2025": 624.274,
-            "Q1 2026": 625.478
+            "Q1 2026": 625.478,
+            "Q2 2026": 625.516
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EQT_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
@@ -7476,7 +7714,8 @@
             "Q2 2025": "2025_Q2_EQT_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q3 2025": "2025_Q3_EQT_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q4 2025": "2025_Q4_EQT_10-K.pdf; cover page / equity disclosure; reported common shares outstanding.",
-            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding."
+            "Q1 2026": "2026_Q1_EQT_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
+            "Q2 2026": "EQT Q2 2026 Form 10-Q cover page (dei:EntityCommonStockSharesOutstanding XBRL tag): 625,516 thousand shares outstanding as of July 14, 2026, matching this metric's established EQT convention (cover-page count, not quarter-end equity-statement balance)."
           },
           "notes": "Reported common shares outstanding as of the filing's latest practicable date."
         },
@@ -7494,10 +7733,35 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": 5.666815641544293
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "Calculated: EV = Q2 2026 cover-page shares (625.516mm, EQT Q2 2026 10-Q cover page) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($53.17) + quarter-end net debt ($5542.851MM, lib/dashboard/financials-quarterly.ts approved audited series, consistent with the $5.5 billion net debt disclosed in EQT's own Q2 2026 earnings release); / LTM Adjusted EBITDAX ($6847.15MM, trailing Q3 2025-Q2 2026). This metric was blank for EQT across all prior quarters (Q1 2024-Q1 2026) because no accessible historical closing-price source had been established for this ticker; this is the first populated value, and prior quarters remain blank rather than being backfilled in this pass."
+          },
           "notes": "Calculated = (market capitalization + total debt - cash and cash equivalents) / LTM Adjusted EBITDAX. Blank where source inputs are unavailable."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 629.049
+          },
+          "source_by_quarter": {
+            "Q2 2026": "EQT Q2 2026 Form 10-Q, Note 10 (Earnings Per Share): weighted average common stock outstanding - diluted, three months ended June 30, 2026 (629,049 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end/cover-page count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -8686,7 +8950,8 @@
             "Q2 2025": 6596.0,
             "Q3 2025": 6721.0,
             "Q4 2025": 6824.0,
-            "Q1 2026": 6914.0
+            "Q1 2026": 6914.0,
+            "Q2 2026": 6896.0
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
@@ -8695,7 +8960,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: natural gas total, three months ended June 30, 2026 (already disclosed as an MMcf/d daily rate)."
           },
           "notes": "Average daily natural gas production."
         },
@@ -8713,7 +8979,8 @@
             "Q2 2025": 83.0,
             "Q3 2025": 85.0,
             "Q4 2025": 80.0,
-            "Q1 2026": 72.0
+            "Q1 2026": 72.0,
+            "Q2 2026": 83.0
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
@@ -8722,7 +8989,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: NGL total, three months ended June 30, 2026 (already disclosed as an MBbl/d daily rate)."
           },
           "notes": "Average daily NGL production."
         },
@@ -8740,7 +9008,8 @@
             "Q2 2025": 18.0,
             "Q3 2025": 17.0,
             "Q4 2025": 16.0,
-            "Q1 2026": 15.0
+            "Q1 2026": 15.0,
+            "Q2 2026": 14.0
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
@@ -8749,7 +9018,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Production volumes table",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: oil total, three months ended June 30, 2026 (already disclosed as an MBbl/d daily rate)."
           },
           "notes": "Average daily crude oil + condensate production where disclosed."
         },
@@ -8767,7 +9037,8 @@
             "Q2 2025": 2.98,
             "Q3 2025": 2.81,
             "Q4 2025": 3.37,
-            "Q1 2026": 4.28
+            "Q1 2026": 4.28,
+            "Q2 2026": 2.42
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.03",
@@ -8776,7 +9047,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.58",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.93",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.58",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.92"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.92",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: natural gas blended \"Total\" price ($/Mcf), three months ended June 30, 2026 -- pre-hedge (the filing separately discloses \"Average Realized Price (including realized derivatives)\" of $2.90 as the post-hedge figure). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized natural gas price unless only post-hedge is disclosed; identify basis in notes.",
           "factset_overridden_quarters": [
@@ -8803,7 +9075,8 @@
             "Q2 2025": 23.08,
             "Q3 2025": 21.62,
             "Q4 2025": 23.77,
-            "Q1 2026": 25.49
+            "Q1 2026": 25.49,
+            "Q2 2026": 26.26
           },
           "source_by_quarter": {
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 30.54",
@@ -8813,7 +9086,8 @@
             "Q1 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
             "Q2 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
             "Q3 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
-            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 23.41"
+            "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 23.41",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: NGL blended \"Total\" price ($/Bbl), three months ended June 30, 2026 (pre-hedge; only Southwest Appalachia produces NGL, so the segment price equals the total)."
           },
           "notes": "Pre-hedge realized NGL price.",
           "factset_overridden_quarters": [
@@ -8837,7 +9111,8 @@
             "Q2 2025": 55.89,
             "Q3 2025": 54.66,
             "Q4 2025": 49.41,
-            "Q1 2026": 64.77
+            "Q1 2026": 64.77,
+            "Q2 2026": 84.71
           },
           "source_by_quarter": {
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 63.4",
@@ -8846,7 +9121,8 @@
             "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 64.37",
             "Q1 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
             "Q2 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
-            "Q3 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)"
+            "Q3 2024": "FactSet E&P Company Model (Actual) - filled (Codex had no value)",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: oil blended \"Total\" price ($/Bbl), three months ended June 30, 2026 (pre-hedge). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized oil / condensate price.",
           "factset_overridden_quarters": [
@@ -8870,7 +9146,8 @@
             "Q2 2025": 0.23,
             "Q3 2025": 0.25,
             "Q4 2025": 0.3,
-            "Q1 2026": 0.28
+            "Q1 2026": 0.28,
+            "Q2 2026": 0.25
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
@@ -8879,7 +9156,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A \"Production Expenses\" table (EXE's LOE-equivalent line item): Total production expenses per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Quarterly LOE / Mcfe."
         },
@@ -8897,7 +9175,8 @@
             "Q2 2025": 0.86,
             "Q3 2025": 0.9,
             "Q4 2025": 0.9,
-            "Q1 2026": 1.03
+            "Q1 2026": 1.03,
+            "Q2 2026": 0.93
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
@@ -8906,7 +9185,8 @@
             "Q1 2025": "2025_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; 10-Q,",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table"
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, MD&A \"Gathering, Processing and Transportation Expenses\" table: Total GP&T per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Combined or closest comparable G&P / transportation unit cost; explain composition in notes."
         },
@@ -8924,7 +9204,8 @@
             "Q2 2025": 0.041,
             "Q3 2025": 0.049,
             "Q4 2025": 0.054,
-            "Q1 2026": 0.079
+            "Q1 2026": 0.079,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -8935,7 +9216,8 @@
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_EXE_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "Left null: the EXE Q1 2026 stored value does not reconcile to the 10-Q's own disclosed G&A per-unit figure ($0.09/Mcfe) or to a straightforward sum of Production Expenses + GP&T + severance/ad valorem taxes + G&A ($1.49/Mcfe for Q2 2026 using disclosed figures), and its own source note already flags the filing as not disclosing a comparable cash-cost figure. No independent earnings-release aggregate (checked EXE's Q2 2026 8-K Ex-99.1) resolves the discrepancy this session, so this quarter is left unavailable rather than extending an unverified methodology."
           },
           "notes": "Cash G&A per Mcfe when disclosed or directly calculable from sourced data."
         },
@@ -8953,7 +9235,8 @@
             "Q2 2025": 1.34,
             "Q3 2025": 1.31,
             "Q4 2025": 1.38,
-            "Q1 2026": 1.53
+            "Q1 2026": 1.53,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -8964,7 +9247,8 @@
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_EXE_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "Left null: the EXE Q1 2026 stored value does not reconcile to the 10-Q's own disclosed G&A per-unit figure ($0.09/Mcfe) or to a straightforward sum of Production Expenses + GP&T + severance/ad valorem taxes + G&A ($1.49/Mcfe for Q2 2026 using disclosed figures), and its own source note already flags the filing as not disclosing a comparable cash-cost figure. No independent earnings-release aggregate (checked EXE's Q2 2026 8-K Ex-99.1) resolves the discrepancy this session, so this quarter is left unavailable rather than extending an unverified methodology."
           },
           "notes": "Company-reported total cash unit costs where available; do not force comparability if definitions differ."
         },
@@ -8982,7 +9266,8 @@
             "Q2 2025": 49.0,
             "Q3 2025": 41.0,
             "Q4 2025": 51.0,
-            "Q1 2026": 60.0
+            "Q1 2026": 60.0,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "User-provided AlphaSense output screenshot; exact underlying company-issued source citation was not supplied.",
@@ -9011,7 +9296,8 @@
             "Q2 2025": 59.0,
             "Q3 2025": 57.0,
             "Q4 2025": 66.0,
-            "Q1 2026": 49.0
+            "Q1 2026": 49.0,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "User-provided AlphaSense output screenshot; exact underlying company-issued source citation was not supplied.",
@@ -9040,7 +9326,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {
             "Q1 2024": "User-provided AlphaSense output screenshot; exact underlying company-issued source citation was not supplied.",
@@ -9069,7 +9356,8 @@
             "Q2 2025": 0.6181972789,
             "Q3 2025": 0.679297597,
             "Q4 2025": 0.510877193,
-            "Q1 2026": 0.3638211382
+            "Q1 2026": 0.3638211382,
+            "Q2 2026": 0.7127303182579564
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
@@ -9080,7 +9368,8 @@
             "Q2 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
             "Q3 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
             "Q4 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
-            "Q1 2026": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8)."
+            "Q1 2026": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
+            "Q2 2026": "Calculated: Total company capital expenditures ($851MM) / (Total company capital expenditures + Free Cash Flow [$343MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts."
           },
           "notes": "Company-reported or consistently calculated reinvestment rate; document methodology."
         },
@@ -9098,7 +9387,8 @@
             "Q2 2025": 238.145675,
             "Q3 2025": 238.169697,
             "Q4 2025": 240.39826,
-            "Q1 2026": 239.228849
+            "Q1 2026": 239.228849,
+            "Q2 2026": 231.503789
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_EXE_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
@@ -9109,7 +9399,8 @@
             "Q2 2025": "2025_Q2_EXE_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q3 2025": "2025_Q3_EXE_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q4 2025": "2025_Q4_EXE_10-K.pdf; cover page / equity disclosure; reported common shares outstanding.",
-            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding."
+            "Q1 2026": "2026_Q1_EXE_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
+            "Q2 2026": "EXE Q2 2026 Form 10-Q cover page (dei:EntityCommonStockSharesOutstanding XBRL tag): 231,503,789 shares outstanding, matching this metric's established EXE convention (cover-page count)."
           },
           "notes": "Reported common shares outstanding as of the filing's latest practicable date."
         },
@@ -9127,10 +9418,35 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": 4.274625401009191
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "Calculated: EV = Q2 2026 cover-page shares (231.503789mm, EXE Q2 2026 10-Q cover page) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($91.19) + quarter-end net debt ($3075MM, lib/dashboard/financials-quarterly.ts approved audited series, consistent with the ~$3.1 billion net debt disclosed in EXE's own Q2 2026 earnings release); / LTM Adjusted EBITDAX ($5658MM, trailing Q3 2025-Q2 2026). This metric was blank for EXE across all prior quarters (Q1 2024-Q1 2026) because no accessible historical closing-price source had been established for this ticker; this is the first populated value, and prior quarters remain blank rather than being backfilled in this pass."
+          },
           "notes": "Calculated = (market capitalization + total debt - cash and cash equivalents) / LTM Adjusted EBITDAX. Blank where source inputs are unavailable."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 238.357
+          },
+          "source_by_quarter": {
+            "Q2 2026": "EXE Q2 2026 Form 10-Q, earnings-per-share reconciliation note: weighted average common shares outstanding, diluted, three months ended June 30, 2026 (238,357 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end/cover-page count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
@@ -10344,7 +10660,8 @@
             "Q2 2025": 891.359,
             "Q3 2025": 987.746,
             "Q4 2025": 988.107,
-            "Q1 2026": 905.77
+            "Q1 2026": 905.77,
+            "Q2 2026": 878.363
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 974.0",
@@ -10353,7 +10670,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 838.0",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 891.0",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 988.0",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 906.0"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 906.0",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: natural gas production 79,931 MMcf for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily natural gas production.",
           "factset_overridden_quarters": [
@@ -10380,7 +10698,8 @@
             "Q2 2025": 11.313,
             "Q3 2025": 15.097,
             "Q4 2025": 13.467,
-            "Q1 2026": 11.432
+            "Q1 2026": 11.432,
+            "Q2 2026": 9.857
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 10.03296703296703",
@@ -10389,7 +10708,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 9.966666666666667",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 11.31868131868132",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 15.09782608695652",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 11.43333333333333"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 11.43333333333333",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: NGL production 897 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily NGL production.",
           "factset_overridden_quarters": [
@@ -10416,7 +10736,8 @@
             "Q2 2025": 7.843,
             "Q3 2025": 6.892,
             "Q4 2025": 4.752,
-            "Q1 2026": 3.738
+            "Q1 2026": 3.738,
+            "Q2 2026": 4.198
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 3.32967032967033",
@@ -10425,7 +10746,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 5.277777777777778",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 7.846153846153846",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 6.891304347826087",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 3.733333333333333"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 3.733333333333333",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: oil/condensate production 382 MBbl for the three months ended June 30, 2026, divided by 91 calendar days. Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Average daily crude oil + condensate production where disclosed.",
           "factset_overridden_quarters": [
@@ -10452,7 +10774,8 @@
             "Q2 2025": 3.19,
             "Q3 2025": 2.95,
             "Q4 2025": 3.36,
-            "Q1 2026": 4.22
+            "Q1 2026": 4.22,
+            "Q2 2026": 2.48
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 2.13",
@@ -10461,7 +10784,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 3.73",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.97",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 2.61",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.9"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 4.9",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: natural gas average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized natural gas price unless only post-hedge is disclosed; identify basis in notes.",
           "factset_overridden_quarters": [
@@ -10488,7 +10812,8 @@
             "Q2 2025": 27.65,
             "Q3 2025": 28.1,
             "Q4 2025": 29.19,
-            "Q1 2026": 31.34
+            "Q1 2026": 31.34,
+            "Q2 2026": 33.94
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 30.79",
@@ -10497,7 +10822,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 34.37",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 27.91",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 27.89",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 30.59"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 30.59",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: NGL average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized NGL price.",
           "factset_overridden_quarters": [
@@ -10524,7 +10850,8 @@
             "Q2 2025": 61.58,
             "Q3 2025": 62.62,
             "Q4 2025": 62.54,
-            "Q1 2026": 61.6
+            "Q1 2026": 61.6,
+            "Q2 2026": 85.86
           },
           "source_by_quarter": {
             "Q1 2024": "FactSet E&P Company Model (Actual) - overrides Codex value 71.64",
@@ -10533,7 +10860,8 @@
             "Q1 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 65.76",
             "Q2 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 58.2",
             "Q3 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 58.99",
-            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 66.4"
+            "Q1 2026": "FactSet E&P Company Model (Actual) - overrides Codex value 66.4",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: oil/condensate average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge). Sourced directly from the 10-Q rather than the FactSet E&P model used for prior quarters (FactSet was not accessible this session)."
           },
           "notes": "Pre-hedge realized oil / condensate price.",
           "factset_overridden_quarters": [
@@ -10560,7 +10888,8 @@
             "Q2 2025": 0.19,
             "Q3 2025": 0.2,
             "Q4 2025": 0.25,
-            "Q1 2026": 0.27
+            "Q1 2026": 0.27,
+            "Q2 2026": 0.23
           },
           "source_by_quarter": {
             "Q1 2024": "2025_Q1_GPOR_10-Q.pdf; 10-Q, comparative Q1 2024",
@@ -10569,7 +10898,8 @@
             "Q1 2025": "2025_Q1_GPOR_10-Q.pdf; 10-Q,",
             "Q2 2025": "2025_Q2_GPOR_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table"
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, MD&A, Lease operating expense per-unit table",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A lease operating expenses table: total LOE per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Quarterly LOE / Mcfe."
         },
@@ -10587,7 +10917,8 @@
             "Q2 2025": 0.94,
             "Q3 2025": 0.94,
             "Q4 2025": 0.92,
-            "Q1 2026": 1.01
+            "Q1 2026": 1.01,
+            "Q2 2026": 0.97
           },
           "source_by_quarter": {
             "Q1 2024": "2025_Q1_GPOR_10-Q.pdf; 10-Q, comparative Q1 2024",
@@ -10596,7 +10927,8 @@
             "Q1 2025": "2025_Q1_GPOR_10-Q.pdf; 10-Q,",
             "Q2 2025": "2025_Q2_GPOR_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table"
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; 10-Q, MD&A, Gathering, processing and transportation expense per-unit table",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A transportation, gathering, processing and compression table: per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Combined or closest comparable G&P / transportation unit cost; explain composition in notes."
         },
@@ -10614,7 +10946,8 @@
             "Q2 2025": 0.08,
             "Q3 2025": 0.09,
             "Q4 2025": 0.08,
-            "Q1 2026": 0.11
+            "Q1 2026": 0.11,
+            "Q2 2026": 0.12
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -10625,7 +10958,8 @@
             "Q2 2025": "2025_Q2_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_GPOR_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, MD&A general and administrative expenses table: G&A, net (gross less third-party reimbursements less capitalized G&A) per Mcfe, three months ended June 30, 2026."
           },
           "notes": "Cash G&A per Mcfe when disclosed or directly calculable from sourced data."
         },
@@ -10643,7 +10977,8 @@
             "Q2 2025": 1.34,
             "Q3 2025": 1.33,
             "Q4 2025": 1.37,
-            "Q1 2026": 1.53
+            "Q1 2026": 1.53,
+            "Q2 2026": 1.3982
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
@@ -10654,7 +10989,8 @@
             "Q2 2025": "2025_Q2_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
             "Q4 2025": "2025_Q4_GPOR_10-K.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated."
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; filing does not disclose an exact standalone cash G&A / total cash-cost allocation comparable to the workbook definition; left blank rather than estimated.",
+            "Q2 2026": "Calculated per this metric's established formula (LOE + taxes other than income + transportation/gathering/processing/compression + G&A net, divided by total production) from the GPOR Q2 2026 Form 10-Q: (19,831 + 7,374 + 84,626 + 10,661) thousand / 87,610 MMcfe. Independently derived from primary-source dollar figures for this quarter; does not exactly reconcile to the Q1 2026 stored value (1.53) using the equivalent Q1 disclosed figures (0.27 LOE + 0.10 tax + 1.01 GP&T + 0.11 G&A = 1.49) -- a small unresolved discrepancy in the Q1 2026 entry, flagged here rather than silently propagated."
           },
           "notes": "Company-reported total cash unit costs where available; do not force comparability if definitions differ."
         },
@@ -10672,9 +11008,12 @@
             "Q2 2025": 19.0,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": 8.0
+            "Q1 2026": 8.0,
+            "Q2 2026": 7.0
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q MD&A: \"We spud 7 gross (6.7 net) wells targeting the Utica formation during the three months ended June 30, 2026\" plus \"We did not spud any operated wells in the SCOOP during the three months ended June 30, 2026\" = 7 gross wells spud, three months ended June 30, 2026."
+          },
           "notes": "Gross or net wells drilled; specify basis in notes."
         },
         "Wells Turned-in-Line (TIL)": {
@@ -10691,9 +11030,12 @@
             "Q2 2025": 14.0,
             "Q3 2025": 28.0,
             "Q4 2025": null,
-            "Q1 2026": 5.0
+            "Q1 2026": 5.0,
+            "Q2 2026": 10.0
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q MD&A highlights: \"Turned to sales 10 gross (9.5 net) operated wells\" during the three months ended June 30, 2026."
+          },
           "notes": "Wells placed on production / turned in line during the quarter."
         },
         "DUC Inventory": {
@@ -10710,7 +11052,8 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": null
           },
           "source_by_quarter": {},
           "notes": "Quarter-end drilled-but-uncompleted well inventory when disclosed."
@@ -10729,7 +11072,8 @@
             "Q2 2025": 0.5850211964,
             "Q3 2025": 0.3514781793,
             "Q4 2025": 0.4706132879,
-            "Q1 2026": 0.4606358819
+            "Q1 2026": 0.4606358819,
+            "Q2 2026": 0.9587096774193548
           },
           "source_by_quarter": {
             "Q1 2024": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
@@ -10740,7 +11084,8 @@
             "Q2 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
             "Q3 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
             "Q4 2025": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
-            "Q1 2026": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8)."
+            "Q1 2026": "Calculated as source-backed capital expenditures (row 10) divided by reported Adjusted EBITDAX (row 8).",
+            "Q2 2026": "Calculated: Total company capital expenditures ($148.6MM) / (Total company capital expenditures + Free Cash Flow [$6.4MM]), using the approved audited Q2 2026 CapEx and FCF rows already live in lib/dashboard/financials-quarterly.ts and free-cash-flow-quarterly.ts."
           },
           "notes": "Company-reported or consistently calculated reinvestment rate; document methodology."
         },
@@ -10758,7 +11103,8 @@
             "Q2 2025": 17.561724,
             "Q3 2025": 19.316819,
             "Q4 2025": 18.558415,
-            "Q1 2026": 17.969641
+            "Q1 2026": 17.969641,
+            "Q2 2026": 17.683866
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_GPOR_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
@@ -10769,7 +11115,8 @@
             "Q2 2025": "2025_Q2_GPOR_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q3 2025": "2025_Q3_GPOR_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
             "Q4 2025": "2025_Q4_GPOR_10-K.pdf; cover page / equity disclosure; reported common shares outstanding.",
-            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding."
+            "Q1 2026": "2026_Q1_GPOR_10-Q.pdf; cover page / equity disclosure; reported common shares outstanding.",
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q cover page (dei:EntityCommonStockSharesOutstanding XBRL tag): 17,683,866 shares outstanding, matching this metric's established GPOR convention (cover-page count)."
           },
           "notes": "Reported common shares outstanding as of the filing's latest practicable date."
         },
@@ -10787,10 +11134,35 @@
             "Q2 2025": null,
             "Q3 2025": null,
             "Q4 2025": null,
-            "Q1 2026": null
+            "Q1 2026": null,
+            "Q2 2026": 4.409670175269299
           },
-          "source_by_quarter": {},
+          "source_by_quarter": {
+            "Q2 2026": "Calculated: EV = Q2 2026 cover-page shares (17.683866mm, GPOR Q2 2026 10-Q cover page) x Nasdaq historical trades table unadjusted close on 2026-06-30 ($169.7) + quarter-end net debt ($928.946MM, lib/dashboard/financials-quarterly.ts approved audited series); / LTM Adjusted EBITDAX ($891.2MM, trailing Q3 2025-Q2 2026). This metric was blank for GPOR across all prior quarters (Q1 2024-Q1 2026) because no accessible historical closing-price source had been established for this ticker; this is the first populated value, and prior quarters remain blank rather than being backfilled in this pass."
+          },
           "notes": "Calculated = (market capitalization + total debt - cash and cash equivalents) / LTM Adjusted EBITDAX. Blank where source inputs are unavailable."
+        },
+        "Diluted Weighted-Average Shares (MM)": {
+          "unit": "MM",
+          "category": "CAPITAL EFFICIENCY / BALANCE SHEET",
+          "classification": "Company-Reported Historical (Actual)",
+          "reported_or_calculated": "reported",
+          "values": {
+            "Q1 2024": null,
+            "Q2 2024": null,
+            "Q3 2024": null,
+            "Q4 2024": null,
+            "Q1 2025": null,
+            "Q2 2025": null,
+            "Q3 2025": null,
+            "Q4 2025": null,
+            "Q1 2026": null,
+            "Q2 2026": 17.945
+          },
+          "source_by_quarter": {
+            "Q2 2026": "GPOR Q2 2026 Form 10-Q, consolidated statements of operations: weighted average common shares outstanding, diluted, three months ended June 30, 2026 (17,945 thousand)."
+          },
+          "notes": "New metric added in the fix/q2-data-foundation Q2 2026 data-foundation pass, distinct from \"Shares Outstanding (MM)\" (period-end/cover-page count). This is the diluted weighted-average share count used in each company's own EPS calculation for the standalone quarter -- the correct denominator for per-share forecast valuation output. Only Q2 2026 is populated; backfilling prior quarters was out of scope for this pass and is left null rather than estimated."
         }
       },
       "normalized_metrics": {
