@@ -1,4 +1,4 @@
-import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
+import { rrcLatestDetailedBaseline } from "@/lib/forecast/data/rrc-baseline";
 import type { RrcCompleteScenarioOptions, RrcPost2027Strategy } from "@/lib/forecast/scenarios/rrc-complete";
 import { runRrcHedgedScenario } from "@/lib/forecast/scenarios/rrc-hedged";
 import { calculateDcf, calculateMultipleValuation } from "@/lib/forecast/valuation";
@@ -35,7 +35,7 @@ export function runRrcValuedScenario(
   const complete = runRrcHedgedScenario(strategy, productionOptions);
   const forecastPeriods = complete.forecast.periods;
   const endingBalanceSheet = complete.balanceSheet[complete.balanceSheet.length - 1];
-  const dilutedSharesMillion = rrcQ1_2026Baseline.dilutedSharesMillion.value;
+  const dilutedSharesMillion = rrcLatestDetailedBaseline.dilutedSharesMillion.value;
   const forecast2027EbitdaxMillion = sumYear(forecastPeriods, 2027, "ebitdaxMillion");
   const netDebtMillion = endingBalanceSheet?.netDebtMillion ?? null;
 

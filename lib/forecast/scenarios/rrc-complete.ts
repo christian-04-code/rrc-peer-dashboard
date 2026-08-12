@@ -1,4 +1,4 @@
-import { rrcQ1_2026Baseline } from "@/lib/forecast/data/rrc-baseline";
+import { rrcLatestDetailedBaseline } from "@/lib/forecast/data/rrc-baseline";
 import { rrcActualQuarters, isRrcActualPeriod, type RrcActualPeriod } from "@/lib/forecast/data/rrc-actuals";
 import { rrcHedgeBookQ1_2026 } from "@/lib/forecast/data/rrc-hedges";
 import { FORECAST_ENGINE_VERSION, runForecastScenario } from "@/lib/forecast/engine";
@@ -67,12 +67,12 @@ export type RrcCompleteScenarioOptions = {
   annualOverrides?: RrcAnnualOverrides;
 };
 
-/** The only reported production anchor this scenario uses: the latest 10-Q baseline, held flat unless overridden. */
+/** The only reported production anchor this scenario uses: the latest detailed 10-Q baseline (rrcLatestDetailedBaseline, currently Q2 2026), held flat unless overridden. */
 export const latestReportedProduction: ProductionBeginningState = {
-  period: rrcQ1_2026Baseline.period.replace("-", ""),
-  gasMmcfPerDay: rrcQ1_2026Baseline.naturalGasMmcfPerDay,
-  nglMbblPerDay: rrcQ1_2026Baseline.nglMbblPerDay,
-  oilMbblPerDay: rrcQ1_2026Baseline.oilMbblPerDay
+  period: rrcLatestDetailedBaseline.period.replace("-", ""),
+  gasMmcfPerDay: rrcLatestDetailedBaseline.naturalGasMmcfPerDay,
+  nglMbblPerDay: rrcLatestDetailedBaseline.nglMbblPerDay,
+  oilMbblPerDay: rrcLatestDetailedBaseline.oilMbblPerDay
 };
 
 export type RrcCompleteScenarioResult = {
@@ -143,6 +143,39 @@ function guidedAnnualValue(metric: GuidanceMetricKey, year: GuidanceYear, unit: 
     reference: guidance.sourceReference,
     notes: `${guidance.notes ?? ""}${rangeText}`.trim()
   });
+}
+
+/**
+ * For market-driven pricing differentials only (gasBasisPerMcf today; oilDifferentialPerBbl
+ * would use this too if RRC ever guides one): when RRC did not guide this exact year, prefer
+ * the current reporting cycle's OWN guided figure (year "2026", the only year this cycle
+ * guides) held flat over falling straight to a single reported quarter's realized outcome.
+ * Rationale (feat/rrc-q2-baseline follow-up, 2026-08-12): a realized quarterly differential is
+ * a backward-looking, market-driven, potentially one-off outcome (basis-hedge settlement
+ * timing, seasonal takeaway constraints, etc.); management's own current guidance -- issued
+ * the SAME day as the Q2 2026 actuals, and explicitly "improved"/"raised" this cycle -- is a
+ * more informative forward view of a structurally-driven basis position (gathering/takeaway
+ * contracts) than one quarter's noisy realized print. Falls through to null (letting the
+ * caller use its reported-anchor default) only when the metric has NO guidance in ANY year of
+ * the current cycle -- e.g. RRC does not guide an oil differential at all, so
+ * oilDifferentialPerBbl is unaffected by this helper and keeps using the reported anchor.
+ * Cost/opex per-Mcfe fields (LOE, GP&T, cash G&A, ...) are NOT routed through this: those are
+ * comparatively stable across quarters (the Q1->Q2 move was a few cents, not a sign flip) and
+ * changing their fallback policy is outside this narrow review's scope.
+ */
+function guidedOrCurrentCycleValue(metric: GuidanceMetricKey, yearKey: GuidanceYear, unit: string, period: string): SourcedValue | null {
+  const exact = guidedAnnualValue(metric, yearKey, unit, period);
+  if (exact) return exact;
+  if (yearKey === "2026") return null;
+  const currentCycle = guidedAnnualValue(metric, "2026", unit, period);
+  if (!currentCycle) return null;
+  return {
+    ...currentCycle,
+    source: {
+      ...currentCycle.source,
+      notes: `${currentCycle.source.notes} RRC did not separately guide this differential for ${yearKey}; the current cycle's only guided figure (FY 2026) is held flat rather than falling back to a single realized quarter's differential.`.trim()
+    }
+  };
 }
 
 /**
@@ -285,15 +318,15 @@ function periodAssumptions(
             notes: "Reported Q1 2026 premium to NYMEX including basis hedges. Historical actual; never overridden by guidance or a user assumption."
           })
         : annualOverride?.gasBasisPerMcf ??
-          guidedAnnualValue("gasBasisPerMcf", yearKey, "$/Mcf", period) ??
+          guidedOrCurrentCycleValue("gasBasisPerMcf", yearKey, "$/Mcf", period) ??
           value({
-            value: 0.18,
+            value: -0.47,
             unit: "$/Mcf",
             period,
             classification: "modeled",
             name: "Range Resources",
-            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
-            notes: `Uses the Q1 2026 premium to NYMEX including basis hedges as the forward anchor, held flat; RRC did not guide a gas differential for ${year}.`
+            reference: "Q2 2026 Form 10-Q realized-pricing disclosure",
+            notes: `Uses the Q2 2026 differential to NYMEX including basis hedges as the forward anchor, held flat; RRC did not guide a gas differential for ${year}.`
           }),
       gasTransportMarketingPerMcf: value({
         value: 0,
@@ -342,15 +375,15 @@ function periodAssumptions(
             notes: "Reported Q1 2026 oil differential to WTI. Historical actual; never overridden by guidance or a user assumption."
           })
         : annualOverride?.oilDifferentialPerBbl ??
-          guidedAnnualValue("oilDifferentialPerBbl", yearKey, "$/bbl", period) ??
+          guidedOrCurrentCycleValue("oilDifferentialPerBbl", yearKey, "$/bbl", period) ??
           value({
-            value: -10.68,
+            value: -9.62,
             unit: "$/bbl",
             period,
             classification: "modeled",
             name: "Range Resources",
-            reference: "Q1 2026 Form 10-Q realized-pricing disclosure",
-            notes: `Uses the Q1 2026 oil differential as the forward anchor, held flat; RRC did not guide an oil differential for ${year}.`
+            reference: "Q2 2026 Form 10-Q realized-pricing disclosure",
+            notes: `Uses the Q2 2026 oil differential as the forward anchor, held flat; RRC did not guide an oil differential for ${year}.`
           }),
       oilHedgeImpactPerBbl: value({
         value: 0,
@@ -377,13 +410,13 @@ function periodAssumptions(
         : annualOverride?.loePerMcfe ??
           guidedAnnualValue("loePerMcfe", yearKey, "$/Mcfe", period) ??
           value({
-            value: 0.14,
+            value: 0.133,
             unit: "$/Mcfe",
             period,
             classification: "modeled",
             name: "Range Resources",
-            reference: "Q1 2026 Form 10-Q",
-            notes: `Uses Q1 2026 direct operating expense per Mcfe as the forward anchor, held flat; RRC did not guide LOE for ${year}.`
+            reference: "Q2 2026 Form 10-Q",
+            notes: `Uses Q2 2026 direct operating expense per Mcfe as the forward anchor, held flat; RRC did not guide LOE for ${year}.`
           }),
       gatheringTransportPerMcfe: isQ1Actual
         ? value({
@@ -398,13 +431,13 @@ function periodAssumptions(
         : annualOverride?.gatheringTransportPerMcfe ??
           guidedAnnualValue("gatheringTransportPerMcfe", yearKey, "$/Mcfe", period) ??
           value({
-            value: 1.63,
+            value: 1.516,
             unit: "$/Mcfe",
             period,
             classification: "modeled",
             name: "Range Resources",
-            reference: "Q1 2026 Form 10-Q",
-            notes: `Uses Q1 2026 GP&T per Mcfe as the forward anchor, held flat; RRC did not guide GP&T for ${year}.`
+            reference: "Q2 2026 Form 10-Q",
+            notes: `Uses Q2 2026 GP&T per Mcfe as the forward anchor, held flat; RRC did not guide GP&T for ${year}.`
           }),
       productionTaxPctRevenue: value({
         value: 5.823 / 1010.252,
@@ -413,7 +446,7 @@ function periodAssumptions(
         classification: isQ1Actual ? "reported" : "modeled",
         name: "Range Resources",
         reference: "Q1 2026 Form 10-Q",
-        notes: "Derived from Q1 2026 taxes other than income divided by natural gas, NGL, and oil sales, held flat. RRC's current $/Mcfe production/ad valorem tax guidance uses a different unit basis (see productionTaxPerMcfe in the guidance reference panel) and is not wired into this percent-of-revenue field."
+        notes: "Derived from Q1 2026 taxes other than income divided by natural gas, NGL, and oil sales, held flat. Not re-verified against Q2 2026 in the feat/rrc-q2-baseline recalibration (2026-08-12) -- doing so would require Q2's own taxes-other-than-income and total commodity-sales figures, not yet pulled -- so this ratio remains Q1-anchored pending a future update; see rrc-baseline.ts's rrcQ2_2026Baseline.productionTaxesPerMcfe. RRC's current $/Mcfe production/ad valorem tax guidance uses a different unit basis (see productionTaxPerMcfe in the guidance reference panel) and is not wired into this percent-of-revenue field."
       }),
       cashGaMillion: isQ1Actual
         ? value({
@@ -457,8 +490,8 @@ function periodAssumptions(
               period,
               classification: "modeled",
               name: "Range Resources",
-              reference: "Q1 2026 Form 10-Q",
-              notes: `Uses reported Q1 2026 cash G&A of $0.18/Mcfe as the forward anchor, held flat and applied to this period's forecast Mcfe production; RRC did not guide G&A for ${year}.`
+              reference: "Q2 2026 Form 10-Q",
+              notes: `Uses reported Q2 2026 cash G&A of $0.18/Mcfe (independently verified via the 10-Q's G&A/stock-comp breakout table; numerically unchanged from the Q1 2026 anchor) as the forward anchor, held flat and applied to this period's forecast Mcfe production; RRC did not guide G&A for ${year}.`
             });
           })(),
       cashInterestMillion: isQ1Actual
@@ -476,13 +509,13 @@ function periodAssumptions(
             const guided = guidedAnnualValue("cashInterestPerMcfe", yearKey, "$/Mcfe", period);
             if (!guided || guided.value === null || flatProduction.volumes.totalMcfe === null) {
               return value({
-                value: 19.419,
+                value: 14.4,
                 unit: "$mm",
                 period,
                 classification: "modeled",
                 name: "Range Resources",
-                reference: "Q1 2026 Form 10-Q",
-                notes: `Uses reported Q1 2026 interest expense as the forward run-rate, held flat; RRC did not guide net interest for ${year}.`
+                reference: "Q2 2026 Form 10-Q",
+                notes: `Uses reported Q2 2026 interest expense as the forward run-rate, held flat; RRC did not guide net interest for ${year}.`
               });
             }
             return value({
@@ -510,13 +543,13 @@ function periodAssumptions(
             const guided = guidedAnnualValue("explorationMillion", yearKey, "$mm", period);
             if (!guided || guided.value === null) {
               return value({
-                value: 6.03,
+                value: 6.498,
                 unit: "$mm",
                 period,
                 classification: "modeled",
                 name: "Range Resources",
-                reference: "Q1 2026 Form 10-Q",
-                notes: `Uses reported Q1 2026 exploration expense as the forward run-rate, held flat; RRC did not guide exploration expense for ${year}.`
+                reference: "Q2 2026 Form 10-Q",
+                notes: `Uses reported Q2 2026 exploration expense as the forward run-rate, held flat; RRC did not guide exploration expense for ${year}.`
               });
             }
             return value({
@@ -779,7 +812,7 @@ export function runRrcCompleteScenario(
       ...rrcHedgeBookQ1_2026.notes,
       "The model is fully calculable, but hedge impacts remain zero until contract-level derivative rows are loaded.",
       "2026Q1 and 2026Q2 are immutable reported actuals (revenue, EBITDAX, CapEx, FCF, total production, and net debt); forward production/cost/pricing assumptions for Q3 2026 onward do not affect them.",
-      "Forward production holds the latest reported Q1 2026 production mix constant by default (Q2 2026 lacks a gas/NGL/oil breakdown in the current integration scope); no decline, growth, or annual target ramp is applied unless the caller supplies an explicit per-period override.",
+      "Forward production holds the latest reported Q2 2026 production mix constant by default (feat/rrc-q2-baseline, 2026-08-12); no decline, growth, or annual target ramp is applied unless the caller supplies an explicit per-period override.",
       "Reported G&A and interest expense are used as forecast anchors and are not presented as separately reconciled cash-only measures."
     ]
   };
