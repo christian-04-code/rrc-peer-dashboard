@@ -23,18 +23,30 @@
  *   rather than silently pulled in as a fallback -- see extraction report for detail.
  *
  * EXTRACTION DATE: 2026-08-04 (supporting fields added 2026-08-10; FactSet
- * reported net income expanded to every supported peer/quarter 2026-08-12)
+ * reported net income expanded to every supported peer/quarter 2026-08-12; Q2 2026
+ * production mix / realized pricing / unit costs / wells detail fields -- previously
+ * left unresolved as outside the "accepted six-metric Q2 2026 actuals integration"
+ * scope -- populated 2026-08-12 on fix/q2-data-foundation from each company's own
+ * Q2 2026 Form 10-Q, tagged "sec-direct" rather than "codex" since they were not
+ * transcribed from the Codex workbook this file otherwise sources from)
  *
  * Every leaf value is a SourcedValue: { value, source, basis, note? }.
  *   - value: the number as it appears in the source workbook, or null when the
  *     source workbook itself is blank / "#N/A" / "Not disclosed". Never 0, never
  *     interpolated.
- *   - source: "codex" | "factset" -- which workbook the cell came from. Almost every
- *     cell in this fixture is "codex"; the tag is kept per-cell (not file-level) so a
- *     future FactSet backfill can be merged in without silently blending series. The
- *     netIncome is "factset" (E&P_Facset_Company_Model.xlsx, each peer sheet,
- *     "Reported Net Income ($mm)" row, Q1 2024A-Q2 2026A actual columns) because
- *     the Codex workbook does not carry net income as its own line. GPOR Q2 2026 is
+ *   - source: "codex" | "factset" | "sec-direct" -- which source the cell came from.
+ *     Almost every cell in this fixture is "codex"; the tag is kept per-cell (not
+ *     file-level) so a future FactSet or Codex backfill can be merged in without
+ *     silently blending series. The netIncome is "factset" (E&P_Facset_Company_Model.xlsx,
+ *     each peer sheet, "Reported Net Income ($mm)" row, Q1 2024A-Q2 2026A actual
+ *     columns) because the Codex workbook does not carry net income as its own line.
+ *     "sec-direct" marks the Q2 2026 production/realizedPrices/costs/wells detail
+ *     fields added 2026-08-12: pulled straight from each company's own Q2 2026 Form
+ *     10-Q (and, for wells activity not disclosed in the 10-Q, that company's Q2 2026
+ *     earnings-release 8-K on SEC EDGAR) rather than the Codex workbook, because the
+ *     Codex extraction session that produced the rest of this file did not yet cover
+ *     these fields for Q2 2026. A future Codex pass covering this quarter's detail
+ *     should replace these cells rather than merge with them. GPOR Q2 2026 is
  *     explicitly #N/A and remains absent. These are FactSet transcriptions of
  *     company-reported actuals, not consensus estimates.
  *   - basis: "actual" | "derived" | "guidance" -- "actual" means taken directly from
@@ -77,7 +89,7 @@ export const quarters: Quarter[] = [
   "Q1 2026", "Q2 2026"
 ];
 
-export type SourceTag = "codex" | "factset";
+export type SourceTag = "codex" | "factset" | "sec-direct";
 export type ValueBasis = "actual" | "derived" | "guidance";
 
 export type SourcedValue = {
@@ -133,6 +145,32 @@ export type QuarterlyFinancials = {
 const RRC_CAPEX_NOTE =
   "Range historical capital expenditures use company-reported all-in capital spending from quarterly earnings materials, consistent with the stored Q1 and Q2 2026 values; standalone quarters are in $MM at the company's reported nearest-$MM precision.";
 
+type PeerQ2DetailField = { value: number; note: string } | null;
+
+/**
+ * Q2 2026 production/pricing/cost/wells detail, sourced directly from each company's
+ * own Q2 2026 Form 10-Q (see the "sec-direct" SourceTag note above the file header).
+ * A field left undefined (not passed) renders as the prior "outside accepted scope"
+ * unresolved placeholder; a field explicitly passed as `null` renders as "confirmed
+ * not disclosed this quarter" (a different, more specific unresolved note) -- both
+ * stay `value: null`, only the note text differs.
+ */
+type AuditedPeerQ2Detail = {
+  naturalGasProduction?: PeerQ2DetailField;
+  nglProduction?: PeerQ2DetailField;
+  oilCondensateProduction?: PeerQ2DetailField;
+  realizedNaturalGasPrice?: PeerQ2DetailField;
+  realizedNglPrice?: PeerQ2DetailField;
+  realizedOilCondensatePrice?: PeerQ2DetailField;
+  leaseOperatingExpense?: PeerQ2DetailField;
+  gatheringProcessingTransportation?: PeerQ2DetailField;
+  cashGA?: PeerQ2DetailField;
+  totalCashUnitCosts?: PeerQ2DetailField;
+  wellsDrilled?: PeerQ2DetailField;
+  wellsTurnedInLine?: PeerQ2DetailField;
+  ducInventory?: PeerQ2DetailField;
+};
+
 type AuditedPeerQ2Actual = {
   ticker: Exclude<Ticker, "RRC">;
   production: number;
@@ -141,6 +179,7 @@ type AuditedPeerQ2Actual = {
   capitalExpenditures: number;
   capitalExpendituresBasis?: ValueBasis;
   netDebt: number;
+  detail?: AuditedPeerQ2Detail;
 };
 
 function auditedPeerQ2Actual({
@@ -150,7 +189,8 @@ function auditedPeerQ2Actual({
   adjustedEbitdax,
   capitalExpenditures,
   capitalExpendituresBasis = "actual",
-  netDebt
+  netDebt,
+  detail = {}
 }: AuditedPeerQ2Actual): QuarterlyFinancials {
   const unresolved = (basis: ValueBasis = "actual"): SourcedValue => ({
     value: null,
@@ -158,6 +198,36 @@ function auditedPeerQ2Actual({
     basis,
     note: `Outside the accepted ${ticker} Q2 2026 six-metric actuals integration scope; left unresolved rather than estimated.`
   });
+
+  const notDisclosed = (basis: ValueBasis = "actual"): SourcedValue => ({
+    value: null,
+    source: "sec-direct",
+    basis,
+    note: `Reviewed the ${ticker} Q2 2026 Form 10-Q (and, for wells activity, the Q2 2026 earnings-release 8-K); this field is not disclosed on a comparable standalone-quarter basis and is left unresolved rather than estimated.`
+  });
+
+  function detailField(key: keyof AuditedPeerQ2Detail, basis: ValueBasis = "actual"): SourcedValue {
+    const field = detail[key];
+    if (field === undefined) return unresolved(basis);
+    if (field === null) return notDisclosed(basis);
+    return { value: field.value, source: "sec-direct", basis, note: field.note };
+  }
+
+  const gasField = detail.naturalGasProduction;
+  const nglField = detail.nglProduction;
+  const oilField = detail.oilCondensateProduction;
+  const mixDenominator = gasField && nglField && oilField ? production : null;
+
+  function mixPct(component: PeerQ2DetailField): SourcedValue {
+    if (mixDenominator === null || !component) return unresolved("derived");
+    const mcfeEquivalent = component === gasField ? component.value : component.value * 6;
+    return {
+      value: mcfeEquivalent / mixDenominator,
+      source: "sec-direct",
+      basis: "derived",
+      note: `Calculated = ${ticker} Q2 2026 component production on an Mcfe-equivalent basis / total production Mcfe, from the same Q2 2026 Form 10-Q production table.`
+    };
+  }
 
   return {
     ticker,
@@ -168,30 +238,30 @@ function auditedPeerQ2Actual({
     netDebt: { value: netDebt, source: "codex", basis: "derived", note: `Approved audited ${ticker} quarter-end net debt as of June 30, 2026, under the existing live-series definition.` },
     production: {
       total: { value: production, source: "codex", basis: "actual", note: `Approved audited ${ticker} Q2 2026 average daily production in MMcfe/d.` },
-      naturalGas: unresolved(),
-      ngl: unresolved(),
-      oilCondensate: unresolved()
+      naturalGas: detailField("naturalGasProduction"),
+      ngl: detailField("nglProduction"),
+      oilCondensate: detailField("oilCondensateProduction")
     },
     commodityMix: {
-      naturalGasPct: unresolved("derived"),
-      nglPct: unresolved("derived"),
-      oilCondensatePct: unresolved("derived")
+      naturalGasPct: mixPct(gasField ?? null),
+      nglPct: mixPct(nglField ?? null),
+      oilCondensatePct: mixPct(oilField ?? null)
     },
     realizedPrices: {
-      naturalGas: unresolved(),
-      ngl: unresolved(),
-      oilCondensate: unresolved()
+      naturalGas: detailField("realizedNaturalGasPrice"),
+      ngl: detailField("realizedNglPrice"),
+      oilCondensate: detailField("realizedOilCondensatePrice")
     },
     costs: {
-      leaseOperatingExpense: unresolved(),
-      gatheringProcessingTransportation: unresolved(),
-      cashGA: unresolved(),
-      totalCashUnitCosts: unresolved("derived")
+      leaseOperatingExpense: detailField("leaseOperatingExpense"),
+      gatheringProcessingTransportation: detailField("gatheringProcessingTransportation"),
+      cashGA: detailField("cashGA"),
+      totalCashUnitCosts: detailField("totalCashUnitCosts", "derived")
     },
     wells: {
-      drilled: unresolved(),
-      turnedInLine: unresolved(),
-      ducInventory: unresolved()
+      drilled: detailField("wellsDrilled"),
+      turnedInLine: detailField("wellsTurnedInLine"),
+      ducInventory: detailField("ducInventory")
     }
   };
 }
@@ -558,29 +628,29 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       netDebt: { value: 880.753, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents as of June 30, 2026, in $MM." },
       production: {
         total: { value: 2296.399, source: "codex", basis: "actual", note: "Direct reported average daily gas-equivalent production for the three months ended June 30, 2026." },
-        naturalGas: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." },
-        ngl: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." },
-        oilCondensate: { value: null, source: "codex", basis: "actual", note: "Not included in the accepted six-metric RRC Q2 2026 actuals integration; left unresolved rather than estimated." }
+        naturalGas: { value: 1548.871, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily natural gas production, 1,548,871 Mcf/d for the three months ended June 30, 2026 (converted to MMcf/d)." },
+        ngl: { value: 118.113, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily NGL production, 118,113 Bbl/d for the three months ended June 30, 2026 (converted to Mbbl/d)." },
+        oilCondensate: { value: 6.475, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A production data table: average daily oil production, 6,475 Bbl/d for the three months ended June 30, 2026 (converted to Mbbl/d)." }
       },
       commodityMix: {
-        naturalGasPct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." },
-        nglPct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." },
-        oilCondensatePct: { value: null, source: "codex", basis: "derived", note: "Production components were outside the accepted RRC Q2 2026 integration; mix remains unresolved." }
+        naturalGasPct: { value: 0.674478172129495, source: "sec-direct", basis: "derived", note: "Calculated = natural gas production on an Mcfe-equivalent basis / total production Mcfe, from the same Q2 2026 Form 10-Q production table." },
+        nglPct: { value: 0.3086040361452866, source: "sec-direct", basis: "derived", note: "Calculated = NGL barrels x 6 Mcfe per barrel / total production Mcfe, from the same Q2 2026 Form 10-Q production table." },
+        oilCondensatePct: { value: 0.01691779172521848, source: "sec-direct", basis: "derived", note: "Calculated = oil/condensate barrels x 6 Mcfe per barrel / total production Mcfe, from the same Q2 2026 Form 10-Q production table." }
       },
       realizedPrices: {
-        naturalGas: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        ngl: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        oilCondensate: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." }
+        naturalGas: { value: 2.79, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A average prices table: natural gas price including derivative settlements but before third-party transportation costs, three months ended June 30, 2026 -- matching this field's established convention (rrc-baseline.ts's \"realizedGasIncludingDerivativesPerMcf\" definition)." },
+        ngl: { value: 29.10, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A average prices table: NGL price excluding derivative settlements, three months ended June 30, 2026." },
+        oilCondensate: { value: 83.96, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q, MD&A average prices table: oil price excluding derivative settlements, three months ended June 30, 2026." }
       },
       costs: {
-        leaseOperatingExpense: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        gatheringProcessingTransportation: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        cashGA: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        totalCashUnitCosts: { value: null, source: "codex", basis: "derived", note: "Outside the accepted RRC Q2 2026 integration scope." }
+        leaseOperatingExpense: { value: 0.1330, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q: Direct operating expense $27,791 thousand / total production 208,972.309 MMcfe (2,296.399 MMcfe/d x 91 days), three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 1.5160, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q: Transportation, gathering, processing and compression $316,812 thousand / total production 208,972.309 MMcfe, three months ended June 30, 2026." },
+        cashGA: { value: 0.2283, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 Form 10-Q: General and administrative $47,707 thousand / total production 208,972.309 MMcfe, three months ended June 30, 2026 -- this is the reported G&A/Mcfe figure directly, not a cash-only adjustment (see lib/forecast/data/rrc-baseline.ts for the stricter forecast-engine convention, which leaves this field unavailable for Q1 2026)." },
+        totalCashUnitCosts: { value: 1.9105, source: "sec-direct", basis: "derived", note: "Calculated (LOE + transportation/gathering/processing/compression + taxes other than income + cash G&A, / production) from the RRC Q2 2026 Form 10-Q: (27,791 + 316,812 + 6,926 + 47,707) thousand / 208,972.309 MMcfe." }
       },
       wells: {
-        drilled: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
-        turnedInLine: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." },
+        drilled: { value: null, source: "sec-direct", basis: "actual", note: "Left unresolved, consistent with this field's established RRC policy: the Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-22) discloses \"Range drilled ~190,000 lateral feet across 11 wells\" during the quarter, but this field explicitly rejects earnings-release wells-drilled language for RRC because it does not reconcile to the 10-K's annual gross-productive-development-wells definition used for other quarters." },
+        turnedInLine: { value: 21.0, source: "sec-direct", basis: "actual", note: "RRC Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-22): \"turning to sales ~300,000 feet across 21 wells\" during the quarter; cross-checked against the release's own \"Wells TIL 1H 2026\" total of 38 less the already-stored Q1 2026 value of 17 (this file's own RRC Q1 2026 wells.turnedInLine) = 21, an exact match." },
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Outside the accepted RRC Q2 2026 integration scope." }
       }
     },
@@ -908,7 +978,22 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       adjustedEbitdax: 595.437,
       capitalExpenditures: 326.0,
       capitalExpendituresBasis: "derived",
-      netDebt: 2634.7
+      netDebt: 2634.7,
+      detail: {
+        naturalGasProduction: { value: 2846.154, note: "AR Q2 2026 Form 10-Q, selected operating data table: natural gas sales volume 259 Bcf for the three months ended June 30, 2026, divided by 91 calendar days." },
+        nglProduction: { value: 207.901, note: "AR Q2 2026 Form 10-Q, selected operating data table: C2 ethane 7,896 MBbl plus C3+ NGLs 11,023 MBbl for the three months ended June 30, 2026, divided by 91 calendar days (combined-NGL convention, matching this field's established AR methodology)." },
+        oilCondensateProduction: { value: 8.33, note: "AR Q2 2026 Form 10-Q, selected operating data table: oil 758 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        realizedNaturalGasPrice: { value: 2.66, note: "AR Q2 2026 Form 10-Q, selected operating data table: natural gas price before effects of derivative settlements, three months ended June 30, 2026 (pre-hedge)." },
+        realizedNglPrice: { value: 31.06, note: "AR Q2 2026 Form 10-Q, selected operating data table: volume-weighted average of C2 ethane ($12.54/Bbl, 7,896 MBbl) and C3+ NGLs ($44.33/Bbl, 11,023 MBbl) before effects of derivative settlements, three months ended June 30, 2026." },
+        realizedOilCondensatePrice: { value: 78.60, note: "AR Q2 2026 Form 10-Q, selected operating data table: oil price before effects of derivative settlements, three months ended June 30, 2026." },
+        leaseOperatingExpense: { value: 0.13, note: "AR Q2 2026 Form 10-Q, selected operating data table: average costs per Mcfe, lease operating, three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 1.99, note: "AR Q2 2026 Form 10-Q, selected operating data table: sum of gathering and compression ($0.72), processing ($0.78), and transportation ($0.49) per Mcfe, three months ended June 30, 2026." },
+        cashGA: { value: 0.12, note: "AR Q2 2026 Form 10-Q, selected operating data table: general and administrative (excluding equity-based compensation) per Mcfe, three months ended June 30, 2026." },
+        totalCashUnitCosts: { value: 2.38, note: "AR Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-29): \"Total cash operating costs were at the low end of the guidance range at $2.38 per Mcfe\" -- independently cross-checked against the 10-Q's own component figures (0.13 LOE + 1.99 GP&T + 0.10 production tax + 0.04 net marketing + 0.12 cash G&A = 2.38)." },
+        wellsDrilled: null,
+        wellsTurnedInLine: { value: 26.0, note: "AR Q2 2026 earnings release (8-K Ex-99.1, filed 2026-07-29): \"Antero placed 26 Marcellus wells to sales during the second quarter.\"" },
+        ducInventory: null
+      }
     })
   },
   CNX: {
@@ -1233,7 +1318,22 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       revenue: 618.484,
       adjustedEbitdax: 290.0,
       capitalExpenditures: 142.0,
-      netDebt: 2239.488
+      netDebt: 2239.488,
+      detail: {
+        naturalGasProduction: { value: 1497.451, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: natural gas sales volume 136,268 MMcf for the three months ended June 30, 2026, divided by 91 calendar days." },
+        nglProduction: { value: 27.099, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: NGL sales volume 2,466 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        oilCondensateProduction: { value: 0.714, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: oil/condensate sales volume 65 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        realizedNaturalGasPrice: { value: 2.40, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: natural gas gross sales price, three months ended June 30, 2026 (pre-hedge)." },
+        realizedNglPrice: { value: 23.40, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: NGL gross price, three months ended June 30, 2026 (pre-hedge)." },
+        realizedOilCondensatePrice: { value: 73.74, note: "CNX Q2 2026 Form 10-Q, average realized price reconciliation table: oil/condensate gross price, three months ended June 30, 2026 (pre-hedge)." },
+        leaseOperatingExpense: { value: 0.1404, note: "CNX Q2 2026 Form 10-Q: Lease Operating Expense $21,262 thousand / total sales volumes 151,453 MMcfe, three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 0.6816, note: "CNX Q2 2026 Form 10-Q: Transportation, Gathering and Compression $103,223 thousand / total sales volumes 151,453 MMcfe, three months ended June 30, 2026." },
+        cashGA: { value: 0.1850, note: "CNX Q2 2026 Form 10-Q: Selling, General and Administrative Costs $33,837 thousand less Long-Term Equity-Based Compensation (non-cash) $5,825 thousand = $28,012 thousand cash SG&A, / total sales volumes 151,453 MMcfe, three months ended June 30, 2026." },
+        totalCashUnitCosts: { value: 1.0501, note: "Calculated per CNX's established formula (LOE + production/ad valorem/other fees + transportation/gathering/compression + cash G&A, / total sales volumes) from the CNX Q2 2026 Form 10-Q: (21,262 + 6,546 + 103,223 + 28,012) thousand / 151,453 MMcfe." },
+        wellsDrilled: { value: 2.0, note: "CNX 2Q 2026 Earnings Results & Supplemental Information (8-K Ex-99.1, filed 2026-07-30), Q2 2026 Activity Summary: \"TD\" (total depth) total." },
+        wellsTurnedInLine: { value: 5.0, note: "CNX 2Q 2026 Earnings Results & Supplemental Information (8-K Ex-99.1, filed 2026-07-30), Q2 2026 Activity Summary: \"TIL\" total." },
+        ducInventory: null
+      }
     })
   },
   CRK: {
@@ -1558,7 +1658,22 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       revenue: 470.262,
       adjustedEbitdax: 244.811,
       capitalExpenditures: 446.869,
-      netDebt: 3088.872
+      netDebt: 3088.872,
+      detail: {
+        naturalGasProduction: { value: 1242.516, note: "CRK Q2 2026 Form 10-Q, MD&A net production data table: natural gas 113,069 MMcf for the three months ended June 30, 2026, divided by 91 calendar days." },
+        nglProduction: null,
+        oilCondensateProduction: { value: 0.0549, note: "CRK Q2 2026 Form 10-Q, MD&A net production data table: oil 5 MBbls for the three months ended June 30, 2026, divided by 91 calendar days." },
+        realizedNaturalGasPrice: { value: 2.54, note: "CRK Q2 2026 Form 10-Q, MD&A average sales price table: natural gas per Mcf, three months ended June 30, 2026 (pre-hedge, before cash settlements on derivatives)." },
+        realizedNglPrice: null,
+        realizedOilCondensatePrice: { value: 95.20, note: "CRK Q2 2026 Form 10-Q, MD&A average sales price table: oil per Bbl, three months ended June 30, 2026 (pre-hedge)." },
+        leaseOperatingExpense: { value: 0.25, note: "CRK Q2 2026 Form 10-Q, MD&A expenses per Mcfe table: lease operating expense, three months ended June 30, 2026 ($28,150 thousand / 113,102 MMcfe)." },
+        gatheringProcessingTransportation: { value: 0.38, note: "CRK Q2 2026 Form 10-Q, MD&A expenses per Mcfe table: gathering and transportation, three months ended June 30, 2026 ($43,331 thousand / 113,102 MMcfe)." },
+        cashGA: { value: 0.0778, note: "CRK Q2 2026 Form 10-Q MD&A: general and administrative expenses $17.2 million less stock-based compensation $8.4 million = $8.8 million cash G&A, / 113,102 MMcfe total production, three months ended June 30, 2026." },
+        totalCashUnitCosts: { value: 0.7734, note: "Calculated per CRK's established formula (LOE + gathering/transportation + production tax + cash G&A) from the CRK Q2 2026 Form 10-Q: (28,150 + 43,331 + 7,196 + 8,800) thousand / 113,102 MMcfe." },
+        wellsDrilled: { value: 17.0, note: "CRK Q2 2026 Form 10-Q MD&A: six months ended June 30, 2026 gross wells drilled (34) less the three months ended March 31, 2026 gross wells drilled already reported for Q1 2026 (17, verified directly against the CRK Q1 2026 Form 10-Q) = 17 standalone Q2 2026 wells drilled (gross), derived by subtraction since CRK's 10-Q discloses only the six-month cumulative for Q2." },
+        wellsTurnedInLine: { value: 16.0, note: "CRK Q2 2026 Form 10-Q MD&A: six months ended June 30, 2026 gross wells completed (29) less the three months ended March 31, 2026 gross wells completed already reported for Q1 2026 (13) = 16 standalone Q2 2026 wells completed/turned-in-line (gross), same derivation as wellsDrilled." },
+        ducInventory: null
+      }
     })
   },
   EQT: {
@@ -1883,7 +1998,22 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       revenue: 1809.94,
       adjustedEbitdax: 1202.99,
       capitalExpenditures: 666.258,
-      netDebt: 5542.851
+      netDebt: 5542.851,
+      detail: {
+        naturalGasProduction: { value: 6560.264, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: natural gas sales volume 596,984 MMcf for the three months ended June 30, 2026, divided by 91 calendar days." },
+        nglProduction: { value: 63.527, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: NGLs-excluding-ethane sales volume 3,459 MBbl plus ethane sales volume 2,322 MBbl for the three months ended June 30, 2026, divided by 91 calendar days (combined-NGL convention)." },
+        oilCondensateProduction: { value: 5.143, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: oil sales volume 468 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        realizedNaturalGasPrice: { value: 2.38, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: \"Average adjusted price\" ($/Mcf) -- NYMEX plus Btu uplift and basis differential but before cash-settled derivatives (pre-hedge), three months ended June 30, 2026." },
+        realizedNglPrice: { value: 26.45, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: volume-weighted average of NGLs-excluding-ethane ($39.29/Bbl, 3,459 MBbl) and ethane ($7.33/Bbl, 2,322 MBbl) before cash-settled derivatives, three months ended June 30, 2026." },
+        realizedOilCondensatePrice: { value: 70.14, note: "EQT Q2 2026 Form 10-Q, MD&A average realized price reconciliation table: oil price ($/Bbl), three months ended June 30, 2026 (pre-hedge)." },
+        leaseOperatingExpense: { value: 0.0990, note: "EQT Q2 2026 Form 10-Q, business segment results \"Per Unit ($/Mcfe)\" table: LOE $62,837 thousand / 634,474 MMcfe total sales volume, three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 0.6068, note: "EQT Q2 2026 Form 10-Q, business segment results \"Per Unit ($/Mcfe)\" table: Gathering ($57,991K) + Transmission ($253,844K) + Processing ($73,182K), excluding the intercompany affiliate-transport elimination line, / 634,474 MMcfe, three months ended June 30, 2026. Reverse-engineered against the already-stored Q1 2026 historical.json value (0.648) which reconciles to this same three-component sum." },
+        cashGA: null,
+        totalCashUnitCosts: { value: 1.03, note: "EQT Second Quarter 2026 Results earnings release (8-K Ex-99.1, filed 2026-07-21), Per Unit Operating Costs table: company-disclosed \"Operating costs\" of $1.03/Mcfe (Gathering + Transmission + Processing + LOE + Production taxes + O&M + SG&A, excluding depletion), three months ended June 30, 2026. Same authoritative definition independently verified to reconcile exactly against the Q1 2026 earnings release's own \"Operating costs\" line (1.09, matching the existing stored Q1 2026 value)." },
+        wellsDrilled: null,
+        wellsTurnedInLine: null,
+        ducInventory: null
+      }
     })
   },
   EXE: {
@@ -2208,7 +2338,25 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       revenue: 2960.0,
       adjustedEbitdax: 1183.0,
       capitalExpenditures: 851.0,
-      netDebt: 3075.0
+      netDebt: 3075.0,
+      detail: {
+        naturalGasProduction: { value: 6896.0, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: natural gas total, three months ended June 30, 2026 (already disclosed as an MMcf/d daily rate)." },
+        nglProduction: { value: 83.0, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: NGL total, three months ended June 30, 2026 (already disclosed as an MBbl/d daily rate)." },
+        oilCondensateProduction: { value: 14.0, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: oil total, three months ended June 30, 2026 (already disclosed as an MBbl/d daily rate)." },
+        realizedNaturalGasPrice: { value: 2.42, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: natural gas blended \"Total\" price ($/Mcf), three months ended June 30, 2026 -- pre-hedge." },
+        realizedNglPrice: { value: 26.26, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: NGL blended \"Total\" price ($/Bbl), three months ended June 30, 2026 (pre-hedge)." },
+        realizedOilCondensatePrice: { value: 84.71, note: "EXE Q2 2026 Form 10-Q, MD&A production volumes and average sales prices table: oil blended \"Total\" price ($/Bbl), three months ended June 30, 2026 (pre-hedge)." },
+        leaseOperatingExpense: { value: 0.25, note: "EXE Q2 2026 Form 10-Q, MD&A \"Production Expenses\" table (EXE's LOE-equivalent line item): Total production expenses per Mcfe, three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 0.93, note: "EXE Q2 2026 Form 10-Q, MD&A \"Gathering, Processing and Transportation Expenses\" table: Total GP&T per Mcfe, three months ended June 30, 2026." },
+        // cashGA / totalCashUnitCosts intentionally omitted (falls back to the generic
+        // "outside accepted scope" unresolved note): the 10-Q's disclosed G&A/Mcfe
+        // ($0.07) does not reconcile to the pattern this metric uses for other peers,
+        // and no independent earnings-release aggregate resolves the ambiguity --
+        // see the equivalent data/historical.json note for the full explanation.
+        wellsDrilled: null,
+        wellsTurnedInLine: null,
+        ducInventory: null
+      }
     })
   },
   GPOR: {
@@ -2533,7 +2681,22 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       revenue: 323.228,
       adjustedEbitdax: 179.1,
       capitalExpenditures: 148.6,
-      netDebt: 928.946
+      netDebt: 928.946,
+      detail: {
+        naturalGasProduction: { value: 878.363, note: "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: natural gas production 79,931 MMcf for the three months ended June 30, 2026, divided by 91 calendar days." },
+        nglProduction: { value: 9.857, note: "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: NGL production 897 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        oilCondensateProduction: { value: 4.198, note: "GPOR Q2 2026 Form 10-Q, MD&A natural gas, oil and condensate and NGL production and pricing table: oil/condensate production 382 MBbl for the three months ended June 30, 2026, divided by 91 calendar days." },
+        realizedNaturalGasPrice: { value: 2.48, note: "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: natural gas average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge)." },
+        realizedNglPrice: { value: 33.94, note: "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: NGL average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge)." },
+        realizedOilCondensatePrice: { value: 85.86, note: "GPOR Q2 2026 Form 10-Q, MD&A production and pricing table: oil/condensate average price without the impact of derivatives, three months ended June 30, 2026 (pre-hedge)." },
+        leaseOperatingExpense: { value: 0.23, note: "GPOR Q2 2026 Form 10-Q, MD&A lease operating expenses table: total LOE per Mcfe, three months ended June 30, 2026." },
+        gatheringProcessingTransportation: { value: 0.97, note: "GPOR Q2 2026 Form 10-Q, MD&A transportation, gathering, processing and compression table: per Mcfe, three months ended June 30, 2026." },
+        cashGA: { value: 0.12, note: "GPOR Q2 2026 Form 10-Q, MD&A general and administrative expenses table: G&A, net (gross less third-party reimbursements less capitalized G&A) per Mcfe, three months ended June 30, 2026." },
+        totalCashUnitCosts: { value: 1.3982, note: "Calculated per GPOR's established formula (LOE + taxes other than income + transportation/gathering/processing/compression + G&A net, / total production) from the GPOR Q2 2026 Form 10-Q: (19,831 + 7,374 + 84,626 + 10,661) thousand / 87,610 MMcfe. Independently derived; does not exactly reconcile to the already-stored Q1 2026 value using the equivalent Q1 disclosed figures, a small unresolved discrepancy flagged rather than forced to match." },
+        wellsDrilled: { value: 7.0, note: "GPOR Q2 2026 Form 10-Q MD&A: \"We spud 7 gross (6.7 net) wells targeting the Utica formation during the three months ended June 30, 2026\" (no wells spud in the SCOOP)." },
+        wellsTurnedInLine: { value: 10.0, note: "GPOR Q2 2026 Form 10-Q MD&A highlights: \"Turned to sales 10 gross (9.5 net) operated wells\" during the three months ended June 30, 2026." },
+        ducInventory: null
+      }
     })
   },
 };

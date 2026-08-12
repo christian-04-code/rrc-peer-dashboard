@@ -28,7 +28,9 @@
       "MUR",
       "OVV",
       "SM"
-    ]
+    ],
+    "deprecated": true,
+    "deprecated_note": "DEPRECATED as of fix/q2-data-foundation (2026-08-12): confirmed zero imports of this file anywhere in the app (grep for \"data/guidance.json\" and \"@/data/guidance\" across lib/, app/, components/ returns no matches). The live guidance source is data/management-guidance.json (see its own meta.reportingCycle), read by lib/dashboard/guidance.ts and lib/dashboard/chart-guidance.ts. This file is kept on disk rather than deleted since deletion carries no benefit and some risk (e.g. an external script or a future session referencing it); do not wire it back into the app without first reconciling it against management-guidance.json, which has since been rebuilt with primary-source verification this file does not have."
   },
   "companies": {
     "RRC": {

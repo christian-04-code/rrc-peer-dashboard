@@ -5,6 +5,44 @@
 - **Latest commit**: "Show commodity price assumptions (current market / EIA / modeled) in the Scenario Workbench"
 - **Pushed to origin**: yes, `origin/main` == local HEAD
 
+## Status as of fix/q2-data-foundation (2026-08-12)
+
+The sections below this one are a chronological session log and are **not** kept
+up to date after they're written -- several of their "Known Risks" bullets are
+now stale. Current accurate facts, superseding anything below that conflicts:
+
+- **Test count**: 421/421 (`npm test`), not the 270/270 figure quoted in
+  "Validation Results" below.
+- **EPS coverage**: populated for **all 7 core peers** (`lib/dashboard/eps-quarterly.ts`,
+  FactSet E&P model), not RRC-only as "Known Risks" below still claims. GPOR
+  Q2 2026 alone is `#N/A` in the source and stays unavailable.
+- **`netIncome` coverage**: populated for **all 7 peers** in
+  `financials-quarterly.ts` (FactSet-sourced), not RRC-only as "Known Risks"
+  below still claims.
+- **Market Cap / P/E / EV-EBITDAX / FCF Yield at Q2 2026**: backfilled for all
+  7 peers (`lib/dashboard/market-cap-quarterly.ts`, Nasdaq historical close x
+  each company's own Q2 2026 10-Q diluted weighted-average shares, since
+  Yahoo Finance/Macrotrends were not reachable this session). GPOR's P/E stays
+  null at Q2 2026 specifically because FactSet's net income row is `#N/A` that
+  quarter, unrelated to the market-cap gap.
+- **Guidance source**: `components/dashboard/GuidancePanel.tsx` and
+  `lib/dashboard/guidance.ts`/`chart-guidance.ts` read `data/management-guidance.json`
+  (`meta.reportingCycle: "Q2 2026"`), not `data/guidance.json` as "Right-column
+  widgets" below still claims -- that file has zero imports anywhere in the
+  app and should be treated as orphaned/deprecated, not the live source.
+- **Q2 2026 production/pricing/cost/wells detail**: `financials-quarterly.ts`'s
+  `production`/`commodityMix`/`realizedPrices`/`costs`/`wells` fields are now
+  populated for Q2 2026 for all 7 peers (source-tagged `"sec-direct"`), closing
+  the gap that was silently pulling the Overview page's realized-gas-price
+  ranking back to Q1 2026 via `latestComparableQuarter()`. `data/historical.json`
+  has the same fields backfilled for reference.
+- **Canonical consistency**: `tests/canonical-consistency.test.cjs` now
+  directly compares `data/historical.json` against the live fixtures at the
+  latest quarter (currently Q2 2026) in CI. It does **not** cover Q1 2024-Q1
+  2026 -- an exploratory sweep found ~272 pre-existing mismatches between the
+  two files across that older history, a separate reconciliation effort not
+  attempted on this branch.
+
 ## Validation Results
 - `npm test`: 270/270 pass, including 14 new tests in `tests/forecast-commodity-assumptions.test.cjs`, plus one test in `tests/forecast-oilpriceapi-fallback.test.cjs` narrowed (it previously blanket-checked for the word "oilpriceapi" anywhere in Forecast components; now that the UI legitimately displays the label "OilPriceAPI · Current Market", the check was scoped to actual import/env-var/upstream-call patterns instead — no provider logic changed)
 - `npm run typecheck`: clean

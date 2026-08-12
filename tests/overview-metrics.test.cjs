@@ -34,9 +34,9 @@ test("all seven peers render ten Overview cards with Q2 fundamentals and compact
   }
 });
 
-test("realized gas uses the latest complete comparable period and lateral feet is not inferred", () => {
+test("realized gas resolves at Q2 2026 for every peer now that the Q2 2026 detail fields are populated, and lateral feet is not inferred", () => {
   for (const ticker of tickers) {
-    assert.match(card(ticker, "realized_gas_price").note, /Q1 2026/);
+    assert.match(card(ticker, "realized_gas_price").note, /Q2 2026/);
     assert.notEqual(card(ticker, "realized_gas_price").displayValue, "--");
     assert.equal(card(ticker, "lateral_feet_til").displayValue, "--");
     assert.equal(card(ticker, "lateral_feet_til").rank, null);

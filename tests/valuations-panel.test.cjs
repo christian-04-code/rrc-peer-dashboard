@@ -25,29 +25,37 @@ test("RRC Valuations widget resolves EPS, EBITDAX, Market Cap, and P/E for the c
   assert.equal(ebitdax.previous, 329.024);
 
   const marketCap = byKey(metrics, "marketCap");
-  assert.equal(marketCap.current, null);
+  assert.equal(marketCap.current, 8784.65);
   assert.equal(marketCap.previous, 9650.0);
 
   const pe = byKey(metrics, "pe");
-  assert.equal(pe.current, null);
+  assert.ok(pe.current !== null && Number.isFinite(pe.current));
   assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
 });
 
-test("peer EPS and historical P/E resolve from FactSet actuals while unsupported current market cap stays blank", () => {
+test("peer EPS and historical P/E resolve from FactSet actuals now that Q2 2026 market cap is backfilled", () => {
   const metrics = getValuationSnapshot("AR");
   const eps = byKey(metrics, "eps");
   const pe = byKey(metrics, "pe");
   assert.equal(eps.current, 0.761931);
   assert.equal(eps.previous, 0.351268);
-  assert.equal(pe.current, null);
+  assert.ok(pe.current !== null && Number.isFinite(pe.current));
   assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
 
-  // Q2 market cap remains unsupported; EBITDAX is independently sourced and resolves.
   const marketCap = byKey(metrics, "marketCap");
   const ebitdax = byKey(metrics, "ebitdax");
-  assert.equal(marketCap.current, null);
+  assert.equal(marketCap.current, 11005.286);
   assert.ok(marketCap.previous !== null);
   assert.ok(ebitdax.current !== null);
+});
+
+test("GPOR P/E stays null for Q2 2026 because FactSet's net income row is #N/A for that quarter, while market cap resolves independently", () => {
+  const metrics = getValuationSnapshot("GPOR");
+  const marketCap = byKey(metrics, "marketCap");
+  const pe = byKey(metrics, "pe");
+  assert.equal(marketCap.current, 3045.267);
+  assert.equal(pe.current, null);
+  assert.ok(pe.previous !== null && Number.isFinite(pe.previous));
 });
 
 test("the Valuations widget updates with the selected company (different tickers produce different snapshots)", () => {

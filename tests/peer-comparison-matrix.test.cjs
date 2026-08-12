@@ -44,10 +44,13 @@ test("multiple selected tickers preserve selection order and deselection removes
 
 test("unsupported values format as double dash rather than falling back to another quarter", () => {
   const matrix = getPeerComparisonMatrix(["RRC", "GPOR"], "Q2 2026");
-  assert.equal(findRow(matrix, "marketCap").values.RRC.value, null);
-  assert.equal(findRow(matrix, "marketCap").values.RRC.displayValue, "--");
   assert.equal(findRow(matrix, "eps").values.GPOR.value, null);
   assert.equal(findRow(matrix, "eps").values.GPOR.displayValue, "--");
+  // GPOR's Q2 2026 P/E stays unsupported (FactSet's net income row is #N/A that quarter)
+  // even though market cap now resolves for every ticker at Q2 2026.
+  assert.equal(findRow(matrix, "pe").values.GPOR.value, null);
+  assert.equal(findRow(matrix, "pe").values.GPOR.displayValue, "--");
+  assert.equal(findRow(matrix, "marketCap").values.RRC.value, 8784.65);
 });
 
 test("all 840 peer-quarter-metric cells are audited with only unsupported values left blank", () => {
@@ -70,14 +73,17 @@ test("all 840 peer-quarter-metric cells are audited with only unsupported values
   }
 
   assert.equal(total, 840);
-  assert.equal(missing, 113);
+  // Q2 2026 market cap backfill (fix/q2-data-foundation) resolved market cap for all
+  // 7 peers, which cascades into P/E, FCF yield, and EV/EBITDAX wherever those were
+  // only blocked by market cap -- 27 fewer blanks than before the backfill (113 -> 86).
+  // GPOR's P/E stays blank because FactSet's Q2 2026 net income row is independently #N/A.
+  assert.equal(missing, 86);
   assert.deepEqual(missingByMetric, {
-    netDebtToEbitdax: 21,
-    fcfYield: 28,
-    marketCap: 7,
     eps: 1,
-    pe: 28,
-    evToEbitdax: 28
+    pe: 22,
+    netDebtToEbitdax: 21,
+    fcfYield: 21,
+    evToEbitdax: 21
   });
 });
 
