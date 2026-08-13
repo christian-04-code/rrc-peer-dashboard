@@ -1,6 +1,6 @@
 {
   "capturedFrom": "feat/peer-forecast-ar-cnx-eqt",
-  "_baselineNote": "CNX's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (605-620 Bcfe, mid 612.5, reaffirmed), held flat forward since CNX did not guide 2027/2028 production. The gas/NGL/oil split derives from CNX's guided FY2026 liquids-mix percentage (7-8%, mid 7.5%) applied to the guided total, then split between NGL and oil using CNX's own Q2 2026 reported NGL:oil ratio (oil is a de minimis ~2.6% of liquids, <0.1% of total production). CNX guides only a single blended cash-unit-cost figure (fully_burdened_cash_cost, $1.15/Mcfe); LOE, gathering/transport, and cash G&A are each proportionally scaled from the Q2 2026 reported mix to reconcile with that guided total. CNX guides an absolute FY2026 NGL price ($24.60/bbl, used directly) and its own NYMEX gas-price planning assumption ($3.55/MMBtu, used as the default Henry Hub input when no live/custom price is supplied -- preferred over the Q2 2026 realized benchmark ($2.89) because it is management's current forward view, the same precedence the RRC reference model applies). Default-forecast EBITDAX ($1,179.8mm) runs ~8.5% below CNX's own guided FY2026 EBITDAX ($1,290mm); the gap is consistent with CNX's separately guided tax-credit (45Z, ~$40mm/yr) and environmental-attribute (~$90mm/yr) monetization, both real cash contributors this engine's standard commodity-revenue model does not capture -- a disclosed, understood limitation, not an error. Net debt declines dollar-for-dollar with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
+  "_baselineNote": "CNX's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (605-620 Bcfe, mid 612.5, reaffirmed), held flat forward since CNX did not guide 2027/2028 production. The gas/NGL/oil split derives from CNX's guided FY2026 liquids-mix percentage (7-8%, mid 7.5%) applied to the guided total, then split between NGL and oil using CNX's own Q2 2026 reported NGL:oil ratio (oil is a de minimis ~2.6% of liquids, <0.1% of total production). CNX guides only a single blended cash-unit-cost figure (fully_burdened_cash_cost, $1.15/Mcfe); LOE, gathering/transport, and cash G&A are each proportionally scaled from the Q2 2026 reported mix to reconcile with that guided total. CNX guides an absolute FY2026 NGL price ($24.60/bbl, used directly) and its own NYMEX gas-price planning assumption ($3.55/MMBtu, used as the default Henry Hub input when no live/custom price is supplied -- preferred over the Q2 2026 realized benchmark ($2.89) because it is management's current forward view, the same precedence the RRC reference model applies). UPDATED (financial-integrity review, post-initial-build): Adjusted EBITDAX now includes a $90mm/yr non-commodity addback for CNX's guided environmental-attribute monetization -- verified against CNX's Q2 2026 Form 10-Q, which recognizes environmental-attribute sales within 'Other Revenue and Operating Income,' a component of CNX's own GAAP-based Adjusted EBITDAX that this engine's commodity-only revenue calculation would otherwise omit every forecast year. FCF is tax-effected on the same addback at each year's resolved cash tax rate. CNX's separately guided 45Z tax-credit monetization (~$40mm/yr) was deliberately NOT added: per the Q2 2026 10-Q's income-tax footnote, that credit is recorded through the income-tax provision, not revenue/operating income, and is excluded from EBITDAX by definition (EBITDAX excludes taxes). Default-forecast EBITDAX ($1,269.8mm) now runs ~1.6% below CNX's own guided FY2026 EBITDAX ($1,290mm), down from an ~8.5% gap before this addback. Net debt declines dollar-for-dollar with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
   "get": {
     "latestActualPeriod": "2026Q2",
     "forecastYears": ["2026", "2027", "2028"],
@@ -10,33 +10,33 @@
   },
   "post": {
     "default": {
-      "ebitdaxMillion": { "2026": 1179.7793904789733, "2027": 1179.7793904789733, "2028": 1183.0116627816556 },
-      "freeCashFlowMillion": { "2026": 432.2136426693939, "2027": 391.26614705023496, "2028": 373.766089759123 },
-      "impliedSharePrice": 39.84495431383617
+      "ebitdaxMillion": { "2026": 1269.7793904789733, "2027": 1269.7793904789733, "2028": 1273.0116627816556 },
+      "freeCashFlowMillion": { "2026": 520.4136426693939, "2027": 475.866147050235, "2028": 456.56608975912303 },
+      "impliedSharePrice": 44.70851503536904
     },
     "productionOverride": {
       "request": { "production": { "2027": { "gasMmcfPerDay": 1700 } } },
-      "ebitdax2027Million": 1278.267845584301,
-      "impliedSharePrice": 44.540325080698466
+      "ebitdax2027Million": 1368.267845584301,
+      "impliedSharePrice": 49.40388580223134
     },
     "commodityOverride": {
       "request": { "customCommodity": { "henryHubPerMmbtu": 4.5 } },
-      "ebitdax2027Million": 1712.3165546195983,
-      "impliedSharePrice": 68.62303025017894
+      "ebitdax2027Million": 1802.3165546195983,
+      "impliedSharePrice": 73.48659097171182
     },
     "multipleSparseOverrides": {
       "request": { "production": { "2028": { "oilMbblPerDay": 2 } }, "customCommodity": { "wtiPerBbl": 80 } },
-      "ebitdax2028Million": 1208.6643125269943,
-      "impliedSharePrice": 39.70224360110066
+      "ebitdax2028Million": 1298.6643125269943,
+      "impliedSharePrice": 44.56580432263354
     },
     "valuationMultiple": {
       "request": { "valuation": { "targetEvToEbitdax": 7.4, "forwardYear": "2027" } },
-      "impliedSharePrice": 47.507786450064174
+      "impliedSharePrice": 52.95590975831974
     },
     "forwardYear": {
       "request": { "valuation": { "targetEvToEbitdax": 6.4, "forwardYear": "2028" } },
-      "forwardEbitdaxMillion": 1183.0116627816556,
-      "impliedSharePrice": 42.40697932707628
+      "forwardEbitdaxMillion": 1273.0116627816556,
+      "impliedSharePrice": 47.80833762839404
     }
   }
 }

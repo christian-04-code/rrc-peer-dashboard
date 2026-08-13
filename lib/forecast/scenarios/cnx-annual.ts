@@ -13,7 +13,8 @@ import {
   cnxManagementGuidance,
   cnxGuidedNglPricePerBbl,
   cnxGuidedFullyBurdenedCashCostPerMcfe,
-  cnxGuidedGasPriceAssumptionPerMmbtu
+  cnxGuidedGasPriceAssumptionPerMmbtu,
+  cnxGuidedEnvironmentalAttributeMonetizationMillionPerYear
 } from "@/lib/forecast/guidance/cnx";
 import {
   resolveGuidedOrCarriedForward,
@@ -285,6 +286,8 @@ export function runCnxAnnualForecast(request: AnnualForecastRequest): AnnualFore
     const capexMillionPerQuarter =
       capexOverride !== undefined ? capexOverride / 4 : capexDefault.classification === "guided" ? (capexDefault.value ?? null) === null ? null : (capexDefault.value as number) / 4 : capexDefault.value;
 
+    const resolvedCashTaxRate = costsOverride.cashTaxRate ?? costsDefault.cashTaxRate.value;
+
     const { quarters, production, revenueMillion, ebitdaxMillion, capexMillion, freeCashFlowMillion } = runAnnualPeriod({
       year,
       gasMmcfPerDay,
@@ -302,13 +305,40 @@ export function runCnxAnnualForecast(request: AnnualForecastRequest): AnnualFore
       cashGaPerMcfe: costsOverride.cashGaPerMcfe ?? costsDefault.cashGaPerMcfe.value,
       explorationMillionPerQuarter: costsOverride.explorationMillion ?? costsDefault.explorationMillion.value,
       cashInterestMillionPerQuarter: costsOverride.cashInterestMillion ?? costsDefault.cashInterestMillion.value,
-      cashTaxRate: costsOverride.cashTaxRate ?? costsDefault.cashTaxRate.value,
+      cashTaxRate: resolvedCashTaxRate,
       capexMillionPerQuarter
     });
 
-    quarterly.push(...quarters);
-    yearlyQuarters.push({ period: year, quarters });
-    annual[year] = { year, production, revenueMillion, ebitdaxMillion, capexMillion, freeCashFlowMillion, fcfYield: null, endingNetDebtMillion: null };
+    // Non-commodity EBITDAX addback: CNX's own guided annual environmental-
+    // attribute monetization run-rate. This engine's revenue/EBITDAX
+    // calculation only projects commodity (gas/NGL/oil) revenue forward, but
+    // CNX's Q2 2026 Form 10-Q confirms environmental-attribute sales are
+    // recognized within "Other Revenue and Operating Income" -- included in
+    // CNX's own GAAP-based Adjusted EBITDAX -- so without this addback the
+    // model structurally omits a real, guided, non-commodity EBITDAX
+    // contributor every forecast year. Applied evenly across the year's 4
+    // quarters (and the underlying net-debt roll-forward, via quarters[]
+    // below) so the annual summary and per-quarter figures stay consistent.
+    // FCF impact is tax-effected at this year's resolved cash tax rate,
+    // consistent with how the rest of EBITDAX flows to FCF. $0 (no change)
+    // if CNX stops guiding this metric in a future cycle.
+    const environmentalAttributeAnnualMillion = cnxGuidedEnvironmentalAttributeMonetizationMillionPerYear() ?? 0;
+    const environmentalAttributeQuarterlyMillion = environmentalAttributeAnnualMillion / 4;
+    const validTaxRate = resolvedCashTaxRate !== null && Number.isFinite(resolvedCashTaxRate);
+    const environmentalAttributeQuarterlyFcfMillion = validTaxRate ? environmentalAttributeQuarterlyMillion * (1 - (resolvedCashTaxRate as number)) : null;
+    const adjustedQuarters = quarters.map((quarter) => ({
+      ...quarter,
+      ebitdaxMillion: quarter.ebitdaxMillion === null ? null : quarter.ebitdaxMillion + environmentalAttributeQuarterlyMillion,
+      freeCashFlowMillion:
+        quarter.freeCashFlowMillion === null || environmentalAttributeQuarterlyFcfMillion === null ? quarter.freeCashFlowMillion : quarter.freeCashFlowMillion + environmentalAttributeQuarterlyFcfMillion
+    }));
+    const adjustedEbitdaxMillion = ebitdaxMillion === null ? null : ebitdaxMillion + environmentalAttributeAnnualMillion;
+    const adjustedFreeCashFlowMillion =
+      freeCashFlowMillion === null || environmentalAttributeQuarterlyFcfMillion === null ? freeCashFlowMillion : freeCashFlowMillion + environmentalAttributeQuarterlyFcfMillion * 4;
+
+    quarterly.push(...adjustedQuarters);
+    yearlyQuarters.push({ period: year, quarters: adjustedQuarters });
+    annual[year] = { year, production, revenueMillion, ebitdaxMillion: adjustedEbitdaxMillion, capexMillion, freeCashFlowMillion: adjustedFreeCashFlowMillion, fcfYield: null, endingNetDebtMillion: null };
   }
 
   const startingNetDebt = cnxLatestDetailedBaseline.netDebtMillion.value ?? 0;
@@ -338,6 +368,7 @@ export function runCnxAnnualForecast(request: AnnualForecastRequest): AnnualFore
     "CNX's commodity split derives NGL/oil from its guided FY2026 liquids-mix percentage plus its own Q2 2026 reported NGL:oil ratio, since CNX does not separately guide gas/NGL/oil volumes.",
     "CNX guides only a single blended cash-unit-cost figure (fully burdened cash cost); LOE, gathering/transport, and cash G&A are each proportionally scaled from the Q2 2026 reported mix to reconcile with that guided total.",
     "CNX guides an absolute FY2026 NGL price ($24.60/bbl), used directly rather than a WTI-relative differential.",
+    "Adjusted EBITDAX includes CNX's guided ~$90mm/yr environmental-attribute monetization as a non-commodity addback (verified as part of CNX's GAAP 'Other Revenue and Operating Income' per its Q2 2026 Form 10-Q, and therefore part of its own Adjusted EBITDAX bridge) -- this engine's commodity-only revenue calculation would otherwise omit it every forecast year. CNX's separately guided 45Z tax-credit monetization (~$40mm/yr) is intentionally NOT added: it is recorded through the income-tax provision, not revenue or operating income, and is excluded from EBITDAX by definition.",
     "Net debt is projected to decline dollar-for-dollar with cumulative forecast free cash flow only; dividends, buybacks, and debt issuance/repayment are not modeled."
   );
 

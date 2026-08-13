@@ -87,3 +87,30 @@ export function cnxGuidedGasPriceAssumptionPerMmbtu(): number | null {
   const record = getCompanyGuidanceRecords("CNX").find((entry) => entry.metric === "gas_price_assumption" && entry.period === "FY 2026");
   return record?.midpoint ?? null;
 }
+
+/**
+ * CNX's own guided annual run-rate environmental-attribute monetization
+ * (~$90mm/yr, "raised" this cycle) -- a non-commodity revenue/EBITDAX
+ * contribution, verified against CNX's Q2 2026 Form 10-Q: environmental
+ * attribute sales are recognized within "Other Revenue and Operating Income"
+ * in CNX's consolidated statement of income ($40,257 thousand for Q2 2026
+ * alone), which is included in "Total Revenue and Other Operating Income"
+ * ($618,484 thousand for Q2 2026 -- the same figure this engine's CNX
+ * baseline already uses as its historical revenue anchor) and therefore in
+ * CNX's own GAAP-based Adjusted EBITDAX bridge. This engine's forecast years
+ * only project commodity (gas/NGL/oil) revenue forward, so without this
+ * addback the model would structurally omit a real, guided, non-commodity
+ * EBITDAX contributor every forecast year -- see scenarios/cnx-annual.ts for
+ * how it's applied. Returns null if CNX stops guiding this metric.
+ *
+ * NOT the same as CNX's separately guided 45Z tax-credit monetization
+ * (~$40mm/yr): that credit is recorded through CNX's income-tax provision
+ * (an increase to income tax benefit / a reduction to cash taxes paid, per
+ * the Q2 2026 10-Q's income-tax footnote), not through revenue or operating
+ * income -- it is a below-EBITDAX-line item by definition (EBITDAX excludes
+ * taxes) and is intentionally NOT added here.
+ */
+export function cnxGuidedEnvironmentalAttributeMonetizationMillionPerYear(): number | null {
+  const record = getCompanyGuidanceRecords("CNX").find((entry) => entry.metric === "environmental_attribute_monetization" && entry.period === "Annual Run Rate");
+  return record?.midpoint ?? null;
+}
