@@ -1,0 +1,42 @@
+{
+  "capturedFrom": "feat/peer-forecast-ar-cnx-eqt",
+  "_baselineNote": "AR's default forecast anchors 2026 total production to its own guided FY2026 total (4.175 Bcfe/d, raised this cycle), with the gas/NGL/oil commodity split derived from AR's separately guided per-commodity components (natural_gas_production + c3_ngl_production + ethane_production + oil_production) rescaled to reconcile with that guided total -- see scenarios/ar-annual.ts's resolveAnnualCommodityProductionDefaults for why the raw components (~4.078 Bcfe/d summed) are not used directly. 2027/2028 gas/oil differentials carry AR's current-cycle FY2026 guided figures forward flat (AR's separate FY2027 production target from the prior Q1 2026 cycle was NOT reconfirmed in Q2 2026 and is intentionally excluded, consistent with the site's reportingCycle-current-only guidance convention). NGL pricing uses a WTI-relative realization ratio derived from the Q2 2026 actual (31.06/93.58), because AR's own guided ethane/C3 differentials are quoted against Mont Belvieu, which this system has no live benchmark for -- an open item. Net debt declines dollar-for-dollar with cumulative forecast FCF only (no dividends/buybacks/financing modeled). Default-forecast implied share price ($35.96) lands within ~2% of AR's actual Q2 2026 quarter-end close ($35.14, per market-cap-quarterly.ts), a useful sanity check on the overall methodology.",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 2634.7,
+    "dilutedSharesMillion": 313.184,
+    "totalMcfe": { "2026": 1523875, "2027": 1523875, "2028": 1528050 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 2132.3679563560877, "2027": 2132.3679563560877, "2028": 2138.2100603461045 },
+      "freeCashFlowMillion": { "2026": 911.500917228966, "2027": 829.3988389747226, "2028": 793.7225355184164 },
+      "impliedSharePrice": 35.9555312769279
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 3000 } } },
+      "ebitdax2027Million": 2163.418580236813,
+      "impliedSharePrice": 36.61385399637722
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 4 } },
+      "ebitdax2027Million": 3265.6933718009127,
+      "impliedSharePrice": 59.43615324941633
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 12 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 1831.3561927600617,
+      "impliedSharePrice": 26.793789872725398
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 6.7, "forwardYear": "2027" } },
+      "impliedSharePrice": 42.76420591023001
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 5.7, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 2138.2100603461045,
+      "impliedSharePrice": 38.5962234204011
+    }
+  }
+}

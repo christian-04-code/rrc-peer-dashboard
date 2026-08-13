@@ -2,14 +2,17 @@ import type { Ticker } from "@/lib/dashboard/types";
 import type { ForecastCompanyAdapter } from "@/lib/forecast/companies/types";
 import { ForecastRequestError } from "@/lib/forecast/companies/types";
 import { rrcForecastAdapter } from "@/lib/forecast/companies/rrc";
+import { arForecastAdapter } from "@/lib/forecast/companies/ar";
+import { cnxForecastAdapter } from "@/lib/forecast/companies/cnx";
+import { eqtForecastAdapter } from "@/lib/forecast/companies/eqt";
 import { createUnsupportedForecastAdapter } from "@/lib/forecast/companies/placeholders";
 
 const adapters: Record<Ticker, ForecastCompanyAdapter> = {
   RRC: rrcForecastAdapter,
-  AR: createUnsupportedForecastAdapter("AR"),
-  CNX: createUnsupportedForecastAdapter("CNX"),
+  AR: arForecastAdapter,
+  CNX: cnxForecastAdapter,
   CRK: createUnsupportedForecastAdapter("CRK"),
-  EQT: createUnsupportedForecastAdapter("EQT"),
+  EQT: eqtForecastAdapter,
   EXE: createUnsupportedForecastAdapter("EXE"),
   GPOR: createUnsupportedForecastAdapter("GPOR")
 };
