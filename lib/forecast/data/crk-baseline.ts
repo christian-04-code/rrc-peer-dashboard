@@ -17,22 +17,23 @@ import type { PeerOperatingBaseline } from "@/lib/forecast/scenarios/annual-shar
  * comes from CRK's own current-cycle guidance (see guidance/crk.ts); the
  * baseline field below is a secondary fallback only.
  *
- * DATA-QUALITY NOTE (found while building this baseline, not fixed here --
- * out of scope for this task, which only builds CRK/EXE/GPOR forecast models):
- * financials-quarterly.ts's CRK Q2 2026 `revenue` field ($470.262mm) does not
- * match CRK's own Q2 2026 Form 10-Q. The 10-Q's consolidated statement of
- * operations (data/sec/CRK/2026-06-30/0001193125-26-326260/filing.htm) shows
- * "Total revenues and other operating income" of $353.282mm for the three
- * months ended June 30, 2026, and $470.262mm for the three months ended June
- * 30, 2025 (the adjacent comparative column) -- i.e. the stored Q2 2026 value
- * appears to be the prior-year comparative, not the current-year actual. This
- * baseline does NOT use that field; the production-tax ratio below is derived
- * from CRK's own reported Q2 2026 natural gas + oil sales ($288.221mm, the
- * "Total natural gas and oil sales" line for the three months ended June 30,
- * 2026) instead. Flagged for a future data-integrity pass; capitalExpenditures
- * and netDebt in financials-quarterly.ts were independently spot-checked
- * against the same 10-Q and are consistent (within a small, disclosed
- * face-value-vs-carrying-value net-debt convention gap), so they are used as-is.
+ * DATA-QUALITY NOTE: financials-quarterly.ts's CRK Q2 2026 `revenue` field
+ * previously held $470.262mm, which was the Q2 2025 comparative-period figure
+ * from CRK's Q2 2026 Form 10-Q rather than the Q2 2026 actual -- corrected to
+ * $353.282mm on fix/crk-q2-2026-revenue (see that field's own comment in
+ * financials-quarterly.ts and data/historical.json for the full citation).
+ * This baseline still does NOT use that field for the production-tax ratio
+ * below, independent of the correction: the ratio is derived from CRK's own
+ * reported Q2 2026 natural gas + oil sales ($288.221mm, the "Total natural gas
+ * and oil sales" line for the three months ended June 30, 2026), deliberately
+ * narrower than "Total revenues and other operating income" (which also
+ * includes CRK's separate "Gas services" / Pinnacle Gas Services midstream
+ * revenue and is not comparable to this engine's commodity-only revenue
+ * basis) -- so this baseline's own figures are unaffected by the fix.
+ * capitalExpenditures and netDebt in financials-quarterly.ts were
+ * independently spot-checked against the same 10-Q and are consistent (within
+ * a small, disclosed face-value-vs-carrying-value net-debt convention gap),
+ * so they are used as-is.
  */
 
 const retrievedAt = "2026-08-13T00:00:00.000Z";
@@ -183,12 +184,13 @@ export const crkLatestDetailedBaseline: PeerOperatingBaseline = {
  * Current-market-implied EV/EBITDAX (Q2 2026 market cap + net debt, over Q2 2026
  * EBITDAX annualized), +-1.0x band -- same preset-banding convention as the RRC
  * reference model. Deliberately NOT built from lib/dashboard/financials-
- * quarterly.ts's CRK `adjustedEbitdax` field ($244.811mm): that field sits
- * alongside the `revenue` field this baseline's header note already flags as
- * likely a Q2-2025/Q2-2026 column mixup (verified against the 10-Q's GAAP income
- * statement), so it was not trusted without independent verification, and no
- * Adjusted EBITDAX reconciliation is disclosed in the cached 10-Q (a non-GAAP
- * metric, normally sourced from the earnings release, not on hand here). Instead
+ * quarterly.ts's CRK `adjustedEbitdax` field ($244.811mm): that field sits in
+ * the same Q2 2026 entry where the adjacent `revenue` field was independently
+ * found to hold a Q2-2025/Q2-2026 column mixup (fixed on
+ * fix/crk-q2-2026-revenue -- see that field's comment), so `adjustedEbitdax`
+ * was not trusted without its own independent verification, and no Adjusted
+ * EBITDAX reconciliation is disclosed in the cached 10-Q (a non-GAAP metric,
+ * normally sourced from the earnings release, not on hand here). Instead
  * this multiple is built from CRK's own reported Q2 2026 commodity cash margin
  * (natural gas + oil sales $288.221mm less LOE $28.150mm, gathering/transport
  * $43.331mm, production taxes $7.196mm, and cash G&A $8.8mm = $200.744mm), a

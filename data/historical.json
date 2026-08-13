@@ -5330,7 +5330,7 @@
             "Q3 2025": 449.852,
             "Q4 2025": 789.814,
             "Q1 2026": 587.354,
-            "Q2 2026": 470.262
+            "Q2 2026": 353.282
           },
           "source_by_quarter": {
             "Q1 2024": "2024_Q1_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
@@ -5342,7 +5342,7 @@
             "Q3 2025": "2025_Q3_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
             "Q4 2025": "FactSet E&P Company Model (Actual) - overrides Codex value 787.321",
             "Q1 2026": "2026_Q1_CRK_10-Q.pdf; 10-Q, Condensed Consolidated Statements of Operations; three months ended",
-            "Q2 2026": "Approved audited Q2 2026 actual; standalone quarter or June 30 quarter-end balance under the existing live-series definition."
+            "Q2 2026": "Corrected (fix/crk-q2-2026-revenue): 2026_Q2_CRK_10-Q.pdf, Condensed Consolidated Statements of Operations, three months ended June 30, 2026, 'Total revenues and other operating income' = $353.282mm. The prior stored value (470.262) was the adjacent three-months-ended-June-30-2025 comparative column from the same statement, not the Q2 2026 actual."
           },
           "notes": "Quarterly reported revenue.",
           "factset_overridden_quarters": [
