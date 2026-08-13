@@ -1,0 +1,42 @@
+{
+  "capturedFrom": "feat/peer-forecast-crk-exe-gpor",
+  "_baselineNote": "EXE's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (7,400-7,600 MMcfe/d, mid 7,500 -- the corrected midpoint following the prior data-foundation fix, converted to this engine's internal Bcfe/d convention), held flat forward since EXE did not guide 2027/2028 production. EXE guides only a total rate (no per-commodity split), so gas/NGL/oil is derived using EXE's own Q2 2026 reported production mix ratio. EXE guides its cash cost structure component-by-component (production expense $0.255/Mcfe, gathering/processing/transportation $1.07/Mcfe -- a base rate of $1.00 plus a $0.07 fair-value-liability adjustment, severance/ad-valorem taxes $0.09/Mcfe converted to a %-of-revenue rate, cash G&A $0.085/Mcfe) plus gas/oil differentials ($-0.35/Mcf, $-9.00/Bbl) and an absolute FY2026 NGL realization price ($22-26/bbl, mid $24/bbl, used directly) this cycle, and a total FY2026 cash-interest figure ($185mm). EXE does not guide a cash-tax rate this cycle (modeled 2/6/8% ramp). EXE's Marketing (Twin Eagle) segment is NOT modeled: its current Q2 2026 net margin (~$32mm/quarter, $681mm marketing revenue less $649mm marketing expense) is materially smaller than the guided long-term $750mm annual run-rate target, an explicit forward/post-synergy figure not confirmed for the current cycle -- disclosed as a real, unmodeled value item, contributing to the default implied share price ($65.09) sitting below EXE's Q2 2026 quarter-end market price (~$91.19). Net debt declines with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 3075,
+    "dilutedSharesMillion": 238.357,
+    "totalMcfe": { "2026": 2737500, "2027": 2737500, "2028": 2745000 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 3461.412342120334, "2027": 3461.412342120334, "2028": 3470.8956636055955 },
+      "freeCashFlowMillion": { "2026": 360.8840952779275, "2027": 229.8276015931142, "2028": 173.02401051714787 },
+      "impliedSharePrice": 65.09167289358727
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 7200 } } },
+      "ebitdax2027Million": 3569.6269107850544,
+      "impliedSharePrice": 67.87924553295336
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 4.5 } },
+      "ebitdax2027Million": 7389.751271498293,
+      "impliedSharePrice": 161.2149280775942
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 20 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 3534.6555873532707,
+      "impliedSharePrice": 63.08227607401551
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 6.2, "forwardYear": "2027" } },
+      "impliedSharePrice": 79.61363928064674
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 5.2, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 3470.8956636055955,
+      "impliedSharePrice": 66.02446396848966
+    }
+  }
+}
