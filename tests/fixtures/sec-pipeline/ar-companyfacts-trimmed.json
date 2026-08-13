@@ -1,0 +1,306 @@
+{
+  "cik": 1433270,
+  "entityName": "ANTERO RESOURCES CORPORATION",
+  "facts": {
+    "us-gaap": {
+      "Revenues": {
+        "label": "Revenues",
+        "description": "Amount of revenue recognized from goods sold, services rendered, insurance premiums, or other activities that constitute an earning process. Includes, but is not limited to, investment and interest income before deduction of interest expense when recognized as a component of revenue, and sales and trading gain (loss).",
+        "units": {
+          "USD": [
+            {
+              "start": "2025-01-01",
+              "end": "2025-09-30",
+              "val": 3864194000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29"
+            },
+            {
+              "start": "2025-07-01",
+              "end": "2025-09-30",
+              "val": 1213994000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29",
+              "frame": "CY2025Q3"
+            },
+            {
+              "start": "2025-01-01",
+              "end": "2025-12-31",
+              "val": 5275823000,
+              "accn": "0001104659-26-013386",
+              "fy": 2025,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2026-02-11",
+              "frame": "CY2025"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-03-31",
+              "val": 1945126000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2026Q1"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-06-30",
+              "val": 3504968000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29"
+            },
+            {
+              "start": "2026-04-01",
+              "end": "2026-06-30",
+              "val": 1559842000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29",
+              "frame": "CY2026Q2"
+            }
+          ]
+        }
+      },
+      "WeightedAverageNumberOfDilutedSharesOutstanding": {
+        "label": "Weighted Average Number of Shares Outstanding, Diluted",
+        "description": "The average number of shares or units issued and outstanding that are used in calculating diluted EPS or earnings per unit (EPU), determined based on the timing of issuance of shares or units in the period.",
+        "units": {
+          "shares": [
+            {
+              "start": "2025-01-01",
+              "end": "2025-09-30",
+              "val": 312741000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29"
+            },
+            {
+              "start": "2025-07-01",
+              "end": "2025-09-30",
+              "val": 311034000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29",
+              "frame": "CY2025Q3"
+            },
+            {
+              "start": "2025-01-01",
+              "end": "2025-12-31",
+              "val": 312361000,
+              "accn": "0001104659-26-013386",
+              "fy": 2025,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2026-02-11",
+              "frame": "CY2025"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-03-31",
+              "val": 311426000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2026Q1"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-06-30",
+              "val": 310931000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29"
+            },
+            {
+              "start": "2026-04-01",
+              "end": "2026-06-30",
+              "val": 310643000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29",
+              "frame": "CY2026Q2"
+            }
+          ]
+        }
+      },
+      "CashAndCashEquivalentsAtCarryingValue": {
+        "label": "Cash and Cash Equivalents, at Carrying Value",
+        "description": "Amount of currency on hand as well as demand deposits with banks or financial institutions. Includes other kinds of accounts that have the general characteristics of demand deposits. Also includes short-term, highly liquid investments that are both readily convertible to known amounts of cash and so near their maturity that they present insignificant risk of changes in value because of changes in interest rates. Excludes cash and cash equivalents within disposal group and discontinued operation.",
+        "units": {
+          "USD": []
+        }
+      },
+      "DebtInstrumentFaceAmount": {
+        "label": "Debt Instrument, Face Amount",
+        "description": "Face (par) amount of debt instrument at time of issuance.",
+        "units": {
+          "USD": [
+            {
+              "end": "2025-09-30",
+              "val": 1313553000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29",
+              "frame": "CY2025Q3I"
+            },
+            {
+              "end": "2025-12-31",
+              "val": 1403953000,
+              "accn": "0001104659-26-013386",
+              "fy": 2025,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2026-02-11"
+            },
+            {
+              "end": "2025-12-31",
+              "val": 1403953000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2025Q4I"
+            },
+            {
+              "end": "2026-03-31",
+              "val": 2686500000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2026Q1I"
+            }
+          ]
+        }
+      },
+      "PaymentsToAcquireOilAndGasProperty": {
+        "label": "Payments to Acquire Oil and Gas Property",
+        "description": "The cash outflow to purchase of mineral interests in oil and gas properties for use in the normal oil and gas operations and not intended for resale.",
+        "units": {
+          "USD": [
+            {
+              "start": "2025-01-01",
+              "end": "2025-09-30",
+              "val": 241162000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29"
+            },
+            {
+              "start": "2025-01-01",
+              "end": "2025-12-31",
+              "val": 253128000,
+              "accn": "0001104659-26-013386",
+              "fy": 2025,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2026-02-11",
+              "frame": "CY2025"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-03-31",
+              "val": 7631000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2026Q1"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-06-30",
+              "val": 7631000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29"
+            }
+          ]
+        }
+      },
+      "PaymentsToExploreAndDevelopOilAndGasProperties": {
+        "label": "Payments to Explore and Develop Oil and Gas Properties",
+        "description": "The cash outflow for exploration and development of oil and gas properties. It includes cash payments related to development of oil and gas wells drilled at previously untested geologic structures (to determine the presence of oil or gas) and wells drilled at sites where the presence of oil or gas has already been established (to extract the oil or gas).",
+        "units": {
+          "USD": [
+            {
+              "start": "2025-01-01",
+              "end": "2025-09-30",
+              "val": 523302000,
+              "accn": "0001104659-25-103735",
+              "fy": 2025,
+              "fp": "Q3",
+              "form": "10-Q",
+              "filed": "2025-10-29"
+            },
+            {
+              "start": "2025-01-01",
+              "end": "2025-12-31",
+              "val": 685468000,
+              "accn": "0001104659-26-013386",
+              "fy": 2025,
+              "fp": "FY",
+              "form": "10-K",
+              "filed": "2026-02-11",
+              "frame": "CY2025"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-03-31",
+              "val": 184551000,
+              "accn": "0001104659-26-051530",
+              "fy": 2026,
+              "fp": "Q1",
+              "form": "10-Q",
+              "filed": "2026-04-29",
+              "frame": "CY2026Q1"
+            },
+            {
+              "start": "2026-01-01",
+              "end": "2026-06-30",
+              "val": 492372000,
+              "accn": "0001104659-26-088153",
+              "fy": 2026,
+              "fp": "Q2",
+              "form": "10-Q",
+              "filed": "2026-07-29"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
