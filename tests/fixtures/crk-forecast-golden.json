@@ -1,0 +1,42 @@
+{
+  "capturedFrom": "feat/peer-forecast-crk-exe-gpor",
+  "_baselineNote": "CRK's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (1,250-1,400 MMcfe/d, mid 1,325, 'reaffirmed' this cycle -- already a daily rate, converted to this engine's internal Bcfe/d convention by /1000), held flat forward since CRK did not guide 2027/2028 production. CRK is predominantly natural gas and does not disclose a separate NGL stream, so nglMbblPerDay is fixed at 0 throughout; oil (an immaterial <0.03% of production) is split using CRK's own Q2 2026 reported oil share. CRK guides its cash cost structure component-by-component (LOE $0.27/Mcfe, gathering/transportation $0.37/Mcfe, production/other taxes $0.125/Mcfe converted to a %-of-revenue rate using CRK's own Q2 2026 commodity-sales-per-Mcfe, cash G&A $39mm total converted to $/Mcfe using guided production) plus a total FY2026 cash-interest figure ($230mm) and a derived cash-tax rate (effective 23% x (1 - 99% deferred) = 0.23%). CRK does not guide a gas or oil price/differential this cycle; both default to CRK's own Q2 2026 realized-price decomposition, held flat. CRK's guided FY2026 capital program ($1,450-1,550mm, mid $1,500mm, 'updated' this cycle) materially outspends its guided-cycle EBITDAX ($821mm), producing negative free cash flow and rising net debt across the forecast window -- a genuine guidance-driven output of CRK's disclosed growth-capital program, not a modeling error. The resulting default implied share price ($9.36) sits well below CRK's Q2 2026 quarter-end market price (~$14.92); this gap is disclosed as an accepted limitation (CRK's separately-guided Pinnacle Gas Services midstream segment EBITDA is not captured by this engine's commodity-only EBITDAX definition, and the model does not extrapolate production growth beyond the FY2026 guided rate into 2027/2028), not forced to reconcile to the market price. DATA-QUALITY NOTE: financials-quarterly.ts's CRK Q2 2026 `revenue` field ($470.262mm) appears to be the Q2 2025 comparative column from the 10-Q's income statement, not the actual Q2 2026 figure ($353.282mm); this baseline does not use that field (see data/crk-baseline.ts for the full note) -- flagged for a future data-integrity pass, not fixed here (out of scope). Net debt declines dollar-for-dollar with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 3088.872,
+    "dilutedSharesMillion": 291.612,
+    "totalMcfe": { "2026": 483625, "2027": 483625, "2028": 484950 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 821.255676797861, "2027": 821.255676797861, "2028": 823.5056923507318 },
+      "freeCashFlowMillion": { "2026": -910.1042112587742, "2027": -910.1042112587742, "2028": -907.859370741675 },
+      "impliedSharePrice": 9.356944747481448
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 1500 } } },
+      "ebitdax2027Million": 929.726096700173,
+      "impliedSharePrice": 13.187362710487212
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 4.5 } },
+      "ebitdax2027Million": 1561.5017759584898,
+      "impliedSharePrice": 38.029893009072076
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 2 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 875.3091259711692,
+      "impliedSharePrice": 9.346258712303637
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 10.3, "forwardYear": "2027" } },
+      "impliedSharePrice": 12.173206344390566
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 9.3, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 823.5056923507318,
+      "impliedSharePrice": 6.3154573392130064
+    }
+  }
+}
