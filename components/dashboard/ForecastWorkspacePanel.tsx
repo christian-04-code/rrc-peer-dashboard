@@ -8,13 +8,15 @@ import { extractLiveMarketMetricsFromMarketResponse, resolveCommoditySources } f
 import { defaultTicker, getCompany, selectableCompanies } from "@/lib/dashboard/company-registry";
 import type { Ticker } from "@/lib/dashboard/types";
 
-const FORECAST_SUPPORTED_TICKERS: ReadonlySet<Ticker> = new Set(["RRC"]);
+const FORECAST_SUPPORTED_TICKERS: ReadonlySet<Ticker> = new Set(["RRC", "AR", "CNX", "EQT"]);
 
 /**
- * Opened from the top-nav Forecast tab. Reuses the existing deterministic RRC forecast
- * engine and RrcScenarioWorkbench rather than the old top-level peer-ranking page. The
- * engine only supports RRC today, so selecting any other company renders an explicit
- * unsupported state instead of a fabricated forecast.
+ * Opened from the top-nav Forecast tab. Reuses the existing deterministic forecast
+ * engine and RrcScenarioWorkbench (a company-generic component despite its name) rather
+ * than the old top-level peer-ranking page. AR, CNX, and EQT gained company-specific
+ * deterministic models on feat/peer-forecast-ar-cnx-eqt; CRK, EXE, and GPOR remain
+ * unsupported, so selecting one of those renders an explicit unsupported state instead
+ * of a fabricated forecast.
  */
 export function ForecastWorkspacePanel() {
   const [ticker, setTicker] = useState<Ticker>(defaultTicker);

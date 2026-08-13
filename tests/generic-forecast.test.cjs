@@ -117,15 +117,29 @@ test("sparse overrides carry field-level provenance without relabeling untouched
 });
 
 test("unsupported and unknown tickers are explicit and isolated from RRC", () => {
+  // AR/CNX/EQT gained company-specific deterministic models on
+  // feat/peer-forecast-ar-cnx-eqt; CRK remains an explicit placeholder and is used
+  // here instead so this test still exercises the genuinely-unsupported path.
   const rrcBefore = getCompanyForecast("RRC");
-  const ar = getCompanyForecast("AR");
-  assert.equal(ar.company.supported, false);
-  assert.equal(ar.result, null);
-  assert.equal(ar.defaults, null);
-  assert.match(ar.warnings[0], /does not yet/);
-  assert.throws(() => runCompanyForecast("AR", {}), (error) => error.status === 422);
+  const crk = getCompanyForecast("CRK");
+  assert.equal(crk.company.supported, false);
+  assert.equal(crk.result, null);
+  assert.equal(crk.defaults, null);
+  assert.match(crk.warnings[0], /does not yet/);
+  assert.throws(() => runCompanyForecast("CRK", {}), (error) => error.status === 422);
   assert.throws(() => getCompanyForecast("NOPE"), (error) => error.status === 404);
   assert.deepEqual(getCompanyForecast("RRC").result, rrcBefore.result);
+});
+
+test("AR, CNX, and EQT are now supported; CRK, EXE, and GPOR remain explicit placeholders", () => {
+  assert.equal(getCompanyForecast("AR").company.supported, true);
+  assert.equal(getCompanyForecast("CNX").company.supported, true);
+  assert.equal(getCompanyForecast("EQT").company.supported, true);
+  for (const ticker of ["CRK", "EXE", "GPOR"]) {
+    const response = getCompanyForecast(ticker);
+    assert.equal(response.company.supported, false);
+    assert.equal(response.result, null);
+  }
 });
 
 test("company switching clears incompatible workbench state before the next response", () => {
