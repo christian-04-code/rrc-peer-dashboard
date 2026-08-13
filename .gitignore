@@ -12,3 +12,8 @@ pnpm-debug.log*
 *.tsbuildinfo
 .vercel
 .env*
+
+# SEC XBRL "company facts" cache (scripts/sec/xbrl-fetch.mjs / npm run sec:xbrl):
+# multi-MB per company, trivially regenerable from data.sec.gov, not a primary
+# source document like the filing.htm files already committed under data/sec/.
+data/sec/*/companyfacts.json
