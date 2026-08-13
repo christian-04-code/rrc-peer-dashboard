@@ -5,16 +5,18 @@ import { rrcForecastAdapter } from "@/lib/forecast/companies/rrc";
 import { arForecastAdapter } from "@/lib/forecast/companies/ar";
 import { cnxForecastAdapter } from "@/lib/forecast/companies/cnx";
 import { eqtForecastAdapter } from "@/lib/forecast/companies/eqt";
-import { createUnsupportedForecastAdapter } from "@/lib/forecast/companies/placeholders";
+import { crkForecastAdapter } from "@/lib/forecast/companies/crk";
+import { exeForecastAdapter } from "@/lib/forecast/companies/exe";
+import { gporForecastAdapter } from "@/lib/forecast/companies/gpor";
 
 const adapters: Record<Ticker, ForecastCompanyAdapter> = {
   RRC: rrcForecastAdapter,
   AR: arForecastAdapter,
   CNX: cnxForecastAdapter,
-  CRK: createUnsupportedForecastAdapter("CRK"),
+  CRK: crkForecastAdapter,
   EQT: eqtForecastAdapter,
-  EXE: createUnsupportedForecastAdapter("EXE"),
-  GPOR: createUnsupportedForecastAdapter("GPOR")
+  EXE: exeForecastAdapter,
+  GPOR: gporForecastAdapter
 };
 
 function isForecastTicker(value: string): value is Ticker {
