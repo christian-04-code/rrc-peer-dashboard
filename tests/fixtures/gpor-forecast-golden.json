@@ -1,0 +1,42 @@
+{
+  "capturedFrom": "feat/peer-forecast-crk-exe-gpor",
+  "_baselineNote": "GPOR's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (1.030-1.055 Bcfe/d, mid 1.0425, 'reaffirmed' this cycle -- already the engine's native daily Bcfe/d unit, no conversion needed), held flat forward since GPOR did not guide 2027/2028 production. GPOR guides a combined FY2026 liquids (NGL + oil) sales volume (18.0-21.0 Mbbl/d, mid 19.5), used to split gas from liquids (925.5 MMcf/d gas = 88.8% of total, cross-reconciling closely with GPOR's separately guided 89% natural-gas-production-mix figure); NGL vs. oil within liquids uses GPOR's own Q2 2026 reported ratio (70.1% NGL). GPOR guides its cash cost structure component-by-component (LOE $0.23/Mcfe, gathering/processing/transportation/compression $0.975/Mcfe, taxes other than income $0.08/Mcfe converted to a %-of-revenue rate, recurring cash G&A $0.13/Mcfe) plus gas/oil differentials and an NGL realization guided directly as a %-of-WTI (40-50%, mid 45%, used directly rather than as an absolute price) this cycle. CAPEX: the default uses ONLY the guided $430mm FY2026 base operated program (capex_base_operated, 'raised' this cycle) -- GPOR's separately-guided $140mm discretionary acreage acquisition program is explicitly described by management as 'additional' to the base program in the Q2 2026 earnings release, so it is disclosed (see the adapter's warnings array) but never silently summed into the default; a combined $570mm scenario can be modeled via a capex override. GPOR does not guide an interest-expense figure this cycle (defaults to the Q2 2026 reported actual, $15.792mm/quarter) or a standard-basis cash-tax rate (its only guidance, 'up to 10% of cumulative 5-yr Adjusted FCF', is on an incompatible cumulative multi-year basis, so the sector-wide modeled 2/6/8% ramp is used instead). The default implied share price ($204.86) sits above GPOR's Q2 2026 quarter-end market price (~$169.70); one focused sensitivity check (adding the $140mm discretionary capex back in) narrows but does not close this gap ($189.25 with the combined $570mm capex), so the remainder is disclosed as an accepted, unexplained valuation-vs-market gap on this small-float peer rather than forced to reconcile. Net debt declines with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 928.946,
+    "dilutedSharesMillion": 17.945,
+    "totalMcfe": { "2026": 380512.5, "2027": 380512.5, "2028": 381555 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 752.8811538943751, "2027": 752.8811538943751, "2028": 754.9438419872363 },
+      "freeCashFlowMillion": { "2026": 245.9188908164875, "2027": 218.3303646607125, "2028": 206.43377462825742 },
+      "impliedSharePrice": 204.85648380586585
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 1000 } } },
+      "ebitdax2027Million": 787.1053779163474,
+      "impliedSharePrice": 217.13867955406877
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 4.5 } },
+      "ebitdax2027Million": 1282.178075759327,
+      "impliedSharePrice": 392.9773985330899
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 6 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 701.0872039774918,
+      "impliedSharePrice": 180.96432008998363
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 6.5, "forwardYear": "2027" } },
+      "impliedSharePrice": 246.81141018615983
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 5.5, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 754.9438419872363,
+      "impliedSharePrice": 216.9923745352609
+    }
+  }
+}

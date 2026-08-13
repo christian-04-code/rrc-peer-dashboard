@@ -1,0 +1,267 @@
+import rawRegistry from "@/config/companies.json";
+import {
+  FORECAST_PROVENANCE_CLASSES,
+  type ForecastCompanyMetadata,
+  type ForecastFieldProvenance,
+  type ForecastScenarioBody
+} from "@/lib/forecast/contracts";
+import { buildForecastYearWindow } from "@/lib/forecast/periods";
+import { ForecastRequestError, type ForecastCompanyAdapter } from "@/lib/forecast/companies/types";
+import {
+  EXE_FORECAST_YEARS,
+  EXE_LATEST_ACTUAL_PERIOD,
+  EXE_VALUATION_PRESETS,
+  resolveAnnualProductionDefault,
+  resolveAnnualCommodityProductionDefaults,
+  resolveAnnualCostDefaults,
+  resolveAnnualCapexDefault,
+  resolveAnnualPricingDefaults,
+  runExeAnnualForecast,
+  type ExeForecastYear,
+  type ExeAnnualForecastRequest,
+  type ExeAnnualForecastResult
+} from "@/lib/forecast/scenarios/exe-annual";
+import { exeManagementGuidance } from "@/lib/forecast/guidance/exe";
+import { exeLatestDetailedBaseline } from "@/lib/forecast/data/exe-baseline";
+import type { ResolvedAnnualValue } from "@/lib/forecast/scenarios/annual-shared";
+
+const company = rawRegistry.companies.EXE;
+const forecastYears = buildForecastYearWindow(EXE_LATEST_ACTUAL_PERIOD);
+if (forecastYears.join(",") !== EXE_FORECAST_YEARS.join(",")) {
+  throw new Error("EXE forecast periods are out of sync with the latest actual period.");
+}
+
+const available = { status: "available", warning: null } as const;
+const hedgesUnavailable = {
+  status: "unavailable",
+  warning: "EXE hedge positions have not yet been ingested into this engine's structured hedge format; the Forecast model treats EXE as unhedged (pre-cash-settled-derivative realized pricing) pending a dedicated hedge-data backfill."
+} as const;
+
+export const EXE_FORECAST_METADATA: ForecastCompanyMetadata = {
+  ticker: "EXE",
+  name: company.name,
+  shortName: company.shortName,
+  supported: true,
+  units: {
+    gasRate: "MMcf/d",
+    liquidsRate: "Mbbl/d",
+    combinedRate: "Bcfe/d",
+    money: "$MM",
+    gasPrice: "$/MMBtu",
+    liquidsPrice: "$/bbl"
+  },
+  periods: {
+    latestActualPeriod: EXE_LATEST_ACTUAL_PERIOD,
+    latestDetailedActualPeriod: EXE_LATEST_ACTUAL_PERIOD,
+    forecastYears,
+    defaultForwardYear: forecastYears[1]
+  },
+  productStreams: [
+    { key: "gas", label: "Natural gas", rateField: "gasMmcfPerDay", unit: "MMcf/d" },
+    { key: "ngl", label: "NGL", rateField: "nglMbblPerDay", unit: "Mbbl/d" },
+    { key: "oil", label: "Oil/condensate", rateField: "oilMbblPerDay", unit: "Mbbl/d" }
+  ],
+  capabilities: { guidance: available, balanceSheet: available, hedges: hedgesUnavailable, valuation: available },
+  warnings: [hedgesUnavailable.warning]
+};
+
+function invalid(message: string): never {
+  throw new ForecastRequestError(message, 400);
+}
+
+function optionalNumber(value: unknown, path: string, minimum?: number): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) invalid(`${path} must be a finite number.`);
+  if (minimum !== undefined && value < minimum) invalid(`${path} must be at least ${minimum}.`);
+  return value;
+}
+
+function record(value: unknown, path: string): Record<string, unknown> {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) invalid(`${path} must be an object.`);
+  return value as Record<string, unknown>;
+}
+
+function perYear<T extends Record<string, number | undefined>>(
+  value: unknown,
+  path: string,
+  fields: ReadonlyArray<{ key: keyof T & string; minimum?: number }>
+): Partial<Record<ExeForecastYear, T>> {
+  const input = record(value, path);
+  const output: Partial<Record<ExeForecastYear, T>> = {};
+  for (const key of Object.keys(input)) {
+    if (!EXE_FORECAST_YEARS.includes(key as ExeForecastYear)) invalid(`${path}.${key} is outside the active forecast window.`);
+  }
+  for (const year of EXE_FORECAST_YEARS) {
+    if (input[year] === undefined) continue;
+    const entry = record(input[year], `${path}.${year}`);
+    const sanitized: Record<string, number> = {};
+    for (const field of fields) {
+      const parsed = optionalNumber(entry[field.key], `${path}.${year}.${field.key}`, field.minimum);
+      if (parsed !== undefined) sanitized[field.key] = parsed;
+    }
+    if (Object.keys(sanitized).length) output[year] = sanitized as T;
+  }
+  return output;
+}
+
+function sanitizeRequest(bodyValue: ForecastScenarioBody): ExeAnnualForecastRequest {
+  const body = record(bodyValue, "request");
+  if (body.commodityMode !== undefined && body.commodityMode !== "custom" && body.commodityMode !== "current-market") {
+    invalid("commodityMode must be custom or current-market.");
+  }
+  const valuation = record(body.valuation, "valuation");
+  const requestedForwardYear = valuation.forwardYear;
+  if (requestedForwardYear !== undefined && !EXE_FORECAST_YEARS.includes(requestedForwardYear as ExeForecastYear)) {
+    invalid("valuation.forwardYear is outside the active forecast window.");
+  }
+  const customCommodity = record(body.customCommodity, "customCommodity");
+  const liveCommodity = record(body.liveCommodity, "liveCommodity") as ExeAnnualForecastRequest["liveCommodity"];
+
+  return {
+    production: perYear(body.production, "production", [
+      { key: "gasMmcfPerDay", minimum: 0 },
+      { key: "nglMbblPerDay", minimum: 0 },
+      { key: "oilMbblPerDay", minimum: 0 }
+    ]),
+    costs: perYear(body.costs, "costs", [
+      { key: "loePerMcfe" },
+      { key: "gatheringTransportPerMcfe" },
+      { key: "cashGaPerMcfe" },
+      { key: "explorationMillion" },
+      { key: "cashInterestMillion" },
+      { key: "cashTaxRate" }
+    ]),
+    capex: perYear(body.capex, "capex", [{ key: "totalMillion", minimum: 0 }]),
+    pricing: perYear(body.pricing, "pricing", [{ key: "gasBasisPerMcf" }, { key: "oilDifferentialPerBbl" }]),
+    commodityMode: body.commodityMode === "custom" ? "custom" : "current-market",
+    customCommodity: {
+      henryHubPerMmbtu: optionalNumber(customCommodity.henryHubPerMmbtu, "customCommodity.henryHubPerMmbtu"),
+      wtiPerBbl: optionalNumber(customCommodity.wtiPerBbl, "customCommodity.wtiPerBbl"),
+      nglPerBbl: optionalNumber(customCommodity.nglPerBbl, "customCommodity.nglPerBbl")
+    },
+    liveCommodity,
+    valuation: {
+      targetEvToEbitdax: optionalNumber(valuation.targetEvToEbitdax, "valuation.targetEvToEbitdax", 0) ?? EXE_VALUATION_PRESETS.base,
+      forwardYear: (requestedForwardYear as ExeForecastYear | undefined) ?? (EXE_FORECAST_METADATA.periods!.defaultForwardYear as ExeForecastYear),
+      netDebtMillionOverride: optionalNumber(valuation.netDebtMillionOverride, "valuation.netDebtMillionOverride"),
+      dilutedSharesMillionOverride: optionalNumber(valuation.dilutedSharesMillionOverride, "valuation.dilutedSharesMillionOverride", Number.EPSILON)
+    }
+  };
+}
+
+function provenanceFor(resolved: { classification: string; notes?: string }): ForecastFieldProvenance {
+  if (resolved.classification === "reported") return "actual";
+  if (resolved.classification === "live") return "market";
+  if (resolved.classification === "user") return "user_override";
+  if (resolved.classification === "guided") {
+    return /reconcil|derived|modeled from guidance/i.test(resolved.notes ?? "") ? "derived_guidance" : "management_guidance";
+  }
+  return "model";
+}
+
+function buildFieldProvenance(request: ExeAnnualForecastRequest): Record<string, ForecastFieldProvenance> {
+  const fields: Record<string, ForecastFieldProvenance> = {};
+  const productionFields = ["gasMmcfPerDay", "nglMbblPerDay", "oilMbblPerDay"] as const;
+  const costFields = ["loePerMcfe", "gatheringTransportPerMcfe", "cashGaPerMcfe", "explorationMillion", "cashInterestMillion", "cashTaxRate"] as const;
+  const pricingFields = ["gasBasisPerMcf", "oilDifferentialPerBbl"] as const;
+
+  for (const year of EXE_FORECAST_YEARS) {
+    const commodityDefaults = resolveAnnualCommodityProductionDefaults(year);
+    for (const field of productionFields) {
+      fields[`production.${year}.${field}`] = request.production[year]?.[field] !== undefined ? "user_override" : provenanceFor(commodityDefaults[field]);
+    }
+    const costDefaults = resolveAnnualCostDefaults(year);
+    for (const field of costFields) {
+      fields[`costs.${year}.${field}`] = request.costs[year]?.[field] !== undefined ? "user_override" : provenanceFor(costDefaults[field]);
+    }
+    fields[`capex.${year}.totalMillion`] = request.capex[year]?.totalMillion !== undefined ? "user_override" : provenanceFor(resolveAnnualCapexDefault(year));
+    const pricingDefaults = resolveAnnualPricingDefaults(year);
+    for (const field of pricingFields) {
+      fields[`pricing.${year}.${field}`] = request.pricing[year]?.[field] !== undefined ? "user_override" : provenanceFor(pricingDefaults[field]);
+    }
+  }
+
+  fields["commodity.henryHubPerMmbtu"] = request.customCommodity?.henryHubPerMmbtu !== undefined ? "user_override" : request.liveCommodity?.henryHubPerMmbtu?.source.classification === "live" ? "market" : "model";
+  fields["commodity.wtiPerBbl"] = request.customCommodity?.wtiPerBbl !== undefined ? "user_override" : request.liveCommodity?.wtiPerBbl?.source.classification === "live" ? "market" : "model";
+  fields["valuation.targetEvToEbitdax"] = request.valuation.targetEvToEbitdax !== EXE_VALUATION_PRESETS.base ? "user_override" : "model";
+  fields["valuation.forwardYear"] = "model";
+  fields["reportedPeriods.through"] = "actual";
+  return fields;
+}
+
+function sourcedDefaults<T extends Record<string, unknown>>(values: T): T {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => {
+      if (value && typeof value === "object" && "classification" in value) {
+        return [key, { ...value, provenance: provenanceFor(value as ResolvedAnnualValue) }];
+      }
+      if (value && typeof value === "object" && !Array.isArray(value)) return [key, sourcedDefaults(value as Record<string, unknown>)];
+      return [key, value];
+    })
+  ) as T;
+}
+
+function defaultRequest(): ExeAnnualForecastRequest {
+  return {
+    production: {},
+    costs: {},
+    capex: {},
+    pricing: {},
+    commodityMode: "current-market",
+    valuation: { targetEvToEbitdax: EXE_VALUATION_PRESETS.base, forwardYear: "2027" }
+  };
+}
+
+function legacyDefaults(): Record<string, unknown> {
+  return {
+    latestActualPeriod: EXE_LATEST_ACTUAL_PERIOD,
+    valuationPresets: EXE_VALUATION_PRESETS,
+    guidance: exeManagementGuidance,
+    productionDefaults: Object.fromEntries(EXE_FORECAST_YEARS.map((year) => [year, resolveAnnualProductionDefault(year)])),
+    commodityProductionDefaults: Object.fromEntries(EXE_FORECAST_YEARS.map((year) => [year, resolveAnnualCommodityProductionDefaults(year)])),
+    costDefaults: Object.fromEntries(EXE_FORECAST_YEARS.map((year) => [year, resolveAnnualCostDefaults(year)])),
+    capexDefaults: Object.fromEntries(EXE_FORECAST_YEARS.map((year) => [year, resolveAnnualCapexDefault(year)])),
+    pricingDefaults: Object.fromEntries(EXE_FORECAST_YEARS.map((year) => [year, resolveAnnualPricingDefaults(year)])),
+    currentNetDebtMillion: exeLatestDetailedBaseline.netDebtMillion.value,
+    dilutedSharesMillion: exeLatestDetailedBaseline.dilutedSharesMillion.value,
+    result: runExeAnnualForecast(defaultRequest())
+  };
+}
+
+export const exeForecastAdapter: ForecastCompanyAdapter<ExeAnnualForecastResult> = {
+  metadata: EXE_FORECAST_METADATA,
+  configuration: {
+    latestDetailedActualPeriod: EXE_LATEST_ACTUAL_PERIOD,
+    guidance: exeManagementGuidance,
+    defaults: { production: available, pricing: available, costs: available, capex: available },
+    balanceSheet: {
+      netDebtMillion: exeLatestDetailedBaseline.netDebtMillion.value,
+      dilutedSharesMillion: exeLatestDetailedBaseline.dilutedSharesMillion.value,
+      status: available
+    },
+    hedges: hedgesUnavailable,
+    valuationPresets: EXE_VALUATION_PRESETS,
+    sourceMetadata: { warnings: [hedgesUnavailable.warning] }
+  },
+  getForecast() {
+    const legacy = legacyDefaults();
+    const { result, ...defaults } = legacy;
+    return {
+      company: EXE_FORECAST_METADATA,
+      provenanceClasses: FORECAST_PROVENANCE_CLASSES,
+      defaults: sourcedDefaults(defaults),
+      result: result as ExeAnnualForecastResult,
+      warnings: [hedgesUnavailable.warning]
+    };
+  },
+  runForecast(body) {
+    const request = sanitizeRequest(body);
+    return {
+      company: EXE_FORECAST_METADATA,
+      result: runExeAnnualForecast(request),
+      fieldProvenance: buildFieldProvenance(request),
+      warnings: [hedgesUnavailable.warning]
+    };
+  }
+};

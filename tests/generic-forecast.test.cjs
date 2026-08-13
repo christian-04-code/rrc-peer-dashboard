@@ -116,29 +116,30 @@ test("sparse overrides carry field-level provenance without relabeling untouched
   assert.equal(response.fieldProvenance["commodity.wtiPerBbl"], "model");
 });
 
-test("unsupported and unknown tickers are explicit and isolated from RRC", () => {
-  // AR/CNX/EQT gained company-specific deterministic models on
-  // feat/peer-forecast-ar-cnx-eqt; CRK remains an explicit placeholder and is used
-  // here instead so this test still exercises the genuinely-unsupported path.
+test("the unsupported-adapter factory still produces an explicit unsupported state, and unknown tickers 404", () => {
+  // Every real ticker now has a company-specific deterministic model
+  // (feat/peer-forecast-ar-cnx-eqt, feat/peer-forecast-crk-exe-gpor), so no
+  // ticker currently exercises companies/placeholders.ts's
+  // createUnsupportedForecastAdapter through the registry -- exercised directly
+  // here instead so the placeholder path itself stays covered for any future
+  // peer that doesn't yet have a model.
+  const { createUnsupportedForecastAdapter } = load("lib/forecast/companies/placeholders.ts");
   const rrcBefore = getCompanyForecast("RRC");
-  const crk = getCompanyForecast("CRK");
-  assert.equal(crk.company.supported, false);
-  assert.equal(crk.result, null);
-  assert.equal(crk.defaults, null);
-  assert.match(crk.warnings[0], /does not yet/);
-  assert.throws(() => runCompanyForecast("CRK", {}), (error) => error.status === 422);
+  const placeholder = createUnsupportedForecastAdapter("CRK").getForecast();
+  assert.equal(placeholder.company.supported, false);
+  assert.equal(placeholder.result, null);
+  assert.equal(placeholder.defaults, null);
+  assert.match(placeholder.warnings[0], /does not yet/);
+  assert.throws(() => createUnsupportedForecastAdapter("CRK").runForecast({}), (error) => error.status === 422);
   assert.throws(() => getCompanyForecast("NOPE"), (error) => error.status === 404);
   assert.deepEqual(getCompanyForecast("RRC").result, rrcBefore.result);
 });
 
-test("AR, CNX, and EQT are now supported; CRK, EXE, and GPOR remain explicit placeholders", () => {
-  assert.equal(getCompanyForecast("AR").company.supported, true);
-  assert.equal(getCompanyForecast("CNX").company.supported, true);
-  assert.equal(getCompanyForecast("EQT").company.supported, true);
-  for (const ticker of ["CRK", "EXE", "GPOR"]) {
+test("all seven peers are now supported with company-specific deterministic models", () => {
+  for (const ticker of ["RRC", "AR", "CNX", "EQT", "CRK", "EXE", "GPOR"]) {
     const response = getCompanyForecast(ticker);
-    assert.equal(response.company.supported, false);
-    assert.equal(response.result, null);
+    assert.equal(response.company.supported, true, `${ticker} should be supported`);
+    assert.notEqual(response.result, null, `${ticker} should have a result`);
   }
 });
 
