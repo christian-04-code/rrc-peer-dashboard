@@ -1,0 +1,42 @@
+{
+  "capturedFrom": "feat/peer-forecast-ar-cnx-eqt",
+  "_baselineNote": "EQT's default forecast anchors 2026/2027/2028 total production to its guided FY2026 total (2,375-2,450 Bcfe, mid 2,412.5, raised this cycle), held flat forward (no 2027/2028 production guidance). The gas/liquids split derives gas as the guided total less EQT's separately guided FY2026 total liquids sales volume (14,200-15,000 MBbl, mid 14,600); NGL vs. oil within liquids uses EQT's own Q2 2026 reported ratio (oil ~7.5% of liquids). EQT guides its cost structure component-by-component (opex_loe, opex_gathering+opex_transmission+opex_processing summed, opex_production_taxes converted to %-of-revenue, opex_sga) -- used directly, no proportional scaling needed (unlike CNX). EQT does not guide a gas, oil, or NGL price/differential this cycle; all three default to EQT's own Q2 2026 realized-price decomposition, independently verified against EQT's Form 10-Q MD&A reconciliation table (NYMEX $2.89/MMBtu + Btu uplift $0.16 + basis $(0.67) = disclosed 'average adjusted price' $2.38/Mcf, reconciling exactly). Capital budget is synthesized from two separately-guided FY2026 figures (capex_maintenance $2,115mm + capex growth $610mm = $2,725mm) that management did not restate as one total. The guided FY2026 annual-average production/mix run below the Q2 2026 single-quarter print (Q2 was evidently a seasonally/timing-elevated quarter); this engine intentionally uses the guided annual figures over a naive Q2 annualization, per the source-precedence rules (exact-year management guidance outranks extrapolating one quarter). Default-forecast implied share price ($37.63) runs well below EQT's actual Q2 2026 close ($53.17) -- a wider gap than AR or CNX, plausibly reflecting EQT's separately guided but unmodeled value drivers (Southeast Utility uplift ~$300mm/yr from 2027-28, CPV Shay FCF uplift, LNG offtake optionality) that this engine's standard commodity-revenue model does not capture; a disclosed, understood limitation. Net debt declines dollar-for-dollar with cumulative forecast FCF only (no dividends/buybacks/financing modeled).",
+  "get": {
+    "latestActualPeriod": "2026Q2",
+    "forecastYears": ["2026", "2027", "2028"],
+    "currentNetDebtMillion": 5542.851,
+    "dilutedSharesMillion": 629.049,
+    "totalMcfe": { "2026": 2412500, "2027": 2412500, "2028": 2419109.589041096 }
+  },
+  "post": {
+    "default": {
+      "ebitdaxMillion": { "2026": 3552.9950491210575, "2027": 3552.9950491210575, "2028": 3562.729282132349 },
+      "freeCashFlowMillion": { "2026": 461.1633081386369, "2027": 331.1158261737945, "2028": 275.0475795617608 },
+      "impliedSharePrice": 37.63361602558925
+    },
+    "productionOverride": {
+      "request": { "production": { "2027": { "gasMmcfPerDay": 6800 } } },
+      "ebitdax2027Million": 3770.0420294857145,
+      "impliedSharePrice": 40.71827239490234
+    },
+    "commodityOverride": {
+      "request": { "customCommodity": { "henryHubPerMmbtu": 4 } },
+      "ebitdax2027Million": 6070.29438222064,
+      "impliedSharePrice": 77.19963795787788
+    },
+    "multipleSparseOverrides": {
+      "request": { "production": { "2028": { "oilMbblPerDay": 6 } }, "customCommodity": { "wtiPerBbl": 80 } },
+      "ebitdax2028Million": 3551.958656583228,
+      "impliedSharePrice": 36.607711699795146
+    },
+    "valuationMultiple": {
+      "request": { "valuation": { "targetEvToEbitdax": 9, "forwardYear": "2027" } },
+      "impliedSharePrice": 43.28181680028417
+    },
+    "forwardYear": {
+      "request": { "valuation": { "targetEvToEbitdax": 8, "forwardYear": "2028" } },
+      "forwardEbitdaxMillion": 3562.729282132349,
+      "impliedSharePrice": 38.1946556960316
+    }
+  }
+}
