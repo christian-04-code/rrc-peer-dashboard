@@ -58,7 +58,7 @@ test("remaining priority peers add only the approved Q2 2026 actuals and preserv
   const approved = {
     AR: { q1: [3852, 1945.126, 252, 2686.5, 723.418], q2: [4144, 1559.842, 326, 2634.7, 595.437] },
     CNX: { q1: [1693.333333333333, 786.654, 170, 2375.08, 400], q2: [1664.8, 618.484, 142, 2239.488, 290] },
-    CRK: { q1: [1087.988888888889, 587.354, 417.102, 2971.095, 251.265], q2: [1242.879, 470.262, 446.869, 3088.872, 244.811] },
+    CRK: { q1: [1087.988888888889, 587.354, 417.102, 2971.095, 251.265], q2: [1242.879, 353.282, 446.869, 3088.872, 244.811] },
     EQT: { q1: [6863.322222222222, 3378.736, 607.836, 5709.889, 2679.045], q2: [6972.242, 1809.94, 666.258, 5542.851, 1202.99] },
     EXE: { q1: [7436, 4397, 716, 2805, 1968], q2: [7482, 2960, 851, 3075, 1183] },
     GPOR: { q1: [997, 437.532, 121.7, 829.079, 264.2], q2: [962.8, 323.228, 148.6, 928.946, 179.1] }
@@ -89,7 +89,7 @@ test("duplicated historical JSON stores the approved Q2 values including the ver
   const approved = {
     AR: [4144, 1559.842, 219.759, 326, 2634.7, 595.437],
     CNX: [1664.8, 618.484, 138, 142, 2239.488, 290],
-    CRK: [1242.879, 470.262, -211, 446.869, 3088.872, 244.811],
+    CRK: [1242.879, 353.282, -211, 446.869, 3088.872, 244.811],
     EQT: [6972.242, 1809.94, 329.666, 666.258, 5542.851, 1202.99],
     EXE: [7482, 2960, 343, 851, 3075, 1183],
     GPOR: [962.8, 323.228, 6.4, 148.6, 928.946, 179.1]
@@ -101,6 +101,32 @@ test("duplicated historical JSON stores the approved Q2 values including the ver
     assert.deepEqual(stored, values);
   }
   assert.match(historical.companies.CRK.metrics["Free Cash Flow"].source_by_quarter["Q2 2026"], /FactSet E&P Company Model/);
+});
+
+test("CRK Q2 2026 revenue is the standalone Q2 2026 figure and never regresses to the Q2 2025 comparative-period value (fix/crk-q2-2026-revenue)", () => {
+  // CRK's Q2 2026 Form 10-Q reports "Total revenues and other operating income" of
+  // $353.282mm for the three months ended June 30, 2026, and $470.262mm for the
+  // adjacent three-months-ended-June-30-2025 comparative column
+  // (data/sec/CRK/2026-06-30/0001193125-26-326260/filing.htm). A prior pass on this
+  // dashboard mistakenly stored the 2025 comparative figure as the Q2 2026 actual in
+  // both lib/dashboard/financials-quarterly.ts and data/historical.json; this test
+  // pins the corrected value and guards against silently reintroducing that mixup.
+  const CORRECT_Q2_2026_REVENUE = 353.282;
+  const WRONG_Q2_2025_COMPARATIVE_VALUE = 470.262;
+
+  const live = getQuarterlyFinancials("CRK", "Q2 2026").revenue.value;
+  assert.equal(live, CORRECT_Q2_2026_REVENUE, "financials-quarterly.ts CRK Q2 2026 revenue must equal the standalone Q2 2026 10-Q figure");
+  assert.notEqual(live, WRONG_Q2_2025_COMPARATIVE_VALUE, "financials-quarterly.ts CRK Q2 2026 revenue must not regress to the Q2 2025 comparative-period value");
+
+  const historical = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "data/historical.json"), "utf8"));
+  const historicalValue = historical.companies.CRK.metrics.Revenue.values["Q2 2026"];
+  assert.equal(historicalValue, CORRECT_Q2_2026_REVENUE, "data/historical.json CRK Q2 2026 revenue must equal the standalone Q2 2026 10-Q figure");
+  assert.notEqual(historicalValue, WRONG_Q2_2025_COMPARATIVE_VALUE, "data/historical.json CRK Q2 2026 revenue must not regress to the Q2 2025 comparative-period value");
+
+  // CRK's own Q2 2025 entry legitimately stores 470.262 -- confirms the two years
+  // are genuinely distinct filed figures, not a tolerance/rounding coincidence.
+  assert.equal(getQuarterlyFinancials("CRK", "Q2 2025").revenue.value, WRONG_Q2_2025_COMPARATIVE_VALUE);
+  assert.equal(historical.companies.CRK.metrics.Revenue.values["Q2 2025"], WRONG_Q2_2025_COMPARATIVE_VALUE);
 });
 
 test("RRC adds only the accepted Q2 2026 actuals and preserves Q1 2026", () => {

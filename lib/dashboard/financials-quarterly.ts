@@ -1655,7 +1655,18 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
     "Q2 2026": auditedPeerQ2Actual({
       ticker: "CRK",
       production: 1242.879,
-      revenue: 470.262,
+      // Corrected (fix/crk-q2-2026-revenue): the prior value, 470.262, was the
+      // Q2 2025 comparative-period figure from the same 10-Q income-statement
+      // line ("Total revenues and other operating income"), not the Q2 2026
+      // actual. Verified directly against CRK's Q2 2026 Form 10-Q
+      // (data/sec/CRK/2026-06-30/0001193125-26-326260/filing.htm): "Total
+      // revenues and other operating income" for the three months ended June
+      // 30, 2026 is $353,282 thousand ($353.282mm); $470,262 thousand is the
+      // adjacent three-months-ended-June-30-2025 column. Same field definition
+      // as every other quarter's revenue value on this dashboard (confirmed by
+      // cross-checking the Q2 2025 entry above, which independently stores
+      // 470.262 for that quarter, matching this same 10-Q line).
+      revenue: 353.282,
       adjustedEbitdax: 244.811,
       capitalExpenditures: 446.869,
       netDebt: 3088.872,
