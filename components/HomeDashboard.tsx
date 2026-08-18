@@ -104,6 +104,9 @@ export function HomeDashboard() {
   }
 
   const activeFeedCount = market.data?.metrics.filter((item) => item.status === "ok").length ?? 0;
+  const totalFeedCount = market.data?.metrics.length ?? 7;
+  const feedStatusText = market.loading ? "Checking feeds…" : market.error ? "Feeds unavailable" : `${activeFeedCount} feeds active`;
+  const feedDetailText = market.error ?? (market.loading ? "Checking market feeds…" : `${activeFeedCount} of ${totalFeedCount} EIA feeds available`);
 
   return (
     <main className="dashboard-shell">
@@ -124,7 +127,7 @@ export function HomeDashboard() {
             </nav>
           </div>
           <div className="status-row">
-            <button className="live-button" onClick={() => openDrawer(market.error ?? `${activeFeedCount} of ${market.data?.metrics.length ?? 7} EIA feeds available`)}>● {activeFeedCount} feeds active</button>
+            <button className="live-button" onClick={() => openDrawer(feedDetailText)}>● {feedStatusText}</button>
           </div>
         </header>
 

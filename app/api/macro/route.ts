@@ -44,7 +44,17 @@ export async function GET() {
     response.demand.error = demand.reason instanceof Error ? demand.reason.message : "Demand unavailable";
   }
 
+  // A degraded response (e.g. a transient upstream EIA rate limit) must not be
+  // pinned behind the same long CDN TTL as a healthy one -- caching it for
+  // s-maxage=3600 would freeze that transient failure into an hours-long visible
+  // outage on the Macro tab. Give degraded responses a short TTL so the next
+  // request retries soon instead of being served the same cached error.
+  const degraded = response.storage.status !== "ok" || response.production.status !== "ok" || response.demand.status !== "ok";
+  const cacheControl = degraded
+    ? "public, s-maxage=30, stale-while-revalidate=60"
+    : "public, s-maxage=3600, stale-while-revalidate=21600";
+
   return NextResponse.json(response satisfies MacroFundamentalsResponse, {
-    headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=21600" }
+    headers: { "Cache-Control": cacheControl }
   });
 }
