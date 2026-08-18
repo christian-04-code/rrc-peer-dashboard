@@ -107,26 +107,45 @@ test("SCENARIO A/C isolation: one dataset failing (429 or 5xx) never blocks or c
   assert.equal(body.demand.status, "ok", "a healthy dataset must still populate even while two siblings are failing");
 });
 
-test("SCENARIO F (concurrent requests): simultaneous invocations are isolated from each other -- one failing does not corrupt or block a concurrent healthy one", async () => {
+test("SCENARIO F (concurrent requests): simultaneous /api/macro invocations on the same warm instance coalesce identical EIA requests via fetchEiaTable's in-flight dedup, so they see consistent results instead of each firing its own duplicate upstream call", async () => {
   process.env.EIA_API_KEY = "test-key";
-  let call = 0;
+  let fetchCalls = 0;
   global.fetch = async () => {
-    call += 1;
-    // Odd-numbered calls across the whole process fail; even succeed -- simulates
-    // an upstream that is intermittently unhealthy across truly concurrent requests.
-    if (call % 2 === 1) return new Response(JSON.stringify({ error: { code: "OVER_RATE_LIMIT" } }), { status: 429 });
+    fetchCalls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    return new Response(eiaOkBody(), { status: 200 });
+  };
+
+  const results = await Promise.all(Array.from({ length: 4 }, () => loadRoute().GET().then((r) => r.json())));
+
+  // 4 concurrent invocations x 3 datasets each would be 12 calls with no dedup;
+  // with in-flight coalescing, identical concurrent requests share one fetch per
+  // distinct dataset (storage/production/demand) regardless of how many
+  // concurrent /api/macro invocations asked for it.
+  assert.equal(fetchCalls, 3, "identical concurrent requests across invocations must coalesce to one upstream fetch per distinct dataset");
+  for (const body of results) {
+    assert.equal(body.storage.status, "ok");
+    assert.equal(body.production.status, "ok");
+    assert.equal(body.demand.status, "ok");
+    assert.notEqual(body.storage.regions.east.current, 0, "an available region must reflect the real fetched value, never a fabricated 0");
+  }
+});
+
+test("SCENARIO F isolation: a concurrent burst where one dataset fails still leaves the other two healthy for every invocation -- coalescing does not break Promise.allSettled isolation", async () => {
+  process.env.EIA_API_KEY = "test-key";
+  global.fetch = async (url) => {
+    const parsed = new URL(url.toString());
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    if (parsed.pathname.includes("stor/wkly")) return new Response(JSON.stringify({ error: { code: "OVER_RATE_LIMIT" } }), { status: 429 });
     return new Response(eiaOkBody(), { status: 200 });
   };
 
   const results = await Promise.all(Array.from({ length: 4 }, () => loadRoute().GET().then((r) => r.json())));
   for (const body of results) {
-    assert.ok(body.storage.status === "ok" || body.storage.status === "unavailable");
-    assert.notEqual(body.storage.regions.east.current, 0, "an unavailable region must never be silently reported as a fabricated 0");
+    assert.equal(body.storage.status, "unavailable");
+    assert.equal(body.production.status, "ok", "a healthy dataset must stay healthy across every concurrent invocation, even while a sibling dataset fails");
+    assert.equal(body.demand.status, "ok");
   }
-  assert.ok(
-    results.some((body) => body.storage.status === "ok"),
-    "at least one concurrent invocation should reflect the healthy responses actually returned"
-  );
 });
 
 test("SCENARIO E (stale-good-data): a healthy response is cached long enough to ride out a brief upstream blip, and a degraded response is cached only briefly so recovery is fast, not architecture-free zero-caching", async () => {

@@ -63,32 +63,19 @@ function validateLength(length: number): void {
   }
 }
 
-export async function fetchEiaTable(params: {
-  route: string;
-  frequency: EiaFrequency;
-  facets?: Record<string, readonly string[]>;
-  length?: number;
-  revalidate?: number;
-  /** Test seam only; production call sites rely on the 8000ms default. */
-  timeoutMs?: number;
-}): Promise<EiaTableResult> {
-  const route = params.route.trim().replace(/^\/+|\/+$/g, "");
-  const length = params.length ?? 5000;
-  if (!route) throw new Error("EIA route is required.");
-  validateLength(length);
+// In-flight request de-duplication, scoped to this warm module instance only.
+// It does not persist any data: an entry exists only while its request is
+// pending and is always removed once that request settles (success or
+// failure), so the next call -- whether from a fresh burst of concurrent
+// requests or just the next invocation -- always issues a real request. This
+// is purely a same-instance optimization for genuinely simultaneous identical
+// requests (e.g. multiple in-flight EIA fetches from one Promise.allSettled
+// batch or overlapping /api/macro invocations landing on the same warm
+// instance); it does nothing across separate serverless instances, which is
+// what CDN-level Cache-Control already covers.
+const inFlightEiaTableRequests = new Map<string, Promise<EiaTableResult>>();
 
-  const url = new URL(`${EIA_BASE_URL}/${route}`);
-  url.searchParams.set("api_key", getEiaApiKey());
-  url.searchParams.set("frequency", params.frequency);
-  url.searchParams.append("data[0]", "value");
-  for (const [facet, values] of Object.entries(params.facets ?? {})) {
-    for (const value of values) url.searchParams.append(`facets[${facet}][]`, value);
-  }
-  url.searchParams.set("sort[0][column]", "period");
-  url.searchParams.set("sort[0][direction]", "desc");
-  url.searchParams.set("offset", "0");
-  url.searchParams.set("length", String(length));
-
+async function requestEiaTable(url: URL, route: string, params: { frequency: EiaFrequency; revalidate?: number; timeoutMs?: number }): Promise<EiaTableResult> {
   let response: Response;
   try {
     // Bounded so a hung/stalled EIA connection fails fast into the normal
@@ -118,6 +105,43 @@ export async function fetchEiaTable(params: {
   });
   if (rows.length === 0) throw new Error(`EIA table response for route "${route}" contained no usable numeric rows.`);
   return { route, frequency: params.frequency, rows, fetchedAt: new Date().toISOString() };
+}
+
+export async function fetchEiaTable(params: {
+  route: string;
+  frequency: EiaFrequency;
+  facets?: Record<string, readonly string[]>;
+  length?: number;
+  revalidate?: number;
+  /** Test seam only; production call sites rely on the 8000ms default. */
+  timeoutMs?: number;
+}): Promise<EiaTableResult> {
+  const route = params.route.trim().replace(/^\/+|\/+$/g, "");
+  const length = params.length ?? 5000;
+  if (!route) throw new Error("EIA route is required.");
+  validateLength(length);
+
+  const url = new URL(`${EIA_BASE_URL}/${route}`);
+  url.searchParams.set("api_key", getEiaApiKey());
+  url.searchParams.set("frequency", params.frequency);
+  url.searchParams.append("data[0]", "value");
+  for (const [facet, values] of Object.entries(params.facets ?? {})) {
+    for (const value of values) url.searchParams.append(`facets[${facet}][]`, value);
+  }
+  url.searchParams.set("sort[0][column]", "period");
+  url.searchParams.set("sort[0][direction]", "desc");
+  url.searchParams.set("offset", "0");
+  url.searchParams.set("length", String(length));
+
+  const key = url.toString();
+  const existing = inFlightEiaTableRequests.get(key);
+  if (existing) return existing;
+
+  const request = requestEiaTable(url, route, params).finally(() => {
+    inFlightEiaTableRequests.delete(key);
+  });
+  inFlightEiaTableRequests.set(key, request);
+  return request;
 }
 
 async function requestEia(
