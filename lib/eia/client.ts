@@ -69,6 +69,8 @@ export async function fetchEiaTable(params: {
   facets?: Record<string, readonly string[]>;
   length?: number;
   revalidate?: number;
+  /** Test seam only; production call sites rely on the 8000ms default. */
+  timeoutMs?: number;
 }): Promise<EiaTableResult> {
   const route = params.route.trim().replace(/^\/+|\/+$/g, "");
   const length = params.length ?? 5000;
@@ -89,7 +91,11 @@ export async function fetchEiaTable(params: {
 
   let response: Response;
   try {
-    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 } });
+    // Bounded so a hung/stalled EIA connection fails fast into the normal
+    // Promise.allSettled degraded-response path instead of blocking the whole
+    // /api/macro invocation (and the other two, unrelated fetches) until the
+    // platform's hard function timeout kills it with no usable response at all.
+    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 }, signal: AbortSignal.timeout(params.timeoutMs ?? 8000) });
   } catch (error) {
     throw new Error(`EIA table request failed for route "${route}": ${error instanceof Error ? error.message : String(error)}`);
   }
