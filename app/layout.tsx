@@ -4,6 +4,7 @@ import "./globals.css";
 import "@/components/dashboard/PeersPanel.css";
 import "@/components/dashboard/MapWorkspace.css";
 import "@/components/dashboard/ForecastPanel.css";
+import "@/components/stocks/StockDetail.css";
 
 const registryValidation = assertRuntimeRegistriesValid();
 

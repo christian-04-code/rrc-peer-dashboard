@@ -142,7 +142,7 @@ export function HomeDashboard() {
             <>
               <CompanyHero company={company} activity={activity} />
 
-              <MetricStrip metrics={metrics} companyShortName={company.shortName} />
+              <MetricStrip metrics={metrics} companyShortName={company.shortName} ticker={focusedTicker} />
 
               <section className="company-selector" aria-label="Company comparison selection">
                 <CompanyComparisonSelector
