@@ -419,6 +419,41 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drilling-concentration-row > span:nth-child(2) { text-align: right; }
 .drilling-source { color: var(--muted); font-size: 8px; line-height: 1.4; }
 
+/* Major Basin Rig Activity -- sits beneath the map+detail grid, inside the same map card. */
+.basin-activity { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.basin-activity .macro-card-title { flex-wrap: wrap; gap: 10px; }
+.basin-activity .macro-map-controls { flex-direction: row; align-items: center; }
+.basin-jump { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--muted); }
+.basin-jump select { border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); color: var(--text); font: inherit; font-size: 10px; padding: 4px 6px; }
+.basin-activity-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 12px; margin-top: 10px; align-items: start; }
+.basin-ranking-wrap { display: grid; gap: 10px; }
+.basin-ranking-table { display: grid; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.basin-ranking-row { display: grid; grid-template-columns: 1.5fr .8fr .7fr .7fr .7fr .7fr; align-items: center; gap: 6px; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--border); background: transparent; font: inherit; text-align: left; cursor: pointer; color: var(--text); }
+.basin-ranking-row:last-child { border-bottom: 0; }
+.basin-ranking-row:hover { background: rgba(0,129,198,.08); }
+.basin-ranking-row.selected { background: rgba(0,129,198,.14); box-shadow: inset 2px 0 var(--accent); }
+.basin-ranking-row.header { cursor: default; background: rgba(16,32,53,.72); padding-block: 8px; }
+.basin-ranking-row.header:hover { background: rgba(16,32,53,.72); }
+.basin-ranking-row.header button { border: 0; background: transparent; color: #75c7ee; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 0; text-align: right; cursor: pointer; }
+.basin-ranking-row.header button.active { color: var(--text); }
+.basin-ranking-row.header span:first-child { color: #75c7ee; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.basin-name { font-size: 11px; font-weight: 650; }
+.basin-num { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.basin-show-all { justify-self: start; border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--muted); font-size: 9px; padding: 5px 9px; }
+.basin-variance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.basin-variance > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: grid; gap: 5px; }
+.basin-variance > div > span { color: #75c7ee; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.basin-variance-row { display: flex; justify-content: space-between; font-size: 10px; }
+.basin-detail { border: 1px solid var(--border); border-radius: 9px; padding: 12px; display: grid; gap: 10px; align-content: start; background: rgba(6,17,31,.55); }
+.basin-detail h4 { margin: 0; font-size: 16px; }
+.basin-detail-row { display: grid; grid-template-columns: auto auto; gap: 3px 10px; font-size: 10px; }
+.basin-detail-row span { color: var(--muted); }
+.basin-detail-row b { text-align: right; }
+.basin-footprint { display: grid; gap: 5px; }
+.basin-footprint > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.basin-footprint-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.basin-footprint-list span { border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; font-size: 9.5px; }
+
 .macro-pa-callout { display: grid; gap: 4px; padding: 9px; border-left: 2px solid var(--accent); background: var(--accent-soft); }
 .macro-pa-callout strong { font-size: 10px; }
 .macro-pa-callout span { color: var(--muted); font-size: 9px; line-height: 1.4; }
@@ -475,6 +510,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-structural-outlook { grid-template-columns: 1fr 1fr; }
   .macro-rig-label text { font-size: 13px; }
   .macro-rig-label circle { r: 8; }
+  .basin-activity-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
@@ -513,6 +549,14 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-card-title { flex-wrap: wrap; }
   .macro-map-controls { justify-items: start; width: 100%; }
   .macro-segmented { flex: 0 0 auto; }
+  .basin-activity .macro-map-controls { flex-direction: column; align-items: flex-start; gap: 6px; }
+  /* Simplify rather than horizontally scroll: drop gas/oil columns on narrow
+     screens, keeping the basin name, total rigs, WoW, and YoY -- the four
+     values the section exists to make "visually obvious" per the presentation
+     feedback that motivated this section. */
+  .basin-ranking-row { grid-template-columns: 1.6fr .8fr .7fr .7fr; }
+  .basin-ranking-row > :nth-child(5), .basin-ranking-row > :nth-child(6) { display: none; }
+  .basin-variance { grid-template-columns: 1fr; }
   .workspace-toolbar { align-items: flex-start; flex-direction: column; }
   .workspace { padding: 12px; }
   aside { grid-template-columns: 1fr; }

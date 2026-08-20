@@ -154,7 +154,7 @@ class BuildDatasetTests(unittest.TestCase):
             (label, country, {**entry, "current": 999} if label == "Pennsylvania" else entry)
             for label, country, entry in sections["State"]
         ]
-        with self.assertRaisesRegex(MODULE.ImportValidationError, "reconciliation failed"):
+        with self.assertRaisesRegex(MODULE.ImportValidationError, "reconcil"):
             MODULE.build_dataset(sections, records, "2026-08-14")
 
     def test_untracked_state_is_absent_rather_than_zero(self):
@@ -162,6 +162,38 @@ class BuildDatasetTests(unittest.TestCase):
         records = MODULE.parse_weekly(minimal_weekly_rows())
         dataset = MODULE.build_dataset(sections, records, "2026-08-14")
         self.assertNotIn("OH", dataset["states"])
+
+    def test_basin_detail_includes_gas_oil_trajectory_states_and_history(self):
+        sections = MODULE.parse_breakdown(minimal_breakdown_rows())
+        records = MODULE.parse_weekly(minimal_weekly_rows())
+        dataset = MODULE.build_dataset(sections, records, "2026-08-14")
+        marcellus = dataset["basins"]["Marcellus"]
+        self.assertEqual(marcellus["current"], 6)
+        self.assertEqual(marcellus["wow"], 1)
+        self.assertEqual(marcellus["yoy"], 2)
+        self.assertEqual(marcellus["commodityMix"], {"gas": 6.0, "oil": 0.0, "misc": 0.0})
+        self.assertEqual(marcellus["trajectoryMix"], {"horizontal": 6.0, "directional": 0.0, "vertical": 0.0})
+        self.assertEqual(marcellus["states"], [{"code": "PA", "current": 6.0}])
+        self.assertEqual(marcellus["topLocations"][0]["county"], "Lycoming")
+        self.assertEqual(marcellus["topLocations"][0]["state"], "PA")
+        self.assertEqual(marcellus["history"][0], {"period": "2026-08-14", "value": 6.0})
+        self.assertEqual(marcellus["history"][1], {"period": "2026-08-07", "value": 5.0})
+        permian = dataset["basins"]["Permian"]
+        self.assertEqual(permian["commodityMix"], {"gas": 0.0, "oil": 4.0, "misc": 0.0})
+        self.assertEqual(permian["states"], [{"code": "TX", "current": 4.0}])
+
+    def test_basin_reconciliation_mismatch_fails_loudly(self):
+        sections = MODULE.parse_breakdown(minimal_breakdown_rows())
+        records = MODULE.parse_weekly(minimal_weekly_rows())
+        sections["Basin"] = [
+            (label, country, {**entry, "current": 999} if label == "Marcellus" else entry)
+            for label, country, entry in sections["Basin"]
+        ]
+        # Corrupting Marcellus's Breakdown total trips the top-level basin-vs-US-total
+        # check before the finer per-basin-vs-weekly-sum check ever runs; either way
+        # the import must fail loudly rather than write an inconsistent snapshot.
+        with self.assertRaisesRegex(MODULE.ImportValidationError, "reconcil"):
+            MODULE.build_dataset(sections, records, "2026-08-14")
 
 
 if __name__ == "__main__":

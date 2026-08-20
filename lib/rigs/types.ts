@@ -40,6 +40,21 @@ export type RigStateData = RigDelta & {
 
 export type RigBasinData = RigDelta & { basin: string };
 
+export type RigBasinStateShare = { code: string; current: number };
+export type RigBasinLocation = { state: string; county: string; rigs: number };
+
+export type RigBasinDetail = RigDelta & {
+  basin: string;
+  commodityMix: RigCommodityMix;
+  trajectoryMix: RigTrajectoryMix;
+  /** States with rig activity in this basin at the latest published week, descending by rig count. */
+  states: RigBasinStateShare[];
+  /** Top 5 county-level locations within this basin at the latest published week, descending by rig count. */
+  topLocations: RigBasinLocation[];
+  /** Weekly observations, newest first, up to the last 52 published weeks (~12 months). */
+  history: RigHistoryPoint[];
+};
+
 export type RigDataset = {
   schemaVersion: 1;
   source: {
@@ -52,7 +67,10 @@ export type RigDataset = {
   national: { unitedStates: RigDelta; canada: RigDelta; northAmerica: RigDelta };
   usDrillFor: { gas: RigDelta; oil: RigDelta; miscellaneous: RigDelta };
   usTrajectory: { directional: RigDelta; horizontal: RigDelta; vertical: RigDelta };
+  /** Basin summary list (current/WoW/YoY only), sorted by current rig count descending. */
   usBasins: RigBasinData[];
   trackedStateCount: number;
   states: Record<string, RigStateData>;
+  /** Full basin detail (gas/oil, trajectory, state membership, top locations, history), keyed by basin name. */
+  basins: Record<string, RigBasinDetail>;
 };
