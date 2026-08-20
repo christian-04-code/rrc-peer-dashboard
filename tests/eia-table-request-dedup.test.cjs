@@ -113,7 +113,7 @@ test("dedup does not persist stale data as a substitute for CDN caching -- once 
   assert.equal(second.rows[0].value, 2);
 });
 
-test("the 8-second timeout still applies per-request even when deduplicated -- a shared hung request still bounds and clears", async () => {
+test("a caller-configured timeout still applies per-request even when deduplicated -- a shared hung request still bounds and clears", async () => {
   process.env.EIA_API_KEY = "test-key";
   global.fetch = (url, init) =>
     new Promise((_resolve, reject) => {
