@@ -154,6 +154,32 @@ test("Wells Drilled ranking excludes unavailable peers rather than treating them
   assert.deepEqual(rankValues, [1, 2, 3, 4]);
 });
 
+test("Realized Price tooltip uses the exact required wording", () => {
+  const definition = card("RRC", "realized_price_per_mcfe").definition;
+  assert.equal(definition, "Blended pre-hedge realized commodity price across natural gas, NGLs, and oil/condensate per Mcfe of total production.");
+});
+
+test("Wells Drilled tooltip surfaces the specific company source caveat where one exists, and the generic definition otherwise", () => {
+  const cnx = card("CNX", "wells_drilled");
+  assert.match(cnx.definition, /^Latest verified standalone-quarter wells drilled \(Q2 2026\)\./);
+  assert.match(cnx.definition, /total depth/i);
+
+  const crk = card("CRK", "wells_drilled");
+  assert.match(crk.definition, /^Latest verified standalone-quarter wells drilled \(Q2 2026\)\./);
+  assert.match(crk.definition, /gross wells drilled/i);
+
+  const exe = card("EXE", "wells_drilled");
+  assert.match(exe.definition, /^Latest verified standalone-quarter wells drilled \(Q1 2026\)\./);
+  assert.match(exe.definition, /Codex workbook "Wells Drilled" row/);
+
+  const gpor = card("GPOR", "wells_drilled");
+  assert.match(gpor.definition, /^Latest verified standalone-quarter wells drilled \(Q1 2026\)\./);
+  assert.match(gpor.definition, /Codex workbook "Wells Drilled" row/);
+
+  const rrc = card("RRC", "wells_drilled");
+  assert.equal(rrc.definition, "Latest verified standalone-quarter wells drilled. Company disclosure definitions may vary; unavailable where drilled wells are not explicitly reported.");
+});
+
 test("removed Overview copy is absent from rendered components", () => {
   const files = ["components/HomeDashboard.tsx", "components/dashboard/CompanyHero.tsx", "components/dashboard/ChartWorkspace.tsx"];
   const source = files.map((file) => fs.readFileSync(path.join(process.cwd(), file), "utf8")).join("\n");

@@ -115,7 +115,7 @@ export function getPeerComparisonMatrix(
           row(
             "realizedPricePerMcfe", "Realized Price / Mcfe", "$/Mcfe",
             (ticker) => getRealizedPricePerMcfe(ticker, quarter).value, formatPerMcfe,
-            "Blended pre-hedge commodity realization across gas, NGLs, and oil/condensate, divided by total equivalent production. Not GAAP revenue/Mcfe and not after-hedge."
+            "Blended pre-hedge commodity realization across natural gas, NGLs, and oil/condensate, divided by total equivalent production. Not GAAP revenue/Mcfe and not after-hedge."
           )
         ]
       },

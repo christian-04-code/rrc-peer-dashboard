@@ -61,33 +61,50 @@ function netDebtToLtmEbitdax(ticker: Ticker, quarter: Quarter): number | null {
  * standalone value for that specific company.
  *
  * Two stored data points are excluded as unverified rather than shown:
- *  - RRC: every populated quarter (Q1-Q3 2025, Q1 2026) carries the exact same
- *    source note used on RRC's null quarters -- "reviewed quarterly materials
- *    do not disclose comparable unique wells drilled by quarter" -- which
- *    directly contradicts having a nonzero value. The stored number cannot be
- *    reconciled against its own documented source, so RRC's Wells Drilled is
- *    treated as unavailable for every quarter until that contradiction is
- *    resolved in the underlying fixture.
+ *  - RRC: the primary Codex source workbook's own "Wells Drilled" row does
+ *    carry values for Q1-Q3 2025 and Q1 2026 (18, 20, 16, 9) -- these are not
+ *    a data-entry error -- but every one of those cells is stamped with the
+ *    exact same audit note used on RRC's null quarters: "reviewed quarterly
+ *    materials do not disclose comparable unique wells drilled by quarter."
+ *    Read together, that means the extraction pass that built this fixture
+ *    checked RRC's own 10-Q/10-K/earnings-release disclosures for each of
+ *    these quarters and could not find where RRC itself reports a comparable
+ *    standalone wells-drilled figure -- i.e. the workbook number exists but is
+ *    not traceable to an RRC company disclosure, unlike every other populated
+ *    cell in this card (which each cite a specific filing). So RRC's Wells
+ *    Drilled is treated as unavailable for every quarter, matching the "if
+ *    standalone quarterly wells drilled cannot be verified, show --" rule.
  *  - GPOR Q2 2026: the source note quotes GPOR's own 10-Q verbatim -- "We spud
  *    7 gross (6.7 net) wells" -- spud, not drilled. This card does not
  *    substitute wells-spud counts for wells-drilled counts, so this quarter is
- *    skipped in favor of GPOR's last verified drilled disclosure (Q1 2026: 8).
+ *    skipped in favor of GPOR's last verified drilled disclosure (Q1 2026: 8,
+ *    confirmed against the Codex workbook's own "Wells Drilled" row, distinct
+ *    from its separate "Wells Turned-in-Line" row).
  */
 const UNVERIFIED_WELLS_DRILLED: Partial<Record<Ticker, Quarter[] | "all">> = {
   RRC: "all",
   GPOR: ["Q2 2026"]
 };
 
-function latestVerifiedWellsDrilled(ticker: Ticker): { quarter: Quarter; value: number } | null {
+function latestVerifiedWellsDrilled(ticker: Ticker): { quarter: Quarter; value: number; note?: string } | null {
   const excluded = UNVERIFIED_WELLS_DRILLED[ticker];
   if (excluded === "all") return null;
   const excludedSet = new Set(excluded ?? []);
   for (const quarter of [...quarters].reverse()) {
     if (excludedSet.has(quarter)) continue;
-    const value = getQuarterlyFinancials(ticker, quarter).wells.drilled.value;
-    if (value !== null) return { quarter, value };
+    const field = getQuarterlyFinancials(ticker, quarter).wells.drilled;
+    if (field.value !== null) return { quarter, value: field.value, note: field.note };
   }
   return null;
+}
+
+const WELLS_DRILLED_UNAVAILABLE_DEFINITION =
+  "Latest verified standalone-quarter wells drilled. Company disclosure definitions may vary; unavailable where drilled wells are not explicitly reported.";
+
+function wellsDrilledDefinition(wellsDrilled: { quarter: Quarter; value: number; note?: string } | null): string {
+  if (!wellsDrilled) return WELLS_DRILLED_UNAVAILABLE_DEFINITION;
+  const caveat = wellsDrilled.note ? ` ${wellsDrilled.note}` : "";
+  return `Latest verified standalone-quarter wells drilled (${wellsDrilled.quarter}).${caveat}`;
 }
 
 export type LiveSharePrice = { value: number | null; note: string } | null;
@@ -128,7 +145,7 @@ export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSha
       displayValue: formatPerMcfe(realizedPricePerMcfe),
       note: REPORTED_SOURCE_NOTE,
       rank: rankValue(ticker, realizedPricePerMcfeValues, "high"),
-      definition: "Blended pre-hedge realized commodity price across gas, NGLs, and oil/condensate per Mcfe of total production."
+      definition: "Blended pre-hedge realized commodity price across natural gas, NGLs, and oil/condensate per Mcfe of total production."
     },
     { key: "net_debt_to_ebitdax", label: "Net Debt / LTM EBITDAX", displayValue: formatMultiple(netDebtToLtmEbitdax(ticker, latestQuarter)), note: REPORTED_SOURCE_NOTE, rank: rankValue(ticker, leverageValues, "low") },
     {
@@ -137,7 +154,7 @@ export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSha
       displayValue: formatCount(wellsDrilled?.value ?? null),
       note: wellsDrilled ? `Latest reported • ${wellsDrilled.quarter}` : "No verified reported value",
       rank: rankValue(ticker, wellsDrilledValues, "high"),
-      definition: "Gross wells drilled during the standalone quarter shown. Gross/net and operated/total basis is not confirmed for every peer -- do not compare across companies as a strictly like-for-like count."
+      definition: wellsDrilledDefinition(wellsDrilled)
     }
   ];
 }

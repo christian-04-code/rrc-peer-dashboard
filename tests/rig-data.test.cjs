@@ -196,3 +196,62 @@ test("basin rendering data contract: BasinRigActivity reads from the ranked-basi
   const macroSource = fs.readFileSync(path.join(process.cwd(), "components/dashboard/MacroEnergyMap.tsx"), "utf8");
   assert.match(macroSource, /BasinRigActivity/);
 });
+
+// -- Full basin reconciliation (every basin, not a 3-example sample) --------
+
+test("every basin fully reconciles: current == gas+oil+misc == horizontal+directional+vertical == sum(states) simultaneously", () => {
+  for (const [name, basin] of Object.entries(dataset.basins)) {
+    const current = basin.current ?? 0;
+    const mixSum = basin.commodityMix.gas + basin.commodityMix.oil + basin.commodityMix.misc;
+    const trajSum = basin.trajectoryMix.horizontal + basin.trajectoryMix.directional + basin.trajectoryMix.vertical;
+    const stateSum = basin.states.reduce((sum, state) => sum + state.current, 0);
+    assert.ok(Math.abs(mixSum - current) < 0.01, `${name}: commodity mix ${mixSum} != current ${current}`);
+    assert.ok(Math.abs(trajSum - current) < 0.01, `${name}: trajectory mix ${trajSum} != current ${current}`);
+    assert.ok(Math.abs(stateSum - current) < 0.01, `${name}: state membership ${stateSum} != current ${current}`);
+  }
+});
+
+test("the sum of every basin's current rig count equals the published US national total", () => {
+  const total = Object.values(dataset.basins).reduce((sum, basin) => sum + (basin.current ?? 0), 0);
+  assert.equal(total, dataset.national.unitedStates.current);
+});
+
+test("no basin history contains a duplicate published week", () => {
+  for (const [name, basin] of Object.entries(dataset.basins)) {
+    const periods = basin.history.map((point) => point.period);
+    assert.equal(new Set(periods).size, periods.length, `${name}: duplicate week in history`);
+  }
+});
+
+// -- BasinRigActivity behavior contracts (QA pass fixes) ---------------------
+
+test("commodity filter contract: selecting Gas/Oil actually re-ranks the default sort column, not just relabels it", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components/dashboard/BasinRigActivity.tsx"), "utf8");
+  // sortValue's "current" branch must read commodityMix.gas/oil when that view is
+  // active -- a purely decorative filter would only touch display text, never sortValue.
+  const sortValueFn = source.slice(source.indexOf("function sortValue"), source.indexOf("function toneClass"));
+  assert.match(sortValueFn, /commodityView === "gas"/);
+  assert.match(sortValueFn, /commodityView === "oil"/);
+  assert.match(sortValueFn, /commodityMix\.gas/);
+  assert.match(sortValueFn, /commodityMix\.oil/);
+});
+
+test("sorting contract: ties break deterministically on basin name, and null values are pushed out rather than sorted as zero", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components/dashboard/BasinRigActivity.tsx"), "utf8");
+  const sortedBasinsFn = source.slice(source.indexOf("const sortedBasins"), source.indexOf("const visibleBasins"));
+  assert.match(sortedBasinsFn, /localeCompare/);
+  assert.match(sortedBasinsFn, /leftValue === null/);
+  assert.match(sortedBasinsFn, /rightValue === null/);
+});
+
+test("selection contract: a basin selected via the dropdown that falls outside the visible top 8 is surfaced, not silently hidden", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components/dashboard/BasinRigActivity.tsx"), "utf8");
+  assert.match(source, /selectedIsHidden/);
+  assert.match(source, /outside the top/);
+});
+
+test("accessibility contract: commodity view exposes aria-pressed, and WoW/YoY commodity caveat is rendered as visible text, not only a title attribute", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components/dashboard/BasinRigActivity.tsx"), "utf8");
+  assert.match(source, /aria-pressed=\{commodityView/);
+  assert.match(source, /<small className="basin-caveat">WoW and YoY reflect total rig count change/);
+});

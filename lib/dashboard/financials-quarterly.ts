@@ -2338,7 +2338,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         totalCashUnitCosts: { value: 1.53, source: "codex", basis: "actual", note: "Company-reported total cash unit costs where available; do not force comparability if definitions differ." }
       },
       wells: {
-        drilled: { value: 60.0, source: "codex", basis: "actual", note: "Gross or net wells drilled; specify basis in notes. Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
+        drilled: { value: 60.0, source: "codex", basis: "actual", note: "Codex workbook \"Wells Drilled\" row (distinct from the workbook's separate \"Wells Turned-in-Line (TIL)\" row, which independently shows 49 for this quarter). Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
         turnedInLine: { value: 49.0, source: "codex", basis: "actual", note: "Wells placed on production / turned in line during the quarter. Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }
@@ -2681,7 +2681,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
         totalCashUnitCosts: { value: 1.53, source: "codex", basis: "actual", note: "Company-reported total cash unit costs where available; do not force comparability if definitions differ." }
       },
       wells: {
-        drilled: { value: 8.0, source: "codex", basis: "actual", note: "Gross or net wells drilled; specify basis in notes. Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
+        drilled: { value: 8.0, source: "codex", basis: "actual", note: "Codex workbook \"Wells Drilled\" row (distinct from the workbook's separate \"Wells Turned-in-Line (TIL)\" row, which independently shows 5 for this quarter). Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
         turnedInLine: { value: 5.0, source: "codex", basis: "actual", note: "Wells placed on production / turned in line during the quarter. Unit basis (gross vs. net, operated vs. total) not explicitly specified in source; do not compare across peers as like-for-like without confirming basis." },
         ducInventory: { value: null, source: "codex", basis: "actual", note: "Quarter-end drilled-but-uncompleted well inventory when disclosed." }
       }

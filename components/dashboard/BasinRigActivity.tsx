@@ -33,10 +33,22 @@ function reportDateLabel(reportDate: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
-function sortValue(basin: RigBasinDetail, key: SortKey): number {
-  if (key === "current") return basin.current ?? 0;
-  if (key === "wow") return basin.wow ?? 0;
-  if (key === "yoy") return basin.yoy ?? 0;
+/**
+ * The "Rigs" column (sortKey "current") displays total/gas/oil depending on
+ * commodityView, so its sort value follows the same displayed number -- this
+ * is what makes selecting Gas/Oil actually re-rank the table by that
+ * commodity when the user hasn't explicitly chosen a different sort column.
+ * The dedicated Gas/Oil column sort keys are commodityView-independent: they
+ * always sort by that commodity regardless of which view is active.
+ */
+function sortValue(basin: RigBasinDetail, key: SortKey, commodityView: CommodityView): number | null {
+  if (key === "current") {
+    if (commodityView === "gas") return basin.commodityMix.gas;
+    if (commodityView === "oil") return basin.commodityMix.oil;
+    return basin.current;
+  }
+  if (key === "wow") return basin.wow;
+  if (key === "yoy") return basin.yoy;
   if (key === "gas") return basin.commodityMix.gas;
   return basin.commodityMix.oil;
 }
@@ -55,17 +67,43 @@ export function BasinRigActivity() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectedBasin, setSelectedBasin] = useState(allRanked[0]?.basin ?? "");
 
-  const visibleBasins = useMemo(() => {
-    const sorted = [...allRanked].sort((left, right) =>
-      sortDirection === "desc" ? sortValue(right, sortKey) - sortValue(left, sortKey) : sortValue(left, sortKey) - sortValue(right, sortKey)
-    );
-    return showAll ? sorted : sorted.slice(0, DEFAULT_BASIN_COUNT);
-  }, [allRanked, showAll, sortDirection, sortKey]);
+  const sortedBasins = useMemo(() => {
+    return [...allRanked].sort((left, right) => {
+      const leftValue = sortValue(left, sortKey, commodityView);
+      const rightValue = sortValue(right, sortKey, commodityView);
+      // A missing (null) value is not a meaningful zero -- always push it to the
+      // bottom of the ranking regardless of sort direction, rather than letting
+      // it win an ascending sort or lose ties it shouldn't.
+      if (leftValue === null && rightValue === null) return left.basin.localeCompare(right.basin);
+      if (leftValue === null) return 1;
+      if (rightValue === null) return -1;
+      const primary = sortDirection === "desc" ? rightValue - leftValue : leftValue - rightValue;
+      // Deterministic secondary sort so tied basins (e.g. several at 0 WoW) never
+      // reorder from an unrelated state change.
+      return primary !== 0 ? primary : left.basin.localeCompare(right.basin);
+    });
+  }, [allRanked, sortDirection, sortKey, commodityView]);
+
+  const visibleBasins = useMemo(
+    () => (showAll ? sortedBasins : sortedBasins.slice(0, DEFAULT_BASIN_COUNT)),
+    [sortedBasins, showAll]
+  );
 
   const selected = allRanked.find((basin) => basin.basin === selectedBasin) ?? null;
+  const selectedIsHidden = selected !== null && !showAll && !visibleBasins.some((basin) => basin.basin === selected.basin);
 
-  const gainers = useMemo(() => [...allRanked].filter((basin) => (basin.wow ?? 0) > 0).sort((left, right) => (right.wow ?? 0) - (left.wow ?? 0)).slice(0, 3), [allRanked]);
-  const decliners = useMemo(() => [...allRanked].filter((basin) => (basin.wow ?? 0) < 0).sort((left, right) => (left.wow ?? 0) - (right.wow ?? 0)).slice(0, 3), [allRanked]);
+  // Unavailable (null) WoW is never treated as a zero-change basin -- it is simply
+  // excluded from both lists rather than silently competing as a "gainer" or
+  // "decliner". Ties break on basin name so the list never reorders on an
+  // unrelated re-render.
+  const gainers = useMemo(() => [...allRanked]
+    .filter((basin): basin is RigBasinDetail & { wow: number } => basin.wow !== null && basin.wow > 0)
+    .sort((left, right) => right.wow - left.wow || left.basin.localeCompare(right.basin))
+    .slice(0, 3), [allRanked]);
+  const decliners = useMemo(() => [...allRanked]
+    .filter((basin): basin is RigBasinDetail & { wow: number } => basin.wow !== null && basin.wow < 0)
+    .sort((left, right) => left.wow - right.wow || left.basin.localeCompare(right.basin))
+    .slice(0, 3), [allRanked]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -91,9 +129,9 @@ export function BasinRigActivity() {
         </div>
         <div className="macro-map-controls">
           <div className="macro-segmented" aria-label="Commodity view">
-            <button className={commodityView === "all" ? "active" : ""} onClick={() => setCommodityView("all")}>All rigs</button>
-            <button className={commodityView === "gas" ? "active" : ""} onClick={() => setCommodityView("gas")}>Gas</button>
-            <button className={commodityView === "oil" ? "active" : ""} onClick={() => setCommodityView("oil")}>Oil</button>
+            <button aria-pressed={commodityView === "all"} className={commodityView === "all" ? "active" : ""} onClick={() => setCommodityView("all")}>All rigs</button>
+            <button aria-pressed={commodityView === "gas"} className={commodityView === "gas" ? "active" : ""} onClick={() => setCommodityView("gas")}>Gas</button>
+            <button aria-pressed={commodityView === "oil"} className={commodityView === "oil" ? "active" : ""} onClick={() => setCommodityView("oil")}>Oil</button>
           </div>
           <label className="basin-jump">
             <span>Jump to basin</span>
@@ -112,8 +150,8 @@ export function BasinRigActivity() {
               <button type="button" className={sortKey === "current" ? "active" : ""} onClick={() => toggleSort("current")}>
                 {commodityView === "gas" ? "Gas rigs" : commodityView === "oil" ? "Oil rigs" : "Rigs"} {sortKey === "current" ? (sortDirection === "desc" ? "↓" : "↑") : ""}
               </button>
-              <button type="button" className={sortKey === "wow" ? "active" : ""} onClick={() => toggleSort("wow")}>WoW {sortKey === "wow" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
-              <button type="button" className={sortKey === "yoy" ? "active" : ""} onClick={() => toggleSort("yoy")}>YoY {sortKey === "yoy" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
+              <button type="button" className={sortKey === "wow" ? "active" : ""} onClick={() => toggleSort("wow")} title={commodityView !== "all" ? "WoW reflects total rig count change; Baker Hughes does not publish a gas- or oil-specific weekly change." : undefined}>WoW {sortKey === "wow" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
+              <button type="button" className={sortKey === "yoy" ? "active" : ""} onClick={() => toggleSort("yoy")} title={commodityView !== "all" ? "YoY reflects total rig count change; Baker Hughes does not publish a gas- or oil-specific year-over-year change." : undefined}>YoY {sortKey === "yoy" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
               <button type="button" className={sortKey === "gas" ? "active" : ""} onClick={() => toggleSort("gas")}>Gas {sortKey === "gas" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
               <button type="button" className={sortKey === "oil" ? "active" : ""} onClick={() => toggleSort("oil")}>Oil {sortKey === "oil" ? (sortDirection === "desc" ? "↓" : "↑") : ""}</button>
             </div>
@@ -139,6 +177,12 @@ export function BasinRigActivity() {
               );
             })}
           </div>
+          {commodityView !== "all" ? (
+            <small className="basin-caveat">WoW and YoY reflect total rig count change; Baker Hughes does not publish a gas- or oil-specific weekly/annual change.</small>
+          ) : null}
+          {selectedIsHidden && selected ? (
+            <small className="basin-caveat">Selected basin ({selected.basin}) is outside the top {DEFAULT_BASIN_COUNT} shown -- <button type="button" className="basin-show-all-inline" onClick={() => setShowAll(true)}>show all {allRanked.length} basins</button> to see its row.</small>
+          ) : null}
           {allRanked.length > DEFAULT_BASIN_COUNT ? (
             <button type="button" className="basin-show-all" onClick={() => setShowAll((current) => !current)}>
               {showAll ? `Show top ${DEFAULT_BASIN_COUNT}` : `Show all ${allRanked.length} basins`}
