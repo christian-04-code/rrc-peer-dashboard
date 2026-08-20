@@ -7,6 +7,7 @@ import {
   getPeerComparisonQuarters
 } from "@/lib/dashboard/peer-comparison-metrics";
 import type { Metric, Ticker } from "@/lib/dashboard/types";
+import { StockDetailButton } from "@/components/dashboard/StockDetailButton";
 
 export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selectedTickers, metric }: { selectedTickers: Ticker[]; metric: Metric }) {
   const [quarter, setQuarter] = useState(DEFAULT_PEER_COMPARISON_QUARTER);
@@ -33,7 +34,7 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
             <tr>
               <th scope="col">Metric</th>
               {matrix.tickers.map((ticker) => (
-                <th scope="col" key={ticker} style={{ borderTopColor: getCompanyColor(ticker) }}>{ticker}</th>
+                <th scope="col" key={ticker} style={{ borderTopColor: getCompanyColor(ticker) }}><span className="peer-stock-heading">{ticker}<StockDetailButton ticker={ticker} compact /></span></th>
               ))}
             </tr>
           </thead>
