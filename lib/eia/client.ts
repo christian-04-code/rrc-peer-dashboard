@@ -12,6 +12,14 @@ export function getEiaApiKey(): string {
 
 const EIA_BASE_URL = "https://api.eia.gov/v2";
 
+// Generic fallback only -- production macro call sites in
+// lib/eia/macro-fundamentals.ts each set an explicit timeoutMs sized to their
+// own payload/latency profile. This value exists purely so an internal caller
+// that forgets to pass timeoutMs still gets a bounded request instead of an
+// unbounded one; it must never be the value that decides whether a heavy
+// table endpoint (storage/production/demand) succeeds in production.
+const DEFAULT_TABLE_TIMEOUT_MS = 30_000;
+
 export type EiaFrequency = "daily" | "weekly" | "monthly" | "annual";
 
 export type EiaDataPoint = {
@@ -75,19 +83,49 @@ function validateLength(length: number): void {
 // what CDN-level Cache-Control already covers.
 const inFlightEiaTableRequests = new Map<string, Promise<EiaTableResult>>();
 
+/**
+ * Server-side-only failure log for a table request. Deliberately omits the
+ * request URL (it carries the EIA api_key as a query param) and logs only
+ * the route/frequency/timing/failure-kind fields useful for diagnosing a
+ * production Macro-tab regression from Vercel logs.
+ */
+function logEiaTableFailure(details: {
+  route: string;
+  frequency: EiaFrequency;
+  elapsedMs: number;
+  timeoutMs: number;
+  reason: "timeout" | "network" | `http_${number}`;
+}): void {
+  console.error("[EIA table]", details);
+}
+
 async function requestEiaTable(url: URL, route: string, params: { frequency: EiaFrequency; revalidate?: number; timeoutMs?: number }): Promise<EiaTableResult> {
+  // Bounded so a hung/stalled EIA connection fails fast into the normal
+  // Promise.allSettled degraded-response path instead of blocking the whole
+  // /api/macro invocation (and the other two, unrelated fetches) until the
+  // platform's hard function timeout kills it with no usable response at all.
+  // Table endpoints vary widely in payload size (storage/production tables
+  // are much heavier than demand), so callers own their own timeout instead
+  // of inheriting one global cutoff -- see lib/eia/macro-fundamentals.ts.
+  const timeoutMs = params.timeoutMs ?? DEFAULT_TABLE_TIMEOUT_MS;
+  const startedAt = Date.now();
   let response: Response;
   try {
-    // Bounded so a hung/stalled EIA connection fails fast into the normal
-    // Promise.allSettled degraded-response path instead of blocking the whole
-    // /api/macro invocation (and the other two, unrelated fetches) until the
-    // platform's hard function timeout kills it with no usable response at all.
-    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 }, signal: AbortSignal.timeout(params.timeoutMs ?? 8000) });
+    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 }, signal: AbortSignal.timeout(timeoutMs) });
   } catch (error) {
+    const reason = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network";
+    logEiaTableFailure({ route, frequency: params.frequency, elapsedMs: Date.now() - startedAt, timeoutMs, reason });
     throw new Error(`EIA table request failed for route "${route}": ${error instanceof Error ? error.message : String(error)}`);
   }
   if (!response.ok) {
     const body = await response.text().catch(() => "");
+    logEiaTableFailure({
+      route,
+      frequency: params.frequency,
+      elapsedMs: Date.now() - startedAt,
+      timeoutMs,
+      reason: `http_${response.status}`
+    });
     throw new Error(`EIA table request failed: ${response.status} for route "${route}".${body.trim() ? ` ${body.slice(0, 300)}` : ""}`);
   }
 
@@ -113,7 +151,12 @@ export async function fetchEiaTable(params: {
   facets?: Record<string, readonly string[]>;
   length?: number;
   revalidate?: number;
-  /** Test seam only; production call sites rely on the 8000ms default. */
+  /**
+   * Production callers (lib/eia/macro-fundamentals.ts) must pass this
+   * explicitly, sized to their own payload/latency profile. Omitting it
+   * falls back to DEFAULT_TABLE_TIMEOUT_MS, which is a generic safety net,
+   * not a per-endpoint production setting.
+   */
   timeoutMs?: number;
 }): Promise<EiaTableResult> {
   const route = params.route.trim().replace(/^\/+|\/+$/g, "");
