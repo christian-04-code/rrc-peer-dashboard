@@ -307,9 +307,9 @@ def build_dataset(sections: dict[str, Any], records: list[dict[str, Any]], repor
             "yoyPct": entry["yoyPct"],
             "commodityMix": {"gas": round(gas, 3), "oil": round(oil, 3), "misc": round(misc, 3)},
             "trajectoryMix": {
-                "horizontal": round(trajectory_by_state.get((label, "Horizontal"), 0.0), 3),
-                "directional": round(trajectory_by_state.get((label, "Directional"), 0.0), 3),
-                "vertical": round(trajectory_by_state.get((label, "Vertical"), 0.0), 3)
+                "horizontal": round(trajectory_by_state.get((label_key, "Horizontal"), 0.0), 3),
+                "directional": round(trajectory_by_state.get((label_key, "Directional"), 0.0), 3),
+                "vertical": round(trajectory_by_state.get((label_key, "Vertical"), 0.0), 3)
             },
             "topCounties": top_counties,
             "history": history

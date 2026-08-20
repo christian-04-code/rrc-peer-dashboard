@@ -32,6 +32,8 @@ export type PeerMetricRow = {
   key: PeerMetricKey;
   label: string;
   unit: string;
+  /** Short, dashboard-tooltip-length definition; shown as the row header's title attribute. */
+  definition?: string;
   values: Record<Ticker, PeerMetricCell>;
 };
 export type PeerMetricGroup = { label: string; rows: PeerMetricRow[] };
@@ -81,11 +83,13 @@ export function getPeerComparisonMatrix(
     label: string,
     unit: string,
     read: (ticker: Ticker) => number | null,
-    format: (value: number | null) => string
+    format: (value: number | null) => string,
+    definition?: string
   ): PeerMetricRow => ({
     key,
     label,
     unit,
+    definition,
     values: Object.fromEntries(selectedTickers.map((ticker) => {
       const value = read(ticker);
       return [ticker, { value, displayValue: format(value) }];
@@ -103,15 +107,27 @@ export function getPeerComparisonMatrix(
           row("ebitdax", "Adjusted EBITDAX", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).adjustedEbitdax.value, formatMoney),
           row("fcf", "Free Cash Flow", "$MM", (ticker) => getQuarterlyFreeCashFlow(ticker, quarter).value, formatMoney),
           row("capex", "Capital Expenditures", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).capitalExpenditures.value, formatMoney),
-          row("capexPerMcfe", "CapEx / Mcfe", "$/Mcfe", (ticker) => getCapexPerMcfe(ticker, quarter).value, formatPerMcfe),
-          row("realizedPricePerMcfe", "Realized Price / Mcfe", "$/Mcfe", (ticker) => getRealizedPricePerMcfe(ticker, quarter).value, formatPerMcfe)
+          row(
+            "capexPerMcfe", "CapEx / Mcfe", "$/Mcfe",
+            (ticker) => getCapexPerMcfe(ticker, quarter).value, formatPerMcfe,
+            "Total company capital expenditures divided by total quarterly equivalent production (Mcfe). Capital intensity, not total spend -- capex definitions still vary by peer (see Capital Expenditures)."
+          ),
+          row(
+            "realizedPricePerMcfe", "Realized Price / Mcfe", "$/Mcfe",
+            (ticker) => getRealizedPricePerMcfe(ticker, quarter).value, formatPerMcfe,
+            "Blended pre-hedge commodity realization across gas, NGLs, and oil/condensate, divided by total equivalent production. Not GAAP revenue/Mcfe and not after-hedge."
+          )
         ]
       },
       {
         label: "Balance Sheet / Capital",
         rows: [
           row("netDebt", "Net Debt", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).netDebt.value, formatMoney),
-          row("netDebtToEbitdax", "Net Debt / LTM EBITDAX", "x", (ticker) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value, formatMultiple),
+          row(
+            "netDebtToEbitdax", "Net Debt / LTM EBITDAX", "x",
+            (ticker) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value, formatMultiple,
+            "Quarter-end net debt divided by the sum of the last four standalone reported quarters of Adjusted EBITDAX (trailing twelve months), not a single quarter's EBITDAX."
+          ),
           row("fcfYield", "FCF Yield", "LTM", (ticker) => {
             const marketCap = getQuarterlyMarketCap(ticker, quarter)?.value ?? null;
             return calculateFcfYield(getLtmFreeCashFlow(ticker, quarter), marketCap);

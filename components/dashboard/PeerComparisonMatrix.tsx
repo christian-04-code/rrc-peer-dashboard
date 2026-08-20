@@ -54,7 +54,7 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
                   const isActive = row.key === activeRow;
                   return (
                     <tr key={row.key} className={isActive ? "peer-matrix-row active" : "peer-matrix-row"} aria-current={isActive ? "true" : undefined}>
-                      <th scope="row"><span>{row.label}</span><small>{row.unit}</small></th>
+                      <th scope="row" title={row.definition}><span>{row.label}</span><small>{row.unit}</small></th>
                       {matrix.tickers.map((ticker) => {
                         const cell = row.values[ticker];
                         return (
@@ -73,7 +73,7 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
       </div>
       {capexEfficiencyRanked.length ? (
         <div className="capex-efficiency" aria-label="Capital intensity ranking, CapEx per Mcfe, selected quarter">
-          <div className="capex-efficiency-head"><span>CAPITAL EFFICIENCY</span><h4>CapEx / Mcfe · {quarter} · lower is more capital efficient</h4></div>
+          <div className="capex-efficiency-head"><span>CAPITAL EFFICIENCY</span><h4 title="Total company capital expenditures / total quarterly equivalent production (Mcfe) -- capital intensity, not total CapEx spend.">CapEx / Mcfe · {quarter} · lower is more capital efficient</h4></div>
           <div className="capex-efficiency-ranking">
             {capexEfficiencyRanked.map((item, index) => (
               <div key={item.ticker} className="capex-efficiency-row">

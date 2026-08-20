@@ -90,7 +90,7 @@ export function DrillingActivityModule({ stateCode, stateName }: { stateCode: st
           ) : null}
 
           <small className="drilling-source">
-            Source: Baker Hughes North America Rotary Rig Count · report week of {reportDateLabel(dataset.source.reportDate)}
+            Source: Baker Hughes · Week of {reportDateLabel(dataset.source.reportDate)}
           </small>
         </>
       )}

@@ -335,7 +335,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-deviation-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, transparent 49.5%, var(--border) 49.5%, var(--border) 50.5%, transparent 50.5%); overflow: hidden; }
 .macro-deviation-bar i { display: block; height: 100%; background: #cf704f; border-radius: 99px; }
 .macro-deviation-bar i.below { background: #36a4c8; }
-.macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); gap: 12px; padding-top: 12px; }
+.macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); align-items: start; gap: 12px; padding-top: 12px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
@@ -384,12 +384,12 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-rig-legend-note { color: #e5ad63; }
 .macro-rig-legend-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(9,15,24,.82); border: 1.5px solid #e5ad63; }
 
-.drilling-activity { display: grid; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
+.drilling-activity { display: grid; gap: 8px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
 .drilling-unsupported { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .drilling-headline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.drilling-headline-stat { display: grid; gap: 2px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 8px; }
+.drilling-headline-stat { display: grid; gap: 2px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 7px 8px; }
 .drilling-headline-stat span { color: var(--muted); font-size: 9px; }
-.drilling-headline-stat strong { font-size: 16px; }
+.drilling-headline-stat strong { font-size: 15px; }
 .drilling-headline-stat strong.positive { color: var(--positive); }
 .drilling-headline-stat strong.negative { color: var(--negative); }
 .drilling-headline-stat small { color: var(--muted); font-size: 9px; }
@@ -407,13 +407,15 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drilling-mix-legend i.misc { background: #8195aa; }
 .drilling-trajectory { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 9px; }
 .drilling-history > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-.drilling-history .macro-evidence-chart svg { height: 110px; }
-.drilling-concentration { display: grid; gap: 5px; }
+.drilling-history .macro-evidence-chart { margin-top: 4px; }
+.drilling-history .macro-evidence-chart svg { height: 92px; }
+.drilling-history .macro-series-legend { margin-top: 2px; }
+.drilling-concentration { display: grid; gap: 4px; }
 .drilling-concentration > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .drilling-concentration-table { display: grid; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
-.drilling-concentration-row { display: grid; grid-template-columns: 1.3fr .6fr 1fr .8fr; gap: 6px; padding: 5px 8px; font-size: 9.5px; border-bottom: 1px solid var(--border); }
+.drilling-concentration-row { display: grid; grid-template-columns: 1.3fr .6fr 1fr .8fr; gap: 6px; padding: 4px 7px; font-size: 9.5px; border-bottom: 1px solid var(--border); }
 .drilling-concentration-row:last-child { border-bottom: 0; }
-.drilling-concentration-row.header { color: #75c7ee; background: rgba(16,32,53,.72); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 8.5px; }
+.drilling-concentration-row.header { color: #75c7ee; background: rgba(16,32,53,.72); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 8.5px; padding: 5px 7px; }
 .drilling-concentration-row > span:nth-child(2) { text-align: right; }
 .drilling-source { color: var(--muted); font-size: 8px; line-height: 1.4; }
 

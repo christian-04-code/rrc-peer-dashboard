@@ -136,8 +136,15 @@ class BuildDatasetTests(unittest.TestCase):
         self.assertEqual(pa["history"][1], {"period": "2026-08-07", "value": 5.0})
         self.assertEqual(pa["topCounties"][0]["county"], "Lycoming")
         self.assertEqual(pa["topCounties"][0]["dominantBasin"], "Marcellus")
+        # Regression: trajectoryMix previously looked up trajectory_by_state with the
+        # title-case Breakdown label ("Pennsylvania") instead of the uppercase key
+        # ("PENNSYLVANIA") actually used by the weekly-row aggregation, so every state's
+        # trajectoryMix silently came back {0, 0, 0} regardless of its real trajectory
+        # split. All fixture rows here are "Horizontal", so PA's split must reflect that.
+        self.assertEqual(pa["trajectoryMix"], {"horizontal": 6.0, "directional": 0.0, "vertical": 0.0})
         tx = dataset["states"]["TX"]
         self.assertEqual(tx["commodityMix"], {"gas": 0.0, "oil": 4.0, "misc": 0.0})
+        self.assertEqual(tx["trajectoryMix"], {"horizontal": 4.0, "directional": 0.0, "vertical": 0.0})
 
     def test_state_reconciliation_mismatch_fails_loudly(self):
         sections = MODULE.parse_breakdown(minimal_breakdown_rows())

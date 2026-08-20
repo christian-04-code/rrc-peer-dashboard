@@ -34,6 +34,13 @@ test("every tracked state's gas + oil + misc commodity mix reconciles to its cur
   }
 });
 
+test("every tracked state's horizontal + directional + vertical trajectory mix reconciles to its current total", () => {
+  for (const [code, state] of Object.entries(dataset.states)) {
+    const trajectorySum = state.trajectoryMix.horizontal + state.trajectoryMix.directional + state.trajectoryMix.vertical;
+    assert.ok(Math.abs(trajectorySum - (state.current ?? 0)) < 0.01, `${code}: trajectory mix ${trajectorySum} != current ${state.current}`);
+  }
+});
+
 test("every tracked state's top counties never exceed the state total", () => {
   for (const [code, state] of Object.entries(dataset.states)) {
     const countySum = state.topCounties.reduce((sum, county) => sum + county.rigs, 0);
@@ -64,6 +71,12 @@ test("PA reconciles to known reviewed values from the source workbook", () => {
   assert.equal(pa.commodityMix.gas, 16);
   assert.equal(pa.commodityMix.oil, 0);
   assert.equal(pa.topCounties[0].dominantBasin, "Marcellus");
+  // Regression: trajectoryMix was previously always {0,0,0} for every state (an
+  // uppercase-vs-title-case label mismatch in scripts/rigs/import.py's aggregation
+  // lookup), which silently hid the trajectory row in the Drilling Activity module.
+  assert.equal(pa.trajectoryMix.horizontal, 14);
+  assert.equal(pa.trajectoryMix.directional, 2);
+  assert.equal(pa.trajectoryMix.vertical, 0);
 });
 
 test("getRigState is case-insensitive and returns null for a state Baker Hughes does not individually track", () => {
