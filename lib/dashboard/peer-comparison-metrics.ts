@@ -1,4 +1,10 @@
-import { getLtmAdjustedEbitdax, getLtmNetIncome, getNetDebtToLtmAdjustedEbitdax } from "./calculated-quarterly";
+import {
+  getCapexPerMcfe,
+  getLtmAdjustedEbitdax,
+  getLtmNetIncome,
+  getNetDebtToLtmAdjustedEbitdax,
+  getRealizedPricePerMcfe
+} from "./calculated-quarterly";
 import { getQuarterlyEps } from "./eps-quarterly";
 import { getQuarterlyFinancials, quarters, type Quarter } from "./financials-quarterly";
 import { getQuarterlyFreeCashFlow } from "./free-cash-flow-quarterly";
@@ -11,6 +17,8 @@ export type PeerMetricKey =
   | "ebitdax"
   | "fcf"
   | "capex"
+  | "capexPerMcfe"
+  | "realizedPricePerMcfe"
   | "netDebt"
   | "netDebtToEbitdax"
   | "fcfYield"
@@ -94,14 +102,16 @@ export function getPeerComparisonMatrix(
           row("revenue", "Revenue", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).revenue.value, formatMoney),
           row("ebitdax", "Adjusted EBITDAX", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).adjustedEbitdax.value, formatMoney),
           row("fcf", "Free Cash Flow", "$MM", (ticker) => getQuarterlyFreeCashFlow(ticker, quarter).value, formatMoney),
-          row("capex", "Capital Expenditures", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).capitalExpenditures.value, formatMoney)
+          row("capex", "Capital Expenditures", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).capitalExpenditures.value, formatMoney),
+          row("capexPerMcfe", "CapEx / Mcfe", "$/Mcfe", (ticker) => getCapexPerMcfe(ticker, quarter).value, formatPerMcfe),
+          row("realizedPricePerMcfe", "Realized Price / Mcfe", "$/Mcfe", (ticker) => getRealizedPricePerMcfe(ticker, quarter).value, formatPerMcfe)
         ]
       },
       {
         label: "Balance Sheet / Capital",
         rows: [
           row("netDebt", "Net Debt", "$MM", (ticker) => getQuarterlyFinancials(ticker, quarter).netDebt.value, formatMoney),
-          row("netDebtToEbitdax", "Net Debt / EBITDAX", "LTM", (ticker) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value, formatMultiple),
+          row("netDebtToEbitdax", "Net Debt / LTM EBITDAX", "x", (ticker) => getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value, formatMultiple),
           row("fcfYield", "FCF Yield", "LTM", (ticker) => {
             const marketCap = getQuarterlyMarketCap(ticker, quarter)?.value ?? null;
             return calculateFcfYield(getLtmFreeCashFlow(ticker, quarter), marketCap);
@@ -150,6 +160,10 @@ function formatMoney(value: number | null): string {
 }
 
 function formatPerShare(value: number | null): string {
+  return value === null ? "--" : `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatPerMcfe(value: number | null): string {
   return value === null ? "--" : `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 

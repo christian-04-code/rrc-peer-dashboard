@@ -8,6 +8,8 @@ import type { MacroFundamentalsResponse, StorageRegionId } from "@/lib/market/ma
 import { formatPct } from "@/lib/market/macro-analytics";
 import { getStateCode, getStateName, getStorageRegionForState } from "@/lib/market/storage-regions";
 import { HistoricalLineChart } from "@/components/dashboard/MacroVisuals";
+import { getRigDataset, getRigState, getRigStateMax } from "@/lib/rigs/rig-data";
+import { DrillingActivityModule } from "@/components/dashboard/DrillingActivity";
 
 type Position = [number, number];
 type StateGeometry =
@@ -22,7 +24,7 @@ const stateFeatures = (feature(topology, topology.objects.states) as unknown as 
 const MAP_STATES = stateFeatures.flatMap((state) => {
   const name = state.properties?.name ?? "";
   const code = getStateCode(name);
-  return code ? [{ code, name, path: geometryPath(state.geometry) }] : [];
+  return code ? [{ code, name, path: geometryPath(state.geometry), centroid: geometryCentroid(state.geometry) }] : [];
 });
 
 function geometryPath(geometry: StateGeometry): string {
@@ -30,6 +32,23 @@ function geometryPath(geometry: StateGeometry): string {
   return polygons.map((polygon) => polygon.map((ring) =>
     ring.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ") + " Z"
   ).join(" ")).join(" ");
+}
+
+/** Bounding-box center of the geometry's largest ring, used to anchor the compact rig-count label. */
+function geometryCentroid(geometry: StateGeometry): Position {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  let outerRing = polygons[0][0];
+  for (const polygon of polygons) {
+    if (polygon[0].length > outerRing.length) outerRing = polygon[0];
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of outerRing) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  return [(minX + maxX) / 2, (minY + maxY) / 2];
 }
 
 function storageColor(value: number | null): string {
@@ -76,16 +95,20 @@ function regionFor(data: MacroFundamentalsResponse | null, stateCode: string) {
 export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | null }) {
   const [mode, setMode] = useState<MapMode>("storage");
   const [productionView, setProductionView] = useState<ProductionView>("current");
+  const [rigOverlay, setRigOverlay] = useState(true);
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState("PA");
   const productionMax = useMemo(() => Math.max(0, ...Object.values(data?.production.states ?? {}).map((state) => state.current)), [data]);
+  const rigMax = useMemo(() => getRigStateMax(), []);
   const activeState = hovered ?? selected;
   const stateName = getStateName(activeState) ?? activeState;
   const region = regionFor(data, activeState);
   const production = data?.production.states[activeState] ?? null;
+  const activeRig = getRigState(activeState);
   const selectedRegion = regionFor(data, selected);
   const selectedProduction = data?.production.states[selected] ?? null;
   const selectedName = getStateName(selected) ?? selected;
+  const rigReportDate = getRigDataset().source.reportDate;
 
   return (
     <div className="macro-map-layout">
@@ -98,6 +121,14 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               <button className={mode === "production" ? "active" : ""} onClick={() => setMode("production")}>Production</button>
             </div>
             {mode === "production" ? <div className="macro-segmented secondary" aria-label="Production map view"><button className={productionView === "current" ? "active" : ""} onClick={() => setProductionView("current")}>Current</button><button className={productionView === "yoy" ? "active" : ""} onClick={() => setProductionView("yoy")}>YoY change</button></div> : null}
+            <button
+              type="button"
+              className={rigOverlay ? "macro-rig-toggle active" : "macro-rig-toggle"}
+              aria-pressed={rigOverlay}
+              onClick={() => setRigOverlay((current) => !current)}
+            >
+              <i /> Rig activity overlay
+            </button>
           </div>
         </div>
         <div className="macro-us-map" onMouseLeave={() => setHovered(null)}>
@@ -129,6 +160,17 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
                 />
               );
             })}
+            {rigOverlay ? MAP_STATES.flatMap((state) => {
+              const rig = getRigState(state.code);
+              if (!rig || !rig.current) return [];
+              const radius = 6 + Math.sqrt(rig.current / (rigMax || 1)) * 7;
+              return [
+                <g key={`rig-${state.code}`} className="macro-rig-label" pointerEvents="none">
+                  <circle cx={state.centroid[0]} cy={state.centroid[1]} r={radius} />
+                  <text x={state.centroid[0]} y={state.centroid[1]}>{formatNumber(rig.current)}</text>
+                </g>
+              ];
+            }) : null}
           </svg>
           <div className="macro-map-tooltip" aria-live="polite">
             <strong>{stateName}</strong>
@@ -137,6 +179,13 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
             ) : (
               <><span>Marketed gas production</span><b>{productionView === "current" ? `${formatNumber(production?.current ?? null)} MMcf/mo` : `${formatPct(production?.yearOverYearPct ?? null)} YoY`}</b><small>{formatPct(production?.monthOverMonthPct ?? null)} MoM · {formatPct(production?.yearOverYearPct ?? null)} YoY · {production?.period ?? "--"}</small></>
             )}
+            {rigOverlay && activeRig ? (
+              <div className="macro-map-tooltip-rigs">
+                <span>Baker Hughes rigs</span>
+                <b>{formatNumber(activeRig.current)} total</b>
+                <small>{formatSigned(activeRig.wow, "WoW")} · {formatSigned(activeRig.yoy, "YoY")} · Gas {formatNumber(activeRig.commodityMix.gas)} / Oil {formatNumber(activeRig.commodityMix.oil)}</small>
+              </div>
+            ) : rigOverlay ? <div className="macro-map-tooltip-rigs"><span>Baker Hughes rigs</span><small>Not individually tracked for {stateName}</small></div> : null}
           </div>
         </div>
         <div className="macro-map-legend">
@@ -147,6 +196,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               ? <><span><i style={{ background: "#506779" }} />Lower</span><span><i style={{ background: "#35a3cb" }} />Mid</span><span><i style={{ background: "#0079b5" }} />Highest</span><small>Relative state-volume scale; unavailable states are gray.</small></>
               : <><span><i style={{ background: productionChangeColor(-12) }} />≤−10%</span><span><i style={{ background: productionChangeColor(-5) }} />Declining</span><span><i style={{ background: productionChangeColor(0) }} />Near flat</span><span><i style={{ background: productionChangeColor(5) }} />Growing</span><span><i style={{ background: productionChangeColor(12) }} />≥+10%</span></>
           )}
+          {rigOverlay ? <span className="macro-rig-legend-note"><i className="macro-rig-legend-dot" />Rig count · Baker Hughes, week of {rigReportDate}</span> : null}
         </div>
       </div>
 
@@ -179,6 +229,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
         )}
         {selected === "PA" ? <div className="macro-pa-callout"><strong>RRC relevance</strong><span>Pennsylvania is RRC&apos;s core Marcellus operating state.</span></div> : null}
         <small>Source: U.S. EIA · retrieved {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : "--"}</small>
+        <DrillingActivityModule stateCode={selected} stateName={selectedName} />
       </aside>
     </div>
   );

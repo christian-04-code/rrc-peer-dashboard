@@ -12,6 +12,7 @@ const {
   getPeerComparisonMatrix,
   getPeerComparisonQuarters
 } = load("lib/dashboard/peer-comparison-metrics.ts");
+const { getQuarterlyFinancials } = load("lib/dashboard/financials-quarterly.ts");
 
 function findRow(matrix, key) {
   return matrix.groups.flatMap((group) => group.rows).find((row) => row.key === key);
@@ -53,7 +54,7 @@ test("unsupported values format as double dash rather than falling back to anoth
   assert.equal(findRow(matrix, "marketCap").values.RRC.value, 8784.65);
 });
 
-test("all 840 peer-quarter-metric cells are audited with only unsupported values left blank", () => {
+test("all 980 peer-quarter-metric cells are audited with only unsupported values left blank", () => {
   const tickers = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
   const missingByMetric = {};
   let total = 0;
@@ -72,19 +73,56 @@ test("all 840 peer-quarter-metric cells are audited with only unsupported values
     }
   }
 
-  assert.equal(total, 840);
+  // 840 base cells (12 rows) + capexPerMcfe and realizedPricePerMcfe (7 tickers x 10
+  // quarters x 2 new rows = 140) = 980.
+  assert.equal(total, 980);
   // Q2 2026 market cap backfill (fix/q2-data-foundation) resolved market cap for all
   // 7 peers, which cascades into P/E, FCF yield, and EV/EBITDAX wherever those were
   // only blocked by market cap -- 27 fewer blanks than before the backfill (113 -> 86).
   // GPOR's P/E stays blank because FactSet's Q2 2026 net income row is independently #N/A.
-  assert.equal(missing, 86);
+  // realizedPricePerMcfe is blank for all 10 CRK quarters: CRK's NGL production is null
+  // for every stored quarter (the Codex workbook never carries it, and the documented
+  // FactSet fallback is an unbroken run of 0.00 indistinguishable from "not disclosed" --
+  // see the capitalExpenditures/realizedPrices header caveats in
+  // financials-quarterly.ts), so a blended $/Mcfe price cannot legitimately be
+  // constructed for CRK. capexPerMcfe has zero missing cells: every stored quarter has
+  // both capitalExpenditures and production.total populated for all seven peers.
+  assert.equal(missing, 96);
   assert.deepEqual(missingByMetric, {
+    realizedPricePerMcfe: 10,
     eps: 1,
     pe: 22,
     netDebtToEbitdax: 21,
     fcfYield: 21,
     evToEbitdax: 21
   });
+});
+
+test("realizedPricePerMcfe is blank for every CRK quarter specifically because NGL production is unresolved, not a calculation bug", () => {
+  const matrix = getPeerComparisonMatrix(["CRK"], "Q2 2026");
+  const row = findRow(matrix, "realizedPricePerMcfe");
+  assert.equal(row.values.CRK.value, null);
+  assert.equal(row.values.CRK.displayValue, "--");
+});
+
+test("capexPerMcfe and realizedPricePerMcfe resolve to sane $/Mcfe magnitudes for RRC (not accidentally $MM or a raw ratio)", () => {
+  const matrix = getPeerComparisonMatrix(["RRC"], "Q1 2024");
+  const capex = findRow(matrix, "capexPerMcfe").values.RRC.value;
+  const price = findRow(matrix, "realizedPricePerMcfe").values.RRC.value;
+  // Gas E&P capital intensity and realized commodity prices both sit in a $0.10-$10/Mcfe
+  // band; a units bug (e.g. forgetting the x1,000 MMcfe/d -> Mcfe conversion, or leaving
+  // capex in $MM instead of $) would produce a value many orders of magnitude outside it.
+  assert.ok(capex > 0.1 && capex < 10, `capexPerMcfe ${capex} outside expected $/Mcfe range`);
+  assert.ok(price > 0.5 && price < 15, `realizedPricePerMcfe ${price} outside expected $/Mcfe range`);
+  // Blended (gas + NGL + oil) realized price must exceed the gas-only realized price --
+  // NGLs and oil realize at a premium to gas per Mcfe-equivalent.
+  const gasOnly = getQuarterlyFinancials("RRC", "Q1 2024").realizedPrices.naturalGas.value;
+  assert.ok(price > gasOnly, `blended price ${price} should exceed gas-only price ${gasOnly}`);
+});
+
+test("Net Debt / LTM EBITDAX label is explicit about the LTM basis", () => {
+  const matrix = getPeerComparisonMatrix(["RRC"], "Q2 2026");
+  assert.equal(findRow(matrix, "netDebtToEbitdax").label, "Net Debt / LTM EBITDAX");
 });
 
 test("historical valuation and LTM metrics resolve at the selected quarter", () => {
