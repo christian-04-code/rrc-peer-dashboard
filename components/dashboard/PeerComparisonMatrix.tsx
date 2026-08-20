@@ -14,6 +14,12 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
   const availableQuarters = useMemo(() => getPeerComparisonQuarters(), []);
   const matrix = useMemo(() => getPeerComparisonMatrix(selectedTickers, quarter), [quarter, selectedTickers]);
   const activeRow = getActivePeerMetricRow(metric);
+  const capexEfficiencyRow = matrix.groups.flatMap((group) => group.rows).find((row) => row.key === "capexPerMcfe");
+  const capexEfficiencyRanked = (capexEfficiencyRow ? matrix.tickers
+    .map((ticker) => ({ ticker, cell: capexEfficiencyRow.values[ticker] }))
+    .filter((item): item is { ticker: Ticker; cell: { value: number; displayValue: string } } => item.cell.value !== null)
+    .sort((left, right) => left.cell.value - right.cell.value) : []);
+  const capexEfficiencyMax = Math.max(0, ...capexEfficiencyRanked.map((item) => item.cell.value));
 
   return (
     <section className="peer-matrix" aria-labelledby="peer-matrix-title">
@@ -48,7 +54,7 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
                   const isActive = row.key === activeRow;
                   return (
                     <tr key={row.key} className={isActive ? "peer-matrix-row active" : "peer-matrix-row"} aria-current={isActive ? "true" : undefined}>
-                      <th scope="row"><span>{row.label}</span><small>{row.unit}</small></th>
+                      <th scope="row" title={row.definition}><span>{row.label}</span><small>{row.unit}</small></th>
                       {matrix.tickers.map((ticker) => {
                         const cell = row.values[ticker];
                         return (
@@ -65,6 +71,21 @@ export const PeerComparisonMatrix = memo(function PeerComparisonMatrix({ selecte
           </tbody>
         </table>
       </div>
+      {capexEfficiencyRanked.length ? (
+        <div className="capex-efficiency" aria-label="Capital intensity ranking, CapEx per Mcfe, selected quarter">
+          <div className="capex-efficiency-head"><span>CAPITAL EFFICIENCY</span><h4 title="Total company capital expenditures / total quarterly equivalent production (Mcfe) -- capital intensity, not total CapEx spend.">CapEx / Mcfe · {quarter} · lower is more capital efficient</h4></div>
+          <div className="capex-efficiency-ranking">
+            {capexEfficiencyRanked.map((item, index) => (
+              <div key={item.ticker} className="capex-efficiency-row">
+                <span>{index + 1}</span>
+                <strong style={{ color: getCompanyColor(item.ticker) }}>{item.ticker}</strong>
+                <div><i style={{ width: `${capexEfficiencyMax ? (item.cell.value / capexEfficiencyMax) * 100 : 0}%`, background: getCompanyColor(item.ticker) }} /></div>
+                <b>{item.cell.displayValue}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 });

@@ -137,6 +137,16 @@ h2 { font-size: 15px; }
 .peer-matrix-row.active th, .peer-matrix-row.active td { background: rgba(0,129,198,.095); }
 .peer-matrix-row.active th { box-shadow: inset 2px 0 var(--accent), 1px 0 var(--border); color: #9fddff; }
 .peer-matrix tbody tr:last-child th, .peer-matrix tbody tr:last-child td { border-bottom: 0; }
+.capex-efficiency { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.capex-efficiency-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.capex-efficiency-head span { color: #75c7ee; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.capex-efficiency-head h4 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); }
+.capex-efficiency-ranking { display: grid; gap: 6px; }
+.capex-efficiency-row { display: grid; grid-template-columns: 16px 40px minmax(80px, 1fr) 64px; align-items: center; gap: 8px; font-size: 10px; }
+.capex-efficiency-row > span { color: var(--muted); }
+.capex-efficiency-row > div { height: 8px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.capex-efficiency-row > div i { display: block; height: 100%; border-radius: 99px; }
+.capex-efficiency-row > b { text-align: right; font-weight: 700; }
 aside { display: flex; flex-direction: column; gap: 14px; }
 .panel { padding: 16px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -325,7 +335,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-deviation-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, transparent 49.5%, var(--border) 49.5%, var(--border) 50.5%, transparent 50.5%); overflow: hidden; }
 .macro-deviation-bar i { display: block; height: 100%; background: #cf704f; border-radius: 99px; }
 .macro-deviation-bar i.below { background: #36a4c8; }
-.macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); gap: 12px; padding-top: 12px; }
+.macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); align-items: start; gap: 12px; padding-top: 12px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
@@ -360,6 +370,55 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-history > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .macro-map-detail .macro-evidence-chart svg { height: 128px; }
 .macro-map-detail .macro-series-legend { margin-top: 3px; }
+
+/* Rig activity overlay (Baker Hughes) -- additive layer on top of the existing storage/production fill. */
+.macro-rig-toggle { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 8px; background: transparent; padding: 5px 9px; font-size: 10px; color: var(--muted); }
+.macro-rig-toggle i { width: 7px; height: 7px; border-radius: 50%; background: #58697b; }
+.macro-rig-toggle.active { color: var(--text); border-color: #e5ad63; }
+.macro-rig-toggle.active i { background: #e5ad63; box-shadow: 0 0 0 3px rgba(229,173,99,.18); }
+.macro-rig-label circle { fill: rgba(9,15,24,.82); stroke: #e5ad63; stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+.macro-rig-label text { fill: #f4dcae; font-size: 15px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.macro-map-tooltip-rigs { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border); display: grid; gap: 2px; }
+.macro-map-tooltip-rigs span { color: #e5ad63; font-size: 9px; font-weight: 700; }
+.macro-map-tooltip-rigs b { color: #f4dcae; font-size: 12px; }
+.macro-rig-legend-note { color: #e5ad63; }
+.macro-rig-legend-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(9,15,24,.82); border: 1.5px solid #e5ad63; }
+
+.drilling-activity { display: grid; gap: 8px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
+.drilling-unsupported { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.drilling-headline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.drilling-headline-stat { display: grid; gap: 2px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 7px 8px; }
+.drilling-headline-stat span { color: var(--muted); font-size: 9px; }
+.drilling-headline-stat strong { font-size: 15px; }
+.drilling-headline-stat strong.positive { color: var(--positive); }
+.drilling-headline-stat strong.negative { color: var(--negative); }
+.drilling-headline-stat small { color: var(--muted); font-size: 9px; }
+.drilling-mix { display: grid; gap: 5px; }
+.drilling-mix-label { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.drilling-commodity-bar { display: flex; height: 9px; border-radius: 99px; overflow: hidden; background: var(--panel-2); }
+.drilling-commodity-bar.empty { background: var(--panel-2); }
+.drilling-commodity-bar i.gas { background: #3db3e3; }
+.drilling-commodity-bar i.oil { background: #e5ad63; }
+.drilling-commodity-bar i.misc { background: #8195aa; }
+.drilling-mix-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--muted); font-size: 9px; }
+.drilling-mix-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.drilling-mix-legend i.gas { background: #3db3e3; }
+.drilling-mix-legend i.oil { background: #e5ad63; }
+.drilling-mix-legend i.misc { background: #8195aa; }
+.drilling-trajectory { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 9px; }
+.drilling-history > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.drilling-history .macro-evidence-chart { margin-top: 4px; }
+.drilling-history .macro-evidence-chart svg { height: 92px; }
+.drilling-history .macro-series-legend { margin-top: 2px; }
+.drilling-concentration { display: grid; gap: 4px; }
+.drilling-concentration > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.drilling-concentration-table { display: grid; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.drilling-concentration-row { display: grid; grid-template-columns: 1.3fr .6fr 1fr .8fr; gap: 6px; padding: 4px 7px; font-size: 9.5px; border-bottom: 1px solid var(--border); }
+.drilling-concentration-row:last-child { border-bottom: 0; }
+.drilling-concentration-row.header { color: #75c7ee; background: rgba(16,32,53,.72); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 8.5px; padding: 5px 7px; }
+.drilling-concentration-row > span:nth-child(2) { text-align: right; }
+.drilling-source { color: var(--muted); font-size: 8px; line-height: 1.4; }
+
 .macro-pa-callout { display: grid; gap: 4px; padding: 9px; border-left: 2px solid var(--accent); background: var(--accent-soft); }
 .macro-pa-callout strong { font-size: 10px; }
 .macro-pa-callout span { color: var(--muted); font-size: 9px; line-height: 1.4; }
@@ -414,6 +473,8 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-map-layout, .macro-two-column.production { grid-template-columns: 1fr; }
   .macro-grid-row-equal, .macro-grid-row-demand, .macro-grid-row-rrc { grid-template-columns: 1fr; }
   .macro-structural-outlook { grid-template-columns: 1fr 1fr; }
+  .macro-rig-label text { font-size: 13px; }
+  .macro-rig-label circle { r: 8; }
 }
 
 @media (max-width: 620px) {
@@ -456,4 +517,10 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .workspace { padding: 12px; }
   aside { grid-template-columns: 1fr; }
   .map-toolbar { align-items: flex-start; flex-direction: column; }
+  /* Permanent rig-count badges get cramped once the map itself drops below ~600px wide;
+     hover/click and the Drilling Activity module below stay fully available. */
+  .macro-rig-label { display: none; }
+  .drilling-headline { grid-template-columns: 1fr 1fr; }
+  .drilling-concentration-table { overflow-x: auto; }
+  .drilling-concentration-row { min-width: 320px; }
 }
