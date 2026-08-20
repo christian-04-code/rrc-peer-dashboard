@@ -61,14 +61,14 @@ test("fetchStateMarketedProductionTable uses an explicit 25s production timeout,
   assert.equal(getMs(), 25_000);
 });
 
-test("fetchDemandTable uses an explicit 20s production timeout, not the old implicit 8s default", async () => {
+test("fetchDemandTable uses an explicit 25s production timeout, not the old implicit 8s default", async () => {
   process.env.EIA_API_KEY = "test-key";
   global.fetch = async () => new Response(eiaOkBody(), { status: 200 });
   const getMs = captureTimeoutMs();
   const { fetchDemandTable } = load("lib/eia/macro-fundamentals.ts");
 
   await fetchDemandTable();
-  assert.equal(getMs(), 20_000);
+  assert.equal(getMs(), 25_000);
 });
 
 test("fetchEiaTable falls back to a bounded, non-8s generic timeout when a caller omits timeoutMs entirely", async () => {
@@ -103,5 +103,5 @@ test("regression guard: the macro table call sites each set their own explicit t
 
   assert.match(functionBody("fetchRegionalStorageTable"), /timeoutMs\s*:\s*(25_?000|REGIONAL_STORAGE_TIMEOUT_MS)\b/);
   assert.match(functionBody("fetchStateMarketedProductionTable"), /timeoutMs\s*:\s*(25_?000|STATE_PRODUCTION_TIMEOUT_MS)\b/);
-  assert.match(functionBody("fetchDemandTable"), /timeoutMs\s*:\s*(20_?000|DEMAND_TIMEOUT_MS)\b/);
+  assert.match(functionBody("fetchDemandTable"), /timeoutMs\s*:\s*(25_?000|DEMAND_TIMEOUT_MS)\b/);
 });
