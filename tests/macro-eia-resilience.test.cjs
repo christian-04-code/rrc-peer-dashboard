@@ -37,9 +37,14 @@ function eiaOkBody(value = 950) {
 function hangingFetch() {
   return (url, init) =>
     new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () =>
-        reject(new DOMException("The operation was aborted due to timeout", "TimeoutError"))
-      );
+      // Node 20 implements AbortSignal.timeout() with an unref'd timer. Keep a
+      // bounded referenced handle in this mock so the test worker remains alive
+      // long enough to observe the real abort signal in CI.
+      const watchdog = setTimeout(() => reject(new Error("test watchdog elapsed")), 2_000);
+      init?.signal?.addEventListener("abort", () => {
+        clearTimeout(watchdog);
+        reject(new DOMException("The operation was aborted due to timeout", "TimeoutError"));
+      });
     });
 }
 

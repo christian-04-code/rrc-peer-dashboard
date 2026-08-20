@@ -117,9 +117,13 @@ test("a caller-configured timeout still applies per-request even when deduplicat
   process.env.EIA_API_KEY = "test-key";
   global.fetch = (url, init) =>
     new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () =>
-        reject(new DOMException("The operation was aborted due to timeout", "TimeoutError"))
-      );
+      // Node 20's AbortSignal.timeout() timer is unref'd; this bounded watchdog
+      // keeps the isolated CI test worker alive until the real abort is observed.
+      const watchdog = setTimeout(() => reject(new Error("test watchdog elapsed")), 2_000);
+      init?.signal?.addEventListener("abort", () => {
+        clearTimeout(watchdog);
+        reject(new DOMException("The operation was aborted due to timeout", "TimeoutError"));
+      });
     });
   const { fetchEiaTable } = loadClient();
   const params = { route: "natural-gas/stor/wkly/data", frequency: "weekly", length: 10, timeoutMs: 50 };
