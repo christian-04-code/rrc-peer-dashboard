@@ -72,12 +72,36 @@ export type MatchedEntity = {
   kind: "ticker" | "company_name" | "topic";
 };
 
+export type TopicKeywordMatch = {
+  topic: string;
+  keywords: string[];
+};
+
+/**
+ * Itemized signal breakdown behind a relevance decision (Phase 2.5). Kept
+ * for auditability/tests, not surfaced in any UI yet: it's what lets a
+ * borderline retain/reject call be explained -- which signal fired, where
+ * it was found (headline vs. excerpt), and whether a source/geography bonus
+ * contributed -- rather than trusting one opaque number.
+ */
+export type RelevanceSignals = {
+  entityMatches: MatchedEntity[];
+  headlineTopicMatches: TopicKeywordMatch[];
+  excerptTopicMatches: TopicKeywordMatch[];
+  distinctTopicsMatched: number;
+  geographyMatches: string[];
+  sourceTierBonus: number;
+  isTier1Source: boolean;
+};
+
 export type RelevanceResult = {
   score: number;
   retained: boolean;
   matchedEntities: MatchedEntity[];
   matchedKeywords: string[];
   rejectionReason: string | null;
+  retentionReason: string | null;
+  signals: RelevanceSignals;
 };
 
 export type CategoryResult = {

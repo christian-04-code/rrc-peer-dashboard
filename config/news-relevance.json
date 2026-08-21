@@ -1,9 +1,10 @@
 {
-  "schemaVersion": 1,
-  "retentionThreshold": 4,
+  "schemaVersion": 2,
+  "highConfidenceScoreFloor": 14,
   "topics": {
     "natural_gas": {
-      "weight": 3,
+      "headlineWeight": 6,
+      "excerptWeight": 2,
       "keywords": [
         "henry hub",
         "nymex natural gas",
@@ -20,7 +21,8 @@
       ]
     },
     "lng": {
-      "weight": 3,
+      "headlineWeight": 6,
+      "excerptWeight": 2,
       "keywords": [
         "lng feedgas",
         "lng export",
@@ -28,14 +30,14 @@
         "lng terminal",
         "lng project",
         "final investment decision",
-        "fid",
         "gulf coast lng",
         "lng facility startup",
         "international lng demand"
       ]
     },
     "appalachia": {
-      "weight": 4,
+      "headlineWeight": 8,
+      "excerptWeight": 2,
       "keywords": [
         "marcellus",
         "utica",
@@ -46,17 +48,20 @@
         "appalachian basis",
         "pipeline constraint",
         "pipeline expansion",
-        "takeaway capacity"
+        "takeaway capacity",
+        "appalachian natural gas"
       ]
     },
     "power_data_centers": {
-      "weight": 3,
+      "headlineWeight": 6,
+      "excerptWeight": 2,
       "keywords": [
         "pjm",
         "power load growth",
         "gas-fired generation",
         "coal retirement",
         "data center power demand",
+        "data center",
         "ai power demand",
         "industrial reshoring",
         "new generation project",
@@ -64,7 +69,8 @@
       ]
     },
     "ngl": {
-      "weight": 2,
+      "headlineWeight": 6,
+      "excerptWeight": 1,
       "keywords": [
         "propane",
         "ethane",
@@ -72,12 +78,15 @@
         "lpg",
         "mont belvieu",
         "ngl export",
+        "propane export",
+        "ethane export",
         "petrochemical demand",
         "export terminal expansion"
       ]
     },
     "infrastructure_regulatory": {
-      "weight": 2,
+      "headlineWeight": 6,
+      "excerptWeight": 1,
       "keywords": [
         "ferc",
         "epa",
@@ -86,18 +95,35 @@
         "permitting",
         "environmental regulation",
         "pennsylvania energy policy",
-        "infrastructure development"
+        "infrastructure development",
+        "natural gas pipeline"
       ]
     }
   },
+  "geography": {
+    "weight": 2,
+    "comment": "Deliberately excludes 'marcellus'/'utica' -- those are appalachia's own topic keywords, and reusing them here would let an appalachia excerpt-only match trivially satisfy its own 'topic + geography' retention rule (exactly the Beetaloo/Phase-2 false-positive pattern). Geography here means an independent, corroborating signal.",
+    "keywords": [
+      "pennsylvania",
+      "west virginia",
+      "ohio",
+      "appalachian basin",
+      "northeast u.s.",
+      "northeast united states",
+      "pjm",
+      "mountain valley pipeline",
+      "transcontinental pipeline",
+      "rover pipeline"
+    ]
+  },
   "entityWeights": {
-    "exactCompanyName": 6,
-    "tickerWithContext": 4,
+    "exactCompanyName": 8,
+    "tickerWithContext": 5,
     "tickerBare": 0
   },
   "rangeGuard": {
     "requirePhraseOrContext": true,
-    "strongPhrases": ["range resources", "range resources corporation", "rrc"],
+    "strongPhrases": ["range resources", "range resources corporation"],
     "contextKeywords": [
       "natural gas",
       "marcellus",

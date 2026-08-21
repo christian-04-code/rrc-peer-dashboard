@@ -19,5 +19,10 @@ export const PIPELINE_CONFIG = {
   maxRetainedArticlesPerRun: envInt("NEWS_MAX_RETAINED_PER_RUN", 60),
   maxAiAnalysesPerRun: envInt("NEWS_MAX_AI_ANALYSES_PER_RUN", 40),
   lookbackHours: envInt("NEWS_LOOKBACK_HOURS", 48),
-  relevanceThreshold: relevanceConfig.retentionThreshold
+  // Phase 2.5 replaced a single relevance score threshold with an explicit
+  // signal-tier rule in lib/news/relevance/score.ts (entity match, headline
+  // topic match, multi-topic match, or topic+geography/Tier-1 corroboration).
+  // highConfidenceScoreFloor is the one remaining number: a deliberately
+  // rare safety net for stacked signals that don't fit a named rule exactly.
+  relevanceHighConfidenceScoreFloor: relevanceConfig.highConfidenceScoreFloor
 };
