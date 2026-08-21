@@ -8,10 +8,10 @@ const require = createRequire(import.meta.url);
 
 /**
  * Minimal single-file TS loader so this script can call the one shared
- * migration implementation in lib/news/persistence/migrate.ts (which also
- * backs the Phase 2.5 diagnostics route) instead of duplicating the
- * read-schema-then-query logic here. Mirrors the same transpile-on-load
- * pattern tests/helpers/ts-loader.cjs already uses for this repo's tests.
+ * migration implementation in lib/news/persistence/migrate.ts instead of
+ * duplicating the read-schema-then-query logic here. Mirrors the same
+ * transpile-on-load pattern tests/helpers/ts-loader.cjs already uses for
+ * this repo's tests.
  */
 function loadTs(absPath, root, cache = new Map()) {
   if (cache.has(absPath)) return cache.get(absPath);
