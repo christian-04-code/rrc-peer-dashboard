@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "retentionThreshold": 4,
+  "topics": {
+    "natural_gas": {
+      "weight": 3,
+      "keywords": [
+        "henry hub",
+        "nymex natural gas",
+        "natural gas storage",
+        "eia storage report",
+        "dry gas production",
+        "associated gas",
+        "gas-directed rig",
+        "gas rig count",
+        "natural gas prices",
+        "gas-directed drilling",
+        "supply/demand balance",
+        "weather-driven demand"
+      ]
+    },
+    "lng": {
+      "weight": 3,
+      "keywords": [
+        "lng feedgas",
+        "lng export",
+        "liquefaction capacity",
+        "lng terminal",
+        "lng project",
+        "final investment decision",
+        "fid",
+        "gulf coast lng",
+        "lng facility startup",
+        "international lng demand"
+      ]
+    },
+    "appalachia": {
+      "weight": 4,
+      "keywords": [
+        "marcellus",
+        "utica",
+        "appalachia",
+        "appalachian basin",
+        "southwest pennsylvania",
+        "appalachian production",
+        "appalachian basis",
+        "pipeline constraint",
+        "pipeline expansion",
+        "takeaway capacity"
+      ]
+    },
+    "power_data_centers": {
+      "weight": 3,
+      "keywords": [
+        "pjm",
+        "power load growth",
+        "gas-fired generation",
+        "coal retirement",
+        "data center power demand",
+        "ai power demand",
+        "industrial reshoring",
+        "new generation project",
+        "electricity demand"
+      ]
+    },
+    "ngl": {
+      "weight": 2,
+      "keywords": [
+        "propane",
+        "ethane",
+        "butane",
+        "lpg",
+        "mont belvieu",
+        "ngl export",
+        "petrochemical demand",
+        "export terminal expansion"
+      ]
+    },
+    "infrastructure_regulatory": {
+      "weight": 2,
+      "keywords": [
+        "ferc",
+        "epa",
+        "pipeline approval",
+        "methane regulation",
+        "permitting",
+        "environmental regulation",
+        "pennsylvania energy policy",
+        "infrastructure development"
+      ]
+    }
+  },
+  "entityWeights": {
+    "exactCompanyName": 6,
+    "tickerWithContext": 4,
+    "tickerBare": 0
+  },
+  "rangeGuard": {
+    "requirePhraseOrContext": true,
+    "strongPhrases": ["range resources", "range resources corporation", "rrc"],
+    "contextKeywords": [
+      "natural gas",
+      "marcellus",
+      "appalachia",
+      "e&p",
+      "exploration and production",
+      "oil and gas",
+      "shale",
+      "drilling",
+      "wells",
+      "nyse: rrc",
+      "nyse:rrc"
+    ],
+    "negativeExamplePhrases": [
+      "price range",
+      "trading range",
+      "mountain range",
+      "shooting range",
+      "product range",
+      "range of options",
+      "range of motion",
+      "home on the range",
+      "free range",
+      "range rover"
+    ]
+  },
+  "sourceWeights": {
+    "tier1_primary": 3,
+    "tier2_major_news": 2,
+    "tier3_discovery": 1
+  },
+  "negativeKeywords": [
+    "recipe",
+    "kitchen range",
+    "stove",
+    "shooting range",
+    "driving range",
+    "range rover",
+    "mountain range"
+  ]
+}
