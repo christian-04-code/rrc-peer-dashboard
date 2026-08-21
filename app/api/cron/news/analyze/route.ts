@@ -51,14 +51,13 @@ export async function GET(request: Request) {
       },
       analysis
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown Phase 3 validation error";
+  } catch {
     return NextResponse.json(
       {
         phase: 3,
         mode: "bounded_manual_validation",
         hardCap: MANUAL_ANALYSIS_HARD_CAP,
-        error: message.slice(0, 500)
+        error: "Phase 3 validation failed in the server runtime."
       },
       { status: 500 }
     );
