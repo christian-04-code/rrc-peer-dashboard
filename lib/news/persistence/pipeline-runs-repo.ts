@@ -48,6 +48,19 @@ export async function completePipelineRun(
   );
 }
 
+/** Phase 3: update AI accounting after the bounded analysis step finishes. */
+export async function recordPipelineRunAiCounts(
+  pool: Pool,
+  runId: string,
+  attempted: number,
+  completed: number
+): Promise<void> {
+  await pool.query(
+    `UPDATE pipeline_runs SET ai_analyses_attempted = $2, ai_analyses_completed = $3 WHERE id = $1`,
+    [runId, attempted, completed]
+  );
+}
+
 export async function markPipelineRunFailed(pool: Pool, runId: string, status: PipelineRunStatus, error: string): Promise<void> {
   await pool.query(
     `UPDATE pipeline_runs SET completed_at = now(), status = $2, errors = errors || $3::jsonb WHERE id = $1`,
