@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "highConfidenceScoreFloor": 14,
+  "topics": {
+    "natural_gas": {
+      "headlineWeight": 6,
+      "excerptWeight": 2,
+      "keywords": [
+        "henry hub",
+        "nymex natural gas",
+        "natural gas storage",
+        "eia storage report",
+        "dry gas production",
+        "associated gas",
+        "gas-directed rig",
+        "gas rig count",
+        "natural gas prices",
+        "gas-directed drilling",
+        "supply/demand balance",
+        "weather-driven demand"
+      ]
+    },
+    "lng": {
+      "headlineWeight": 6,
+      "excerptWeight": 2,
+      "keywords": [
+        "lng feedgas",
+        "lng export",
+        "liquefaction capacity",
+        "lng terminal",
+        "lng project",
+        "final investment decision",
+        "gulf coast lng",
+        "lng facility startup",
+        "international lng demand"
+      ]
+    },
+    "appalachia": {
+      "headlineWeight": 8,
+      "excerptWeight": 2,
+      "keywords": [
+        "marcellus",
+        "utica",
+        "appalachia",
+        "appalachian basin",
+        "southwest pennsylvania",
+        "appalachian production",
+        "appalachian basis",
+        "pipeline constraint",
+        "pipeline expansion",
+        "takeaway capacity",
+        "appalachian natural gas"
+      ]
+    },
+    "power_data_centers": {
+      "headlineWeight": 6,
+      "excerptWeight": 2,
+      "keywords": [
+        "pjm",
+        "power load growth",
+        "gas-fired generation",
+        "coal retirement",
+        "data center power demand",
+        "data center",
+        "ai power demand",
+        "industrial reshoring",
+        "new generation project",
+        "electricity demand"
+      ]
+    },
+    "ngl": {
+      "headlineWeight": 6,
+      "excerptWeight": 1,
+      "keywords": [
+        "propane",
+        "ethane",
+        "butane",
+        "lpg",
+        "mont belvieu",
+        "ngl export",
+        "propane export",
+        "ethane export",
+        "petrochemical demand",
+        "export terminal expansion"
+      ]
+    },
+    "infrastructure_regulatory": {
+      "headlineWeight": 6,
+      "excerptWeight": 1,
+      "keywords": [
+        "ferc",
+        "epa",
+        "pipeline approval",
+        "methane regulation",
+        "permitting",
+        "environmental regulation",
+        "pennsylvania energy policy",
+        "infrastructure development",
+        "natural gas pipeline"
+      ]
+    }
+  },
+  "geography": {
+    "weight": 2,
+    "comment": "Deliberately excludes 'marcellus'/'utica' -- those are appalachia's own topic keywords, and reusing them here would let an appalachia excerpt-only match trivially satisfy its own 'topic + geography' retention rule (exactly the Beetaloo/Phase-2 false-positive pattern). Geography here means an independent, corroborating signal.",
+    "keywords": [
+      "pennsylvania",
+      "west virginia",
+      "ohio",
+      "appalachian basin",
+      "northeast u.s.",
+      "northeast united states",
+      "pjm",
+      "mountain valley pipeline",
+      "transcontinental pipeline",
+      "rover pipeline"
+    ]
+  },
+  "entityWeights": {
+    "exactCompanyName": 8,
+    "tickerWithContext": 5,
+    "tickerBare": 0
+  },
+  "rangeGuard": {
+    "requirePhraseOrContext": true,
+    "strongPhrases": ["range resources", "range resources corporation"],
+    "contextKeywords": [
+      "natural gas",
+      "marcellus",
+      "appalachia",
+      "e&p",
+      "exploration and production",
+      "oil and gas",
+      "shale",
+      "drilling",
+      "wells",
+      "nyse: rrc",
+      "nyse:rrc"
+    ],
+    "negativeExamplePhrases": [
+      "price range",
+      "trading range",
+      "mountain range",
+      "shooting range",
+      "product range",
+      "range of options",
+      "range of motion",
+      "home on the range",
+      "free range",
+      "range rover"
+    ]
+  },
+  "sourceWeights": {
+    "tier1_primary": 3,
+    "tier2_major_news": 2,
+    "tier3_discovery": 1
+  },
+  "negativeKeywords": [
+    "recipe",
+    "kitchen range",
+    "stove",
+    "shooting range",
+    "driving range",
+    "range rover",
+    "mountain range"
+  ]
+}
