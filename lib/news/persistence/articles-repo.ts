@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import type { AiAnalysisResult } from "@/lib/news/ai/types";
 import type { NewsCategory, ProcessingStatus, ScoredArticle, SourceTier } from "@/lib/news/types";
 
 export type ArticleRecord = {
@@ -184,4 +185,47 @@ export async function queryArticles(pool: Pool, filters: ArticleQueryFilters): P
     values
   );
   return result.rows.map(mapRow);
+}
+
+/** Phase 3: persist only a structurally validated provider result. */
+export async function persistArticleAnalysis(pool: Pool, articleId: string, analysis: AiAnalysisResult): Promise<void> {
+  await pool.query(
+    `UPDATE articles SET
+      ai_summary = $2,
+      range_impact = $3,
+      impact_strength = $4,
+      affected_drivers = $5,
+      range_analysis = $6,
+      time_horizon = $7,
+      confidence = $8,
+      ai_provider = $9,
+      ai_model = $10,
+      ai_analyzed_at = $11,
+      impact_framework_version = $12,
+      processing_status = 'analyzed',
+      updated_at = now()
+    WHERE id = $1 AND processing_status = 'retained'`,
+    [
+      articleId,
+      analysis.summary,
+      analysis.rangeImpact,
+      analysis.impactStrength,
+      analysis.affectedDrivers,
+      analysis.rangeAnalysis,
+      analysis.timeHorizon,
+      analysis.confidence,
+      analysis.aiProvider,
+      analysis.aiModel,
+      analysis.analyzedAt,
+      analysis.impactFrameworkVersion
+    ]
+  );
+}
+
+/** Phase 3: mark a retained article as failed without persisting partial AI output. */
+export async function markArticleAnalysisFailed(pool: Pool, articleId: string): Promise<void> {
+  await pool.query(
+    `UPDATE articles SET processing_status = 'analysis_failed', updated_at = now() WHERE id = $1 AND processing_status = 'retained'`,
+    [articleId]
+  );
 }
