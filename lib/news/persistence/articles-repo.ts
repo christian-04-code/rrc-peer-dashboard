@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import type { AiAnalysisResult } from "@/lib/news/ai/types";
 import type { NewsCategory, ProcessingStatus, ScoredArticle, SourceTier } from "@/lib/news/types";
+import type { AiAnalysisResult, AnalysisInput } from "@/lib/news/ai/types";
 
 export type ArticleRecord = {
   id: string;
@@ -192,8 +192,74 @@ export async function queryArticles(pool: Pool, filters: ArticleQueryFilters): P
   return result.rows.map(mapRow);
 }
 
-/** Phase 3: persist only a structurally validated provider result. */
-export async function persistArticleAnalysis(pool: Pool, articleId: string, analysis: AiAnalysisResult): Promise<void> {
+export type RetainedArticleForAnalysis = {
+  id: string;
+  headline: string;
+  excerpt: string | null;
+  publisher: string;
+  category: NewsCategory[];
+  matchedKeywords: string[];
+};
+
+function toAnalysisInput(article: RetainedArticleForAnalysis): AnalysisInput {
+  return {
+    headline: article.headline,
+    excerpt: article.excerpt,
+    publisher: article.publisher,
+    categories: article.category,
+    matchedKeywords: article.matchedKeywords
+  };
+}
+
+/**
+ * Phase 3 analysis eligibility, expressed entirely as a WHERE clause:
+ * processing_status = 'retained' already excludes collected/rejected_*
+ * (never retained in the first place) and analyzed/analysis_failed
+ * (already processed) by construction -- no separate "already analyzed"
+ * check is needed. sinceIso enforces the same lookback window the
+ * collection pipeline uses, per the Phase 3 eligibility rules. When
+ * pipelineRunId is supplied, candidates are scoped to that one collection
+ * run -- what lets a manual validation call know exactly which articles it
+ * analyzed, rather than reaching into whatever else is sitting in the
+ * globally-retained pool from earlier runs.
+ */
+export async function getRetainedUnanalyzedArticles(
+  pool: Pool,
+  options: { limit: number; sinceIso: string; pipelineRunId?: string }
+): Promise<Array<RetainedArticleForAnalysis & { toAnalysisInput: () => AnalysisInput }>> {
+  const result = await pool.query(
+    `SELECT id, headline, excerpt, publisher, category, matched_keywords
+     FROM articles
+     WHERE processing_status = 'retained' AND retrieved_at >= $1
+       AND ($3::uuid IS NULL OR pipeline_run_id = $3)
+     ORDER BY relevance_score DESC
+     LIMIT $2`,
+    [options.sinceIso, options.limit, options.pipelineRunId ?? null]
+  );
+  return (result.rows as Array<{ id: string; headline: string; excerpt: string | null; publisher: string; category: NewsCategory[]; matched_keywords: string[] }>).map(
+    (row) => {
+      const article: RetainedArticleForAnalysis = {
+        id: row.id,
+        headline: row.headline,
+        excerpt: row.excerpt,
+        publisher: row.publisher,
+        category: row.category ?? [],
+        matchedKeywords: row.matched_keywords ?? []
+      };
+      return { ...article, toAnalysisInput: () => toAnalysisInput(article) };
+    }
+  );
+}
+
+/**
+ * Persists a validated AiAnalysisResult onto its article and flips
+ * processing_status to 'analyzed'. Never touches factual/provenance
+ * columns. The `AND processing_status = 'retained'` guard makes this a
+ * no-op if the row's status has already moved on since it was selected
+ * (e.g. a concurrent/duplicate call) -- idempotency enforced at the write,
+ * not only at the earlier SELECT.
+ */
+export async function saveArticleAnalysis(pool: Pool, articleId: string, analysis: AiAnalysisResult): Promise<void> {
   await pool.query(
     `UPDATE articles SET
       ai_summary = $2,
@@ -205,8 +271,9 @@ export async function persistArticleAnalysis(pool: Pool, articleId: string, anal
       confidence = $8,
       ai_provider = $9,
       ai_model = $10,
-      ai_analyzed_at = $11,
-      impact_framework_version = $12,
+      impact_framework_version = $11,
+      analysis_schema_version = $12,
+      ai_analyzed_at = $13,
       processing_status = 'analyzed',
       updated_at = now()
     WHERE id = $1 AND processing_status = 'retained'`,
@@ -221,16 +288,16 @@ export async function persistArticleAnalysis(pool: Pool, articleId: string, anal
       analysis.confidence,
       analysis.aiProvider,
       analysis.aiModel,
-      analysis.analyzedAt,
-      analysis.impactFrameworkVersion
+      analysis.impactFrameworkVersion,
+      analysis.analysisSchemaVersion,
+      analysis.analyzedAt
     ]
   );
 }
 
-/** Phase 3: mark a retained article as failed without persisting partial AI output. */
+/** Explicit failure state -- never silently left as 'retained' or fabricated as 'analyzed'. The article and its factual fields are preserved untouched. Guarded the same way saveArticleAnalysis is. */
 export async function markArticleAnalysisFailed(pool: Pool, articleId: string): Promise<void> {
-  await pool.query(
-    `UPDATE articles SET processing_status = 'analysis_failed', updated_at = now() WHERE id = $1 AND processing_status = 'retained'`,
-    [articleId]
-  );
+  await pool.query(`UPDATE articles SET processing_status = 'analysis_failed', updated_at = now() WHERE id = $1 AND processing_status = 'retained'`, [
+    articleId
+  ]);
 }

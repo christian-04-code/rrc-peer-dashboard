@@ -60,13 +60,14 @@ CREATE TABLE IF NOT EXISTS articles (
   affected_drivers TEXT[],
   range_analysis TEXT,
   time_horizon TEXT CHECK (
-    time_horizon IS NULL OR time_horizon IN ('immediate', 'near_term', 'medium_term', 'long_term')
+    time_horizon IS NULL OR time_horizon IN ('near_term', 'medium_term', 'long_term', 'multi_horizon')
   ),
   confidence NUMERIC CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
   ai_provider TEXT,
   ai_model TEXT,
   ai_analyzed_at TIMESTAMPTZ,
   impact_framework_version TEXT,
+  analysis_schema_version TEXT,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -80,3 +81,14 @@ CREATE INDEX IF NOT EXISTS articles_category_idx ON articles USING GIN (category
 CREATE INDEX IF NOT EXISTS articles_processing_status_idx ON articles (processing_status);
 CREATE INDEX IF NOT EXISTS articles_relevance_score_idx ON articles (relevance_score DESC);
 CREATE INDEX IF NOT EXISTS articles_pipeline_run_id_idx ON articles (pipeline_run_id);
+
+-- Phase 3 additions. Both statements are safe to re-run against a table
+-- that already has them (ADD COLUMN IF NOT EXISTS is a no-op; the
+-- constraint is unconditionally dropped-then-recreated, which is safe here
+-- because no row had ever written a time_horizon value before Phase 3).
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS analysis_schema_version TEXT;
+
+ALTER TABLE articles DROP CONSTRAINT IF EXISTS articles_time_horizon_check;
+ALTER TABLE articles ADD CONSTRAINT articles_time_horizon_check CHECK (
+  time_horizon IS NULL OR time_horizon IN ('near_term', 'medium_term', 'long_term', 'multi_horizon')
+);
