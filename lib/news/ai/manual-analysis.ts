@@ -50,9 +50,6 @@ function analysisInput(article: ArticleRecord) {
 
 function safeError(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown analysis error";
-  // Never surface request headers, API-key values, or provider response bodies.
-  // The provider's own errors are concise and schema-oriented; unexpected
-  // errors are intentionally collapsed to their class/message only.
   return error.message.slice(0, 500);
 }
 
@@ -60,13 +57,12 @@ function safeError(error: unknown): string {
  * Analyze only articles already marked `retained` by the deterministic
  * relevance pipeline. This is the key cost/safety gate: no article can reach
  * Anthropic directly from source collection or from an unfiltered request.
- *
- * The manual Phase 3 mechanism performs no retry. One provider call per
- * selected article is the approved bounded validation behavior.
+ * The manual Phase 3 mechanism performs no automatic retry.
  */
 export async function runBoundedManualAnalysis(options: {
   provider?: NewsAnalysisProvider;
   maxArticles?: number;
+  pipelineRunId?: string;
 } = {}): Promise<ManualAnalysisResult> {
   if (!isDatabaseConfigured()) {
     return {
@@ -87,9 +83,11 @@ export async function runBoundedManualAnalysis(options: {
   const provider = options.provider ?? new AnthropicNewsAnalysisProvider();
   const pool = getPool();
 
-  // `processing_status = retained` is produced only after deterministic
-  // normalize -> dedupe -> relevance filtering in runNewsPipeline().
-  const candidates = await queryArticles(pool, { status: "retained", limit: maxArticles });
+  const candidates = await queryArticles(pool, {
+    status: "retained",
+    pipelineRunId: options.pipelineRunId,
+    limit: maxArticles
+  });
   const items: ManualAnalysisItem[] = [];
   const errors: string[] = [];
   let completed = 0;
