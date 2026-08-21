@@ -72,3 +72,13 @@ export async function getPipelineRun(pool: Pool, runId: string): Promise<Record<
   const result = await pool.query(`SELECT * FROM pipeline_runs WHERE id = $1`, [runId]);
   return result.rows[0] ?? null;
 }
+
+/** Most recent run, for the News tab's Daily Intelligence header. Prefers a completed run so the header doesn't show a still-in-progress row as "the" status; falls back to the most recent run of any status if none has completed yet. */
+export async function getLatestPipelineRun(pool: Pool): Promise<Record<string, unknown> | null> {
+  const completed = await pool.query(
+    `SELECT * FROM pipeline_runs WHERE status IN ('completed', 'completed_with_errors') ORDER BY started_at DESC LIMIT 1`
+  );
+  if (completed.rows[0]) return completed.rows[0];
+  const anyRun = await pool.query(`SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 1`);
+  return anyRun.rows[0] ?? null;
+}

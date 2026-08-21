@@ -22,11 +22,11 @@ test("Forecast is present in the primary navigation and opens the consolidated f
   assert.match(homeDashboardSource, /ForecastWorkspacePanel/);
 });
 
-test("top nav renders exactly Overview, Forecast, Macro, in that order", () => {
+test("top nav renders exactly Overview, Forecast, Macro, News, in that order", () => {
   const navMatch = homeDashboardSource.match(/<nav aria-label="Primary navigation">([\s\S]*?)<\/nav>/);
   assert.ok(navMatch, "primary navigation block should exist");
   const labels = [...navMatch[1].matchAll(/>([A-Za-z]+)<\/button>/g)].map((match) => match[1]);
-  assert.deepEqual(labels, ["Overview", "Forecast", "Macro"]);
+  assert.deepEqual(labels, ["Overview", "Forecast", "Macro", "News"]);
   assert.doesNotMatch(navMatch[1], />Map</);
 });
 

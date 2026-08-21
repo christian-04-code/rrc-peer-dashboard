@@ -30,6 +30,7 @@ import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { ForecastWorkspacePanel } from "@/components/dashboard/ForecastWorkspacePanel";
 import { DetailDrawer, type DrawerContent } from "@/components/dashboard/DetailDrawer";
+import { NewsPanel } from "@/components/news/NewsPanel";
 
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
 const DEFAULT_SELECTED_TICKERS = [defaultTicker, ...DEFAULT_COMPARISONS.filter((ticker) => ticker !== defaultTicker)];
@@ -124,6 +125,7 @@ export function HomeDashboard() {
               <button className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>Overview</button>
               <button className={view === "forecast" ? "active" : ""} onClick={() => setView("forecast")}>Forecast</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
+              <button className={view === "news" ? "active" : ""} onClick={() => setView("news")}>News</button>
             </nav>
           </div>
           <div className="status-row">
@@ -138,6 +140,8 @@ export function HomeDashboard() {
             <MacroPanel />
           ) : view === "forecast" ? (
             <ForecastWorkspacePanel />
+          ) : view === "news" ? (
+            <NewsPanel />
           ) : (
             <>
               <CompanyHero company={company} activity={activity} />

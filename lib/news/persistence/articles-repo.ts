@@ -32,6 +32,7 @@ export type ArticleRecord = {
   aiModel: string | null;
   aiAnalyzedAt: string | null;
   impactFrameworkVersion: string | null;
+  analysisSchemaVersion: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -67,6 +68,7 @@ function mapRow(row: Record<string, unknown>): ArticleRecord {
     aiModel: (row.ai_model as string | null) ?? null,
     aiAnalyzedAt: (row.ai_analyzed_at as Date | null)?.toISOString?.() ?? (row.ai_analyzed_at as string | null),
     impactFrameworkVersion: (row.impact_framework_version as string | null) ?? null,
+    analysisSchemaVersion: (row.analysis_schema_version as string | null) ?? null,
     createdAt: (row.created_at as Date).toISOString?.() ?? (row.created_at as string),
     updatedAt: (row.updated_at as Date).toISOString?.() ?? (row.updated_at as string)
   };
