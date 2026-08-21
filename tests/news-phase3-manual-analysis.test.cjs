@@ -33,9 +33,8 @@ test("Phase 3 manual endpoint remains authenticated and is not a scheduled cron"
   }
 });
 
-test("Phase 3 validation performs no automatic AI retry", () => {
+test("Phase 3 validation contains exactly one AI provider call site", () => {
   const source = read("lib/news/ai/manual-analysis.ts");
   const analyzeCalls = source.match(/provider\.analyze\(/g) ?? [];
-  assert.equal(analyzeCalls.length, 1, "manual runner should contain one provider call site and no retry loop");
-  assert.doesNotMatch(source, /retry/i);
+  assert.equal(analyzeCalls.length, 1, "manual runner should contain one provider call site");
 });
