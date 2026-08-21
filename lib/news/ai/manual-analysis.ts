@@ -1,6 +1,7 @@
 import type { NewsAnalysisProvider } from "@/lib/news/ai/provider";
 import { AnthropicNewsAnalysisProvider } from "@/lib/news/ai/anthropic-provider";
-import type { AiAnalysisResult } from "@/lib/news/ai/types";
+import { AiAnalysisValidationError, type AiAnalysisResult } from "@/lib/news/ai/types";
+import { NewsAnalysisProviderError } from "@/lib/news/ai/provider";
 import { getPool, isDatabaseConfigured } from "@/lib/news/persistence/db";
 import {
   markArticleAnalysisFailed,
@@ -8,6 +9,7 @@ import {
   queryArticles,
   type ArticleRecord
 } from "@/lib/news/persistence/articles-repo";
+import { recordPipelineRunAiCounts } from "@/lib/news/persistence/pipeline-runs-repo";
 
 /**
  * Phase 3 real-article validation is intentionally more restrictive than the
@@ -49,8 +51,11 @@ function analysisInput(article: ArticleRecord) {
 }
 
 function safeError(error: unknown): string {
-  if (!(error instanceof Error)) return "Unknown analysis error";
-  return error.message.slice(0, 500);
+  if (error instanceof AiAnalysisValidationError || error instanceof NewsAnalysisProviderError) {
+    return error.message.slice(0, 300);
+  }
+  if (error instanceof Error) return `Analysis failed (${error.name}).`;
+  return "Analysis failed (unknown error).";
 }
 
 /**
@@ -120,6 +125,10 @@ export async function runBoundedManualAnalysis(options: {
         error: message
       });
     }
+  }
+
+  if (options.pipelineRunId) {
+    await recordPipelineRunAiCounts(pool, options.pipelineRunId, candidates.length, completed);
   }
 
   return {
