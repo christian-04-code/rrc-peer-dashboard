@@ -336,6 +336,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-deviation-bar i { display: block; height: 100%; background: #cf704f; border-radius: 99px; }
 .macro-deviation-bar i.below { background: #36a4c8; }
 .macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); align-items: start; gap: 12px; padding-top: 12px; }
+.macro-map-left-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
@@ -419,13 +420,17 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drilling-concentration-row > span:nth-child(2) { text-align: right; }
 .drilling-source { color: var(--muted); font-size: 8px; line-height: 1.4; }
 
-/* Major Basin Rig Activity -- sits beneath the map+detail grid, inside the same map card. */
+/* Major Basin Rig Activity -- rendered directly beneath the map card, inside the
+   map's left column, so it reads as a continuation of the map analysis rather
+   than a full-width module below the whole map+detail grid. The ranking table,
+   selected-basin detail, and gainers/decliners stack vertically here since this
+   column is narrower than the old full-page width the module was designed for. */
 .basin-activity { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .basin-activity .macro-card-title { flex-wrap: wrap; gap: 10px; }
 .basin-activity .macro-map-controls { flex-direction: row; align-items: center; }
 .basin-jump { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--muted); }
 .basin-jump select { border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); color: var(--text); font: inherit; font-size: 10px; padding: 4px 6px; }
-.basin-activity-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 12px; margin-top: 10px; align-items: start; }
+.basin-activity-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; align-items: start; }
 .basin-ranking-wrap { display: grid; gap: 10px; }
 .basin-ranking-table { display: grid; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .basin-ranking-row { display: grid; grid-template-columns: 1.5fr .8fr .7fr .7fr .7fr .7fr; align-items: center; gap: 6px; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--border); background: transparent; font: inherit; text-align: left; cursor: pointer; color: var(--text); }
@@ -512,7 +517,6 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-structural-outlook { grid-template-columns: 1fr 1fr; }
   .macro-rig-label text { font-size: 13px; }
   .macro-rig-label circle { r: 8; }
-  .basin-activity-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
