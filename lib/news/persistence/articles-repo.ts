@@ -138,6 +138,7 @@ export type ArticleQueryFilters = {
   status?: ProcessingStatus;
   sourceTier?: SourceTier;
   minRelevance?: number;
+  pipelineRunId?: string;
   limit?: number;
   offset?: number;
 };
@@ -173,6 +174,10 @@ export async function queryArticles(pool: Pool, filters: ArticleQueryFilters): P
   if (filters.minRelevance !== undefined) {
     values.push(filters.minRelevance);
     conditions.push(`relevance_score >= $${values.length}`);
+  }
+  if (filters.pipelineRunId) {
+    values.push(filters.pipelineRunId);
+    conditions.push(`pipeline_run_id = $${values.length}`);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
