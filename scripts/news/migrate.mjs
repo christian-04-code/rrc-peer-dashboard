@@ -1,33 +1,53 @@
-import { readFile } from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import pg from "pg";
+import { createRequire } from "node:module";
+import ts from "typescript";
+
+const require = createRequire(import.meta.url);
 
 /**
- * Applies lib/news/persistence/schema.sql against DATABASE_URL (or
- * POSTGRES_URL). Deliberately a standalone script, not code reachable from
- * app/api/cron/news/route.ts -- migrations run once per deploy/manual step,
- * not per request, and reading the .sql file at request time would also
- * require it to survive Vercel's serverless bundling/file tracing.
+ * Minimal single-file TS loader so this script can call the one shared
+ * migration implementation in lib/news/persistence/migrate.ts (which also
+ * backs the Phase 2.5 diagnostics route) instead of duplicating the
+ * read-schema-then-query logic here. Mirrors the same transpile-on-load
+ * pattern tests/helpers/ts-loader.cjs already uses for this repo's tests.
  */
+function loadTs(absPath, root, cache = new Map()) {
+  if (cache.has(absPath)) return cache.get(absPath);
+  const source = fs.readFileSync(absPath, "utf8");
+  const output = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+    fileName: absPath
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  cache.set(absPath, moduleObj.exports);
+
+  const customRequire = (specifier) => {
+    let target;
+    if (specifier.startsWith("@/")) target = path.join(root, specifier.slice(2));
+    else if (specifier.startsWith(".")) target = path.resolve(path.dirname(absPath), specifier);
+    else return require(specifier);
+    const resolved = fs.existsSync(`${target}.ts`) ? `${target}.ts` : target;
+    return loadTs(resolved, root, cache);
+  };
+
+  const wrapper = new Function("exports", "require", "module", "__filename", "__dirname", output);
+  wrapper(moduleObj.exports, customRequire, moduleObj, absPath, path.dirname(absPath));
+  cache.set(absPath, moduleObj.exports);
+  return moduleObj.exports;
+}
+
 export async function runMigrations(root = process.cwd()) {
   const connectionString = process.env.DATABASE_URL?.trim() || process.env.POSTGRES_URL?.trim();
   if (!connectionString) {
     throw new Error("DATABASE_URL (or POSTGRES_URL) is not set.");
   }
-
-  const schemaPath = path.join(root, "lib", "news", "persistence", "schema.sql");
-  const sql = await readFile(schemaPath, "utf8");
-
-  const useSsl = process.env.NEWS_DB_SSL === "true" || (process.env.NEWS_DB_SSL !== "false" && !/localhost|127\.0\.0\.1/.test(connectionString));
-  const client = new pg.Client({ connectionString, ssl: useSsl ? { rejectUnauthorized: false } : undefined });
-
-  await client.connect();
-  try {
-    await client.query(sql);
-  } finally {
-    await client.end();
-  }
+  const { runNewsMigrations } = loadTs(path.join(root, "lib", "news", "persistence", "migrate.ts"), root);
+  await runNewsMigrations();
+  const { closePool } = loadTs(path.join(root, "lib", "news", "persistence", "db.ts"), root);
+  await closePool();
 }
 
 async function main() {
