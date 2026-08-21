@@ -17,7 +17,7 @@ function isAuthorized(request: Request): boolean {
  * This is deliberately NOT registered in vercel.json and therefore is not a
  * production cron. It first runs the existing deterministic collection /
  * normalization / dedupe / relevance pipeline, then permits at most five
- * already-retained articles to reach the AI provider.
+ * already-retained articles from that same run to reach the AI provider.
  */
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
@@ -26,7 +26,10 @@ export async function GET(request: Request) {
 
   try {
     const pipeline = await runNewsPipeline();
-    const analysis = await runBoundedManualAnalysis({ maxArticles: MANUAL_ANALYSIS_HARD_CAP });
+    const analysis = await runBoundedManualAnalysis({
+      maxArticles: MANUAL_ANALYSIS_HARD_CAP,
+      pipelineRunId: pipeline.runId
+    });
 
     return NextResponse.json({
       phase: 3,
