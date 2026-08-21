@@ -318,11 +318,11 @@ def build_dataset(sections: dict[str, Any], records: list[dict[str, Any]], repor
     if reconciliation_errors:
         raise ImportValidationError("State-level reconciliation failed:\n  - " + "\n  - ".join(reconciliation_errors))
 
-    basins = [
-        {"basin": label, **entry}
-        for label, country, entry in sections["Basin"]
+    basin_rows = [
+        (label, entry) for label, country, entry in sections["Basin"]
         if country == "UNITED STATES" and label != STATE_SECTION_TERMINAL
     ]
+    basins = [{"basin": label, **entry} for label, entry in basin_rows]
     basin_weekly_total = sum(item["current"] or 0 for item in basins)
     us_total_check = national("Basin", STATE_SECTION_TERMINAL)["current"]
     if us_total_check is not None and abs(basin_weekly_total - us_total_check) > 0.01:
@@ -331,6 +331,76 @@ def build_dataset(sections: dict[str, Any], records: list[dict[str, Any]], repor
     state_total_check = sum(entry["current"] or 0 for _label, entry in state_rows)
     if abs(state_total_check - (us_total_check or 0)) > 0.01:
         raise ImportValidationError(f"State totals ({state_total_check}) do not reconcile to US total ({us_total_check})")
+
+    # Basin detail: gas/oil split, trajectory mix, state membership, top county
+    # locations, and 52-week history, all aggregated from NAM Weekly (the same
+    # granular source used for state detail) and reconciled against the
+    # authoritative NAM Breakdown "Basin" section current figures above.
+    basin_gas_oil = latest_week_totals(us_records, lambda row: (row["basin"], row["drillFor"]))
+    basin_trajectory = latest_week_totals(us_records, lambda row: (row["basin"], row["trajectory"]))
+    basin_state_totals = latest_week_totals(us_records, lambda row: (row["basin"], row["state"]))
+    basin_location_totals = latest_week_totals(us_records, lambda row: (row["basin"], row["state"], row["county"]))
+
+    basin_history: defaultdict[str, defaultdict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for row in us_records:
+        if row["publishDate"] in recent_dates and row["basin"]:
+            basin_history[row["basin"]][row["publishDate"]] += row["value"]
+
+    basin_detail_errors: list[str] = []
+    basin_details: dict[str, Any] = {}
+    for label, entry in basin_rows:
+        basin_total_from_weekly = sum(value for (basin, _drill), value in basin_gas_oil.items() if basin == label)
+        if entry["current"] is not None and abs(basin_total_from_weekly - entry["current"]) > 0.01:
+            basin_detail_errors.append(
+                f"{label}: NAM Breakdown current={entry['current']} vs NAM Weekly latest-week sum={basin_total_from_weekly}"
+            )
+
+        gas = basin_gas_oil.get((label, "Gas"), 0.0)
+        oil = basin_gas_oil.get((label, "Oil"), 0.0)
+        misc = basin_gas_oil.get((label, "Miscellaneous"), 0.0)
+
+        basin_states = sorted(
+            (
+                {"code": state_code_for(state), "current": round(value, 3)}
+                for (basin, state), value in basin_state_totals.items()
+                if basin == label and state
+            ),
+            key=lambda item: -item["current"]
+        )
+
+        locations: defaultdict[tuple[str, str], float] = defaultdict(float)
+        for (basin, state, county), value in basin_location_totals.items():
+            if basin == label and county:
+                locations[(state, county)] += value
+        top_locations = [
+            {"state": state_code_for(state), "county": county.title(), "rigs": round(value, 3)}
+            for (state, county), value in sorted(locations.items(), key=lambda item: -item[1])[:5]
+        ]
+
+        history = [{"period": d, "value": round(basin_history[label].get(d, 0.0), 3)} for d in reversed(recent_dates)]
+
+        basin_details[label] = {
+            "basin": label,
+            "current": entry["current"],
+            "priorWeek": entry["priorWeek"],
+            "wow": entry["wow"],
+            "wowPct": entry["wowPct"],
+            "yearAgo": entry["yearAgo"],
+            "yoy": entry["yoy"],
+            "yoyPct": entry["yoyPct"],
+            "commodityMix": {"gas": round(gas, 3), "oil": round(oil, 3), "misc": round(misc, 3)},
+            "trajectoryMix": {
+                "horizontal": round(basin_trajectory.get((label, "Horizontal"), 0.0), 3),
+                "directional": round(basin_trajectory.get((label, "Directional"), 0.0), 3),
+                "vertical": round(basin_trajectory.get((label, "Vertical"), 0.0), 3)
+            },
+            "states": basin_states,
+            "topLocations": top_locations,
+            "history": history
+        }
+
+    if basin_detail_errors:
+        raise ImportValidationError("Basin-level reconciliation failed:\n  - " + "\n  - ".join(basin_detail_errors))
 
     return {
         "schemaVersion": 1,
@@ -359,7 +429,8 @@ def build_dataset(sections: dict[str, Any], records: list[dict[str, Any]], repor
             for item in sorted(basins, key=lambda item: item["current"] or 0, reverse=True)
         ],
         "trackedStateCount": len(tracked_states),
-        "states": states
+        "states": states,
+        "basins": basin_details
     }
 
 

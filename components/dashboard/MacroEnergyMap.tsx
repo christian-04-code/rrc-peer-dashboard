@@ -10,6 +10,7 @@ import { getStateCode, getStateName, getStorageRegionForState } from "@/lib/mark
 import { HistoricalLineChart } from "@/components/dashboard/MacroVisuals";
 import { getRigDataset, getRigState, getRigStateMax } from "@/lib/rigs/rig-data";
 import { DrillingActivityModule } from "@/components/dashboard/DrillingActivity";
+import { BasinRigActivity } from "@/components/dashboard/BasinRigActivity";
 
 type Position = [number, number];
 type StateGeometry =
@@ -111,6 +112,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
   const rigReportDate = getRigDataset().source.reportDate;
 
   return (
+    <>
     <div className="macro-map-layout">
       <div className="macro-map-card">
         <div className="macro-card-title">
@@ -232,5 +234,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
         <DrillingActivityModule stateCode={selected} stateName={selectedName} />
       </aside>
     </div>
+    <BasinRigActivity />
+    </>
   );
 }

@@ -1,13 +1,13 @@
-import { getQuarterlyFinancials, quarters, type Quarter, type QuarterlyFinancials } from "@/lib/dashboard/financials-quarterly";
+import { getQuarterlyFinancials, quarters, type Quarter } from "@/lib/dashboard/financials-quarterly";
 import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
-import { getNetDebtToLtmAdjustedEbitdax } from "@/lib/dashboard/calculated-quarterly";
+import { getNetDebtToLtmAdjustedEbitdax, getRealizedPricePerMcfe } from "@/lib/dashboard/calculated-quarterly";
 import type { Ticker } from "@/lib/dashboard/types";
 
 const peerTickers: Ticker[] = ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
 const latestQuarter = quarters[quarters.length - 1];
 const REPORTED_SOURCE_NOTE = `Latest reported • ${latestQuarter}`;
 
-export type SummaryCard = { key: string; label: string; displayValue: string; note: string; rank: number | null };
+export type SummaryCard = { key: string; label: string; displayValue: string; note: string; rank: number | null; definition?: string };
 
 function formatMillions(value: number | null): string {
   return value === null ? "--" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}MM`;
@@ -21,18 +21,16 @@ function formatSharePrice(value: number): string {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function formatGasPrice(value: number | null): string {
-  return value === null ? "--" : `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Mcf`;
+function formatPerMcfe(value: number | null): string {
+  return value === null ? "--" : `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Mcfe`;
+}
+
+function formatCount(value: number | null): string {
+  return value === null ? "--" : value.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 function formatMultiple(value: number | null): string {
   return value === null ? "--" : `${value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`;
-}
-
-function latestComparableQuarter(read: (row: QuarterlyFinancials) => number | null): Quarter | null {
-  return [...quarters].reverse().find((quarter) =>
-    peerTickers.every((ticker) => read(getQuarterlyFinancials(ticker, quarter)) !== null)
-  ) ?? null;
 }
 
 function rankValue(ticker: Ticker, values: Partial<Record<Ticker, number | null>>, direction: "high" | "low"): number | null {
@@ -55,6 +53,60 @@ function netDebtToLtmEbitdax(ticker: Ticker, quarter: Quarter): number | null {
   return getNetDebtToLtmAdjustedEbitdax(ticker, quarter).value;
 }
 
+/**
+ * wells.drilled (see financials-quarterly.ts) is disclosed sparsely and
+ * inconsistently across peers -- unlike every other Overview card, there is no
+ * single quarter where "show Q2 2026 or --" is the right rule, so this walks
+ * backward from the latest quarter to the most recent quarter with a verified
+ * standalone value for that specific company.
+ *
+ * Two stored data points are excluded as unverified rather than shown:
+ *  - RRC: the primary Codex source workbook's own "Wells Drilled" row does
+ *    carry values for Q1-Q3 2025 and Q1 2026 (18, 20, 16, 9) -- these are not
+ *    a data-entry error -- but every one of those cells is stamped with the
+ *    exact same audit note used on RRC's null quarters: "reviewed quarterly
+ *    materials do not disclose comparable unique wells drilled by quarter."
+ *    Read together, that means the extraction pass that built this fixture
+ *    checked RRC's own 10-Q/10-K/earnings-release disclosures for each of
+ *    these quarters and could not find where RRC itself reports a comparable
+ *    standalone wells-drilled figure -- i.e. the workbook number exists but is
+ *    not traceable to an RRC company disclosure, unlike every other populated
+ *    cell in this card (which each cite a specific filing). So RRC's Wells
+ *    Drilled is treated as unavailable for every quarter, matching the "if
+ *    standalone quarterly wells drilled cannot be verified, show --" rule.
+ *  - GPOR Q2 2026: the source note quotes GPOR's own 10-Q verbatim -- "We spud
+ *    7 gross (6.7 net) wells" -- spud, not drilled. This card does not
+ *    substitute wells-spud counts for wells-drilled counts, so this quarter is
+ *    skipped in favor of GPOR's last verified drilled disclosure (Q1 2026: 8,
+ *    confirmed against the Codex workbook's own "Wells Drilled" row, distinct
+ *    from its separate "Wells Turned-in-Line" row).
+ */
+const UNVERIFIED_WELLS_DRILLED: Partial<Record<Ticker, Quarter[] | "all">> = {
+  RRC: "all",
+  GPOR: ["Q2 2026"]
+};
+
+function latestVerifiedWellsDrilled(ticker: Ticker): { quarter: Quarter; value: number; note?: string } | null {
+  const excluded = UNVERIFIED_WELLS_DRILLED[ticker];
+  if (excluded === "all") return null;
+  const excludedSet = new Set(excluded ?? []);
+  for (const quarter of [...quarters].reverse()) {
+    if (excludedSet.has(quarter)) continue;
+    const field = getQuarterlyFinancials(ticker, quarter).wells.drilled;
+    if (field.value !== null) return { quarter, value: field.value, note: field.note };
+  }
+  return null;
+}
+
+const WELLS_DRILLED_UNAVAILABLE_DEFINITION =
+  "Latest verified standalone-quarter wells drilled. Company disclosure definitions may vary; unavailable where drilled wells are not explicitly reported.";
+
+function wellsDrilledDefinition(wellsDrilled: { quarter: Quarter; value: number; note?: string } | null): string {
+  if (!wellsDrilled) return WELLS_DRILLED_UNAVAILABLE_DEFINITION;
+  const caveat = wellsDrilled.note ? ` ${wellsDrilled.note}` : "";
+  return `Latest verified standalone-quarter wells drilled (${wellsDrilled.quarter}).${caveat}`;
+}
+
 export type LiveSharePrice = { value: number | null; note: string } | null;
 export type LiveSharePrices = Partial<Record<Ticker, LiveSharePrice>>;
 
@@ -62,8 +114,8 @@ export type LiveSharePrices = Partial<Record<Ticker, LiveSharePrice>>;
 export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSharePrice, liveSharePrices?: LiveSharePrices): SummaryCard[] {
   const financials = getQuarterlyFinancials(ticker, latestQuarter);
   const freeCashFlow = getQuarterlyFreeCashFlow(ticker, latestQuarter);
-  const realizedGasQuarter = latestComparableQuarter((row) => row.realizedPrices.naturalGas.value);
-  const realizedGas = realizedGasQuarter === null ? null : getQuarterlyFinancials(ticker, realizedGasQuarter).realizedPrices.naturalGas.value;
+  const realizedPricePerMcfe = getRealizedPricePerMcfe(ticker, latestQuarter).value;
+  const wellsDrilled = latestVerifiedWellsDrilled(ticker);
   const sharePriceValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, liveSharePrices?.[peerTicker]?.value ?? null])) as Partial<Record<Ticker, number | null>>;
   const productionValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getQuarterlyFinancials(peerTicker, latestQuarter).production.total.value]));
   const revenueValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getQuarterlyFinancials(peerTicker, latestQuarter).revenue.value]));
@@ -71,11 +123,9 @@ export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSha
   const freeCashFlowValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getQuarterlyFreeCashFlow(peerTicker, latestQuarter).value]));
   const netDebtValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getQuarterlyFinancials(peerTicker, latestQuarter).netDebt.value]));
   const capexValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getQuarterlyFinancials(peerTicker, latestQuarter).capitalExpenditures.value]));
-  const realizedGasValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, realizedGasQuarter === null ? null : getQuarterlyFinancials(peerTicker, realizedGasQuarter).realizedPrices.naturalGas.value]));
+  const realizedPricePerMcfeValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, getRealizedPricePerMcfe(peerTicker, latestQuarter).value]));
   const leverageValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, netDebtToLtmEbitdax(peerTicker, latestQuarter)]));
-  // No normalized quarterly lateral-feet-TIL actual exists in the repo. Management
-  // guidance and average-lateral-length disclosures are intentionally not substituted.
-  const lateralFeetTilValues: Partial<Record<Ticker, number | null>> = {};
+  const wellsDrilledValues = Object.fromEntries(peerTickers.map((peerTicker) => [peerTicker, latestVerifiedWellsDrilled(peerTicker)?.value ?? null]));
   const sharePriceCard: SummaryCard =
     liveSharePrice && liveSharePrice.value !== null
       ? { key: "share_price", label: "Share price", displayValue: formatSharePrice(liveSharePrice.value), note: liveSharePrice.note, rank: rankValue(ticker, sharePriceValues, "high") }
@@ -89,8 +139,22 @@ export function getOverviewSummaryCards(ticker: Ticker, liveSharePrice?: LiveSha
     { key: "free_cash_flow", label: "Free cash flow", displayValue: formatMillions(freeCashFlow.value), note: REPORTED_SOURCE_NOTE, rank: rankValue(ticker, freeCashFlowValues, "high") },
     { key: "net_debt", label: "Net debt", displayValue: formatMillions(financials.netDebt.value), note: REPORTED_SOURCE_NOTE, rank: rankValue(ticker, netDebtValues, "low") },
     { key: "capex", label: "CapEx", displayValue: formatMillions(financials.capitalExpenditures.value), note: REPORTED_SOURCE_NOTE, rank: rankValue(ticker, capexValues, "high") },
-    { key: "realized_gas_price", label: "Realized Natural Gas Price", displayValue: formatGasPrice(realizedGas), note: realizedGasQuarter ? `Latest comparable reported • ${realizedGasQuarter}` : "No comparable reported value", rank: rankValue(ticker, realizedGasValues, "high") },
+    {
+      key: "realized_price_per_mcfe",
+      label: "Realized Price",
+      displayValue: formatPerMcfe(realizedPricePerMcfe),
+      note: REPORTED_SOURCE_NOTE,
+      rank: rankValue(ticker, realizedPricePerMcfeValues, "high"),
+      definition: "Blended pre-hedge realized commodity price across natural gas, NGLs, and oil/condensate per Mcfe of total production."
+    },
     { key: "net_debt_to_ebitdax", label: "Net Debt / LTM EBITDAX", displayValue: formatMultiple(netDebtToLtmEbitdax(ticker, latestQuarter)), note: REPORTED_SOURCE_NOTE, rank: rankValue(ticker, leverageValues, "low") },
-    { key: "lateral_feet_til", label: "Lateral Feet TIL", displayValue: "--", note: "No verified reported value", rank: rankValue(ticker, lateralFeetTilValues, "high") }
+    {
+      key: "wells_drilled",
+      label: "Wells Drilled",
+      displayValue: formatCount(wellsDrilled?.value ?? null),
+      note: wellsDrilled ? `Latest reported • ${wellsDrilled.quarter}` : "No verified reported value",
+      rank: rankValue(ticker, wellsDrilledValues, "high"),
+      definition: wellsDrilledDefinition(wellsDrilled)
+    }
   ];
 }
