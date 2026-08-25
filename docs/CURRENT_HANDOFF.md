@@ -5,6 +5,36 @@
 - **Latest commit**: "Show commodity price assumptions (current market / EIA / modeled) in the Scenario Workbench"
 - **Pushed to origin**: yes, `origin/main` == local HEAD
 
+## Feature branch in progress: `feat/daily-energy-intelligence` (News / Daily Energy Intelligence) — NOT merged to main (2026-08-24)
+
+Not part of `main` yet. All work below lives only on this branch; nothing in this section has been merged, and no production automation is enabled.
+
+- **Branch**: `feat/daily-energy-intelligence`
+- **Final commit (Phase 4)**: `68a6b220f732dd4df1fe3f8da5390bd6723fcd8f` — confirmed identical on `origin/feat/daily-energy-intelligence`
+- **Open PR**: [#13](https://github.com/christian-04-code/rrc-peer-dashboard/pull/13) — "Phase 3: bounded AI news validation", **DRAFT**, base `main`. Opened before Phase 4; its diff now reflects every commit through Phase 4 since PRs track the head branch live, but its title/description still say "Phase 3 only" and haven't been updated to mention the News tab. Not merged, not touched by this session beyond reading its status.
+
+**Phases completed, in order**: Phase 1 (architecture-only report, no code) → Phase 2 (deterministic collection/normalize/dedupe/relevance/persistence pipeline against Neon) → Phase 2.5 (relevance-engine hardening + real-Neon verification) → Phase 3 (Anthropic-backed Range-impact analysis, manually validated against 2 real live articles, then reconciled after an independent parallel Phase 3 implementation was discovered already pushed to the same branch) → Phase 4 (News tab UI, read-only).
+
+**What exists now**:
+- A `News` top-level tab (`components/HomeDashboard.tsx`, `lib/dashboard/types.ts`'s `View` union), reading exclusively from `GET /api/news` and the new `GET /api/news/status` — never triggers collection or AI analysis, never calls `/api/cron/news` or `/api/cron/news/analyze`.
+- A full deterministic pipeline (`lib/news/`) — public-source collection (EIA, SEC EDGAR 8-Ks, Natural Gas Intelligence, OilPrice.com), normalization, dedup, a signal-tiered relevance engine (headline vs. excerpt weighting, entity matching, a hardened Range/RRC false-positive guard), category classification, and Postgres persistence (Neon, schema in `lib/news/persistence/schema.sql`).
+- An Anthropic-backed (`claude-haiku-4-5`) Range Impact analysis stage (`lib/news/pipeline/analyze.ts`, `lib/news/ai/`), gated entirely behind deterministic relevance filtering, with bounded retry, strict schema validation (including a code-enforced ban on guaranteed-outcome language), and current-pipeline-run scoping. Reachable only via the CRON_SECRET-gated `/api/cron/news/analyze` (hard-capped at 5 articles/call, not wired to any scheduler).
+- Real validated data already sitting in Neon from the Phase 3 manual run: 2 analyzed articles, visible live in the News tab today.
+
+**Test/build status**: 887 tests, 873 passing, 0 failing, 14 skipped (DB-gated tests that skip loudly without a live `DATABASE_URL` — all independently verified passing against a real local Postgres during Phases 2.5/3/4). `npm run typecheck`: clean. `npm run build`: succeeds, additive only — zero diff to any existing dashboard file (`components/dashboard/`, `lib/forecast/`, `lib/eia/`, `lib/fmp/`, `lib/finnhub/`, `lib/market/`, `data/`, `config/companies.json`, `vercel.json`) confirmed via `git diff --stat` at every phase boundary.
+
+**Preview**: `https://rrc-peer-dashboard-r6hruc2nc-christian-04-codes-projects.vercel.app` (Phase 4 deployment, Ready). Manually verified in-browser: News tab renders real analyzed articles with correct factual/AI visual separation, driver/time-horizon label conversion, and confidence display; Overview/Forecast/Macro all regression-free.
+
+**Known limitations**:
+- Only 2 real articles have ever been analyzed (both topic-driven — natural gas pricing, LNG capacity — not entity-driven). The Range/peer-entity-specific AI-analysis path is built and tested but has not yet been exercised against a live, naturally-retained Range- or peer-specific story.
+- The optional "24-Hour Range Environment" aggregate widget was intentionally not built — no defensible aggregate methodology exists yet, and inventing one in the UI was explicitly out of scope.
+- Running the two DB-gated Phase 2.5/3/4 test files concurrently against one shared local Postgres can race (both truncate the same tables in `beforeEach`); each passes reliably run individually, and this never affects real CI (no `DATABASE_URL` there) or the deployed app.
+- All Neon/Postgres, `CRON_SECRET`, and `ANTHROPIC_API_KEY` values are Vercel "Sensitive" — not retrievable by an agent locally; any future manual validation needs either the user running an authenticated `vercel curl` themselves, or a non-Sensitive duplicate var.
+
+**Exact next step**: Phase 5 — enable daily automation (Vercel Cron on `/api/cron/news`, wiring the analysis stage into the daily run, not just the manual endpoint). **Not started.** Requires explicit user approval before any scheduling is added.
+
+**Confirmed**: production cron is still disabled (no `vercel.json` cron entry exists anywhere on this branch); the branch remains unmerged from `main`.
+
 ## Status as of fix/q2-data-foundation (2026-08-12)
 
 The sections below this one are a chronological session log and are **not** kept
