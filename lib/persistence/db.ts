@@ -1,5 +1,13 @@
 import { Pool } from "pg";
 
+/**
+ * Shared Postgres pool for the whole app (moved here from
+ * lib/news/persistence/db.ts during Phase 6 so the Macro EIA intelligence
+ * system's own persistence -- STEO snapshots, cached AI risk summaries --
+ * can use the same one Neon connection pool as News, instead of opening a
+ * second pool to the same database or creating a Macro -> News dependency).
+ * One module-level singleton per warm serverless instance, same as before.
+ */
 let pool: Pool | null = null;
 
 /**
@@ -18,6 +26,11 @@ export function isDatabaseConfigured(): boolean {
 }
 
 function shouldUseSsl(connectionString: string): boolean {
+  // Name kept as NEWS_DB_SSL (not renamed on this move) -- it's the
+  // established local-dev/test toggle already used throughout the test
+  // suite and developer workflow; renaming it would be a pure-risk change
+  // with no behavioral benefit, for a single shared SSL knob that applies
+  // equally to News's and Macro's use of this same pool.
   if (process.env.NEWS_DB_SSL === "false") return false;
   if (process.env.NEWS_DB_SSL === "true") return true;
   try {
@@ -31,7 +44,7 @@ function shouldUseSsl(connectionString: string): boolean {
 export function getPool(): Pool {
   const connectionString = getDatabaseUrl();
   if (!connectionString) {
-    throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. The news pipeline's persistence layer requires it.");
+    throw new Error("DATABASE_URL (or POSTGRES_URL) is not set. This app's persistence layer requires it.");
   }
   if (!pool) {
     pool = new Pool({

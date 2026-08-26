@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { getPool, isDatabaseConfigured } from "@/lib/news/persistence/db";
+import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { runNewsPipeline, type PipelineRunResult } from "@/lib/news/pipeline/runner";
 import type { NewsSourceAdapter } from "@/lib/news/sources";
 import { analyzeEligibleArticles } from "@/lib/news/pipeline/analyze";

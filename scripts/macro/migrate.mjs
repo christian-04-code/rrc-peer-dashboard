@@ -8,10 +8,9 @@ const require = createRequire(import.meta.url);
 
 /**
  * Minimal single-file TS loader so this script can call the one shared
- * migration implementation in lib/news/persistence/migrate.ts instead of
- * duplicating the read-schema-then-query logic here. Mirrors the same
- * transpile-on-load pattern tests/helpers/ts-loader.cjs already uses for
- * this repo's tests.
+ * migration implementation in lib/market/persistence/migrate.ts instead of
+ * duplicating the read-schema-then-query logic here. Mirrors
+ * scripts/news/migrate.mjs's identical pattern.
  */
 function loadTs(absPath, root, cache = new Map()) {
   if (cache.has(absPath)) return cache.get(absPath);
@@ -44,15 +43,15 @@ export async function runMigrations(root = process.cwd()) {
   if (!connectionString) {
     throw new Error("DATABASE_URL (or POSTGRES_URL) is not set.");
   }
-  const { runNewsMigrations } = loadTs(path.join(root, "lib", "news", "persistence", "migrate.ts"), root);
-  await runNewsMigrations();
+  const { runMacroMigrations } = loadTs(path.join(root, "lib", "market", "persistence", "migrate.ts"), root);
+  await runMacroMigrations();
   const { closePool } = loadTs(path.join(root, "lib", "persistence", "db.ts"), root);
   await closePool();
 }
 
 async function main() {
   await runMigrations();
-  process.stdout.write("News schema migration applied.\n");
+  process.stdout.write("Macro schema migration applied.\n");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

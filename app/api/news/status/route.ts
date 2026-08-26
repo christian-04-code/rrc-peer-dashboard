@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPool, isDatabaseConfigured } from "@/lib/news/persistence/db";
+import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { getLatestPipelineRun } from "@/lib/news/persistence/pipeline-runs-repo";
 
 export const dynamic = "force-dynamic";

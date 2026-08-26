@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPool, isDatabaseConfigured } from "@/lib/news/persistence/db";
+import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { runNewsMigrations } from "@/lib/news/persistence/migrate";
 import { runNewsPipeline } from "@/lib/news/pipeline/runner";
 import { analyzeEligibleArticles } from "@/lib/news/pipeline/analyze";

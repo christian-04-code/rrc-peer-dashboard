@@ -27,7 +27,7 @@ test.before(async () => {
   const { pathToFileURL } = require("node:url");
   const { runMigrations } = await import(pathToFileURL(path.resolve(__dirname, "../scripts/news/migrate.mjs")).href);
   await runMigrations();
-  const { getPool } = load("lib/news/persistence/db.ts");
+  const { getPool } = load("lib/persistence/db.ts");
   pool = getPool();
   await pool.query("TRUNCATE articles, pipeline_runs CASCADE");
 });

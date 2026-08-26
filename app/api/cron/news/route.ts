@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isDatabaseConfigured } from "@/lib/news/persistence/db";
+import { isDatabaseConfigured } from "@/lib/persistence/db";
 import { runNewsMigrations } from "@/lib/news/persistence/migrate";
 import { runDailyNewsOrchestration } from "@/lib/news/pipeline/orchestrate";
 

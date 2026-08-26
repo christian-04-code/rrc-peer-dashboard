@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isDatabaseConfigured, getPool } from "@/lib/news/persistence/db";
+import { isDatabaseConfigured, getPool } from "@/lib/persistence/db";
 import { queryArticles, type ArticleQueryFilters } from "@/lib/news/persistence/articles-repo";
 import { NEWS_CATEGORIES } from "@/lib/news/types";
 import type { NewsCategory, ProcessingStatus, SourceTier } from "@/lib/news/types";

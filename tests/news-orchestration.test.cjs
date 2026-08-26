@@ -24,7 +24,7 @@ test.before(async () => {
   const { pathToFileURL } = require("node:url");
   const { runMigrations } = await import(pathToFileURL(path.resolve(__dirname, "../scripts/news/migrate.mjs")).href);
   await runMigrations();
-  const { getPool } = load("lib/news/persistence/db.ts");
+  const { getPool } = load("lib/persistence/db.ts");
   pool = getPool();
   await pool.query("TRUNCATE articles, pipeline_runs CASCADE");
 });
@@ -210,7 +210,7 @@ test("pipeline run accounting persists ai_analyses_attempted/completed/failed co
 test("a second concurrent invocation is skipped via the advisory lock, not run in parallel against the same eligible articles", { skip }, async () => {
   const { runDailyNewsOrchestration } = loadOrchestrate();
   const { Client } = require("pg");
-  const { getDatabaseUrl } = load("lib/news/persistence/db.ts");
+  const { getDatabaseUrl } = load("lib/persistence/db.ts");
 
   // A dedicated Client (its own physical connection/session), not a query
   // through the shared Pool -- session-level advisory locks are reentrant

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { getPool } from "@/lib/news/persistence/db";
+import { getPool } from "@/lib/persistence/db";
 
 /**
  * Single shared implementation of "apply the news schema" -- called by

@@ -6,7 +6,7 @@ import { dedupeArticles, partitionAgainstExisting } from "@/lib/news/dedupe";
 import { scoreRelevance } from "@/lib/news/relevance/score";
 import { classifyCategories } from "@/lib/news/category/classify";
 import { PIPELINE_CONFIG } from "@/lib/news/pipeline/config";
-import { getPool, isDatabaseConfigured } from "@/lib/news/persistence/db";
+import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { createPipelineRun, completePipelineRun, markPipelineRunFailed } from "@/lib/news/persistence/pipeline-runs-repo";
 import { getExistingFingerprintsAndUrls, insertArticleIfNew } from "@/lib/news/persistence/articles-repo";
 
