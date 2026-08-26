@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./helpers/ts-loader.cjs");
 
-const { isDisplayableStatus, selectDisplayableArticles, filterArticles, formatArticleDate, impactSymbol } = load(
+const { isDisplayableStatus, selectDisplayableArticles, filterArticles, formatArticleDate, impactSymbol, rangeImpactTone } = load(
   "lib/news/article-display.ts"
 );
 
@@ -118,4 +118,41 @@ test("impactSymbol: uses a distinct, non-color-dependent symbol per direction", 
   assert.notEqual(positive, negative);
   assert.notEqual(positive, neutral);
   assert.notEqual(negative, neutral);
+});
+
+test("rangeImpactTone: positive impact at medium or high strength is 'positive'", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: "positive", impactStrength: "medium" }), "positive");
+  assert.equal(rangeImpactTone({ rangeImpact: "positive", impactStrength: "high" }), "positive");
+});
+
+test("rangeImpactTone: negative impact at medium or high strength is 'negative'", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: "negative", impactStrength: "medium" }), "negative");
+  assert.equal(rangeImpactTone({ rangeImpact: "negative", impactStrength: "high" }), "negative");
+});
+
+test("rangeImpactTone: an explicitly 'neutral' AI impact is always 'caution', regardless of strength", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: "neutral", impactStrength: "high" }), "caution");
+  assert.equal(rangeImpactTone({ rangeImpact: "neutral", impactStrength: "low" }), "caution");
+});
+
+test("rangeImpactTone: a low-strength positive or negative call is downgraded to 'caution', not shown as a strong directional signal", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: "positive", impactStrength: "low" }), "caution");
+  assert.equal(rangeImpactTone({ rangeImpact: "negative", impactStrength: "low" }), "caution");
+});
+
+test("rangeImpactTone: a directional impact with a missing/malformed strength defensively falls back to 'caution', never a fabricated direction", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: "positive", impactStrength: null }), "caution");
+  assert.equal(rangeImpactTone({ rangeImpact: "negative", impactStrength: null }), "caution");
+});
+
+test("rangeImpactTone: no AI result yet (unanalyzed or analysis_failed, rangeImpact null) is 'neutral' -- never fabricates a color", () => {
+  assert.equal(rangeImpactTone({ rangeImpact: null, impactStrength: null }), "neutral");
+});
+
+test("rangeImpactTone: uses only the existing categorical rangeImpact/impactStrength fields -- verified by source inspection to never reference a numeric confidence threshold", () => {
+  const fs = require("node:fs");
+  const source = fs.readFileSync(require.resolve("../lib/news/article-display.ts"), "utf8");
+  const fnMatch = source.match(/export function rangeImpactTone\([\s\S]*?\n}/);
+  assert.ok(fnMatch, "expected to find the rangeImpactTone function body");
+  assert.doesNotMatch(fnMatch[0], /confidence/i, "rangeImpactTone must not invent a numeric confidence cutoff");
 });

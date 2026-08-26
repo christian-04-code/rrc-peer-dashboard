@@ -3,6 +3,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { NewsArticleDto } from "@/lib/news/client-types";
 import { categoryLabel, driverLabel, timeHorizonLabel } from "@/lib/news/client-types";
+import { rangeImpactTone } from "@/lib/news/article-display";
 import type { ImpactDriverKey } from "@/lib/news/impact-framework";
 
 /**
@@ -50,6 +51,8 @@ export function NewsDetailDrawer({
 
   if (!article) return null;
 
+  const tone = rangeImpactTone(article);
+
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <aside
@@ -64,7 +67,9 @@ export function NewsDetailDrawer({
           Close
         </button>
         <p className="muted news-drawer-category">{article.category.map(categoryLabel).join(" · ") || "Uncategorized"}</p>
-        <h2 id="news-drawer-title">{article.headline}</h2>
+        <h2 id="news-drawer-title" className={`news-headline-${tone}`}>
+          {article.headline}
+        </h2>
         <p className="muted drawer-source">
           {article.publisher}
           {article.publishedAt ? ` · ${new Date(article.publishedAt).toLocaleString()}` : ""}
@@ -76,8 +81,8 @@ export function NewsDetailDrawer({
         </section>
 
         {article.processingStatus === "analyzed" && article.rangeImpact ? (
-          <section className="news-drawer-section news-ai-label">
-            <h3>AI Range Analysis</h3>
+          <section className="news-drawer-section">
+            <h3 className="news-ai-label">AI Range Analysis</h3>
             <p className={`news-impact-pill news-impact-${article.rangeImpact}`}>
               {article.rangeImpact.toUpperCase()} · {article.impactStrength?.toUpperCase()}
             </p>

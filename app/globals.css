@@ -11,6 +11,7 @@
   --accent-soft: rgba(0, 129, 198, 0.15);
   --positive: #70c99a;
   --negative: #e48686;
+  --caution: #e5ad63;
 }
 
 * { box-sizing: border-box; }

@@ -2,13 +2,14 @@
 
 import type { NewsArticleDto } from "@/lib/news/client-types";
 import { categoryLabel, driverLabel, timeHorizonLabel } from "@/lib/news/client-types";
-import { formatArticleDate, impactSymbol } from "@/lib/news/article-display";
+import { formatArticleDate, impactSymbol, rangeImpactTone } from "@/lib/news/article-display";
 import type { ImpactDriverKey } from "@/lib/news/impact-framework";
 
 export function ArticleCard({ article, onExpand }: { article: NewsArticleDto; onExpand: () => void }) {
   const primaryCategory = article.category[0];
   const isAnalyzed = article.processingStatus === "analyzed";
   const isFailed = article.processingStatus === "analysis_failed";
+  const tone = rangeImpactTone(article);
 
   return (
     <article className="news-card panel">
@@ -21,7 +22,7 @@ export function ArticleCard({ article, onExpand }: { article: NewsArticleDto; on
         ))}
       </div>
 
-      <button type="button" className="news-card-headline" onClick={onExpand}>
+      <button type="button" className={`news-card-headline news-headline-${tone}`} onClick={onExpand}>
         {article.headline}
       </button>
 

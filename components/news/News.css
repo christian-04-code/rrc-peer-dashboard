@@ -1,8 +1,8 @@
 .news-panel { display: grid; gap: 16px; }
 
-.news-header { display: grid; gap: 10px; }
+.news-header { display: grid; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
 .news-header-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.news-header-title h2 { margin: 0; font-size: 15px; }
+.news-header-title h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .01em; }
 .news-status-badge.news-status-completed { border-color: rgba(112,201,154,.5); background: rgba(112,201,154,.12); color: var(--positive); }
 .news-status-badge.news-status-completed_with_errors { border-color: rgba(229,173,99,.5); background: rgba(229,173,99,.12); color: #e5ad63; }
 .news-status-badge.news-status-failed { border-color: rgba(228,134,134,.5); background: rgba(228,134,134,.12); color: var(--negative); }
@@ -13,9 +13,14 @@
 .news-header-stat strong { font-size: 16px; }
 .news-header-stat strong small { color: var(--muted); font-size: 11px; font-weight: 500; }
 
+/* NewsFilters.tsx is currently unrendered (see NewsPanel.tsx) -- these
+   rules are kept so the component still looks correct if it's ever wired
+   back in, rather than being deleted alongside it. */
 .news-filters { display: grid; gap: 8px; }
 .news-filters-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
 .news-category-tabs, .news-impact-tabs, .news-strength-tabs { flex-wrap: wrap; }
+
+.news-feed-heading { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 
 .news-loading, .news-empty-state { border: 1px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; margin: 0; }
 
@@ -24,15 +29,27 @@
 .news-card { display: grid; gap: 8px; align-content: start; }
 .news-card-eyebrow { display: flex; flex-wrap: wrap; gap: 6px; }
 .news-card-secondary-category { color: var(--muted); background: transparent; }
-.news-card-headline { border: 0; background: transparent; color: var(--text); text-align: left; padding: 0; font-size: 15px; font-weight: 600; line-height: 1.35; cursor: pointer; }
+.news-card-headline { border: 0; background: transparent; color: var(--text); text-align: left; padding: 0; font-size: 16px; font-weight: 700; line-height: 1.35; cursor: pointer; }
 .news-card-headline:hover { color: var(--accent); }
 .news-card-byline { margin: 0; font-size: 12px; }
 
-.news-card-section { display: grid; gap: 5px; border-top: 1px solid var(--border); padding-top: 8px; }
-.news-card-label { margin: 0; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+/* Headline color communicates Range-impact direction (see rangeImpactTone
+   in lib/news/article-display.ts) -- "neutral" (no AI result yet) keeps the
+   default --text color deliberately, so an unanalyzed article never looks
+   like a deterministic "no impact" judgment.
+   Compound selectors (two classes, specificity 0,2,0) are required here to
+   outrank the global `.panel button { color: var(--accent); } rule
+   (specificity 0,1,1) that would otherwise silently win over a single
+   `.news-headline-positive` class alone on this <button>-based headline. */
+.news-card-headline.news-headline-positive, .news-headline-positive { color: var(--positive); }
+.news-card-headline.news-headline-negative, .news-headline-negative { color: var(--negative); }
+.news-card-headline.news-headline-caution, .news-headline-caution { color: var(--caution); }
+
+.news-card-section { display: grid; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+.news-card-label { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .news-ai-label { color: var(--accent); }
-.news-card-excerpt { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
-.news-card-analysis { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+.news-card-excerpt { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text); }
+.news-card-analysis { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text); }
 
 .news-impact-headline { display: flex; }
 .news-impact-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); }
@@ -53,9 +70,11 @@
 .news-view-original:hover { text-decoration: underline; }
 
 .news-detail-drawer { width: min(460px, 92vw); }
+.news-detail-drawer h2 { font-size: 19px; font-weight: 700; line-height: 1.3; }
 .news-drawer-category { margin: 44px 0 4px; }
-.news-drawer-section { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; display: grid; gap: 6px; }
-.news-drawer-section h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.news-drawer-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; display: grid; gap: 7px; }
+.news-drawer-section h3 { margin: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.news-drawer-section h3.news-ai-label { color: var(--accent); }
 .news-drawer-audit dt { text-transform: none; }
 
 @media (max-width: 980px) {

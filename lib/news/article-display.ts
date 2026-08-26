@@ -50,3 +50,32 @@ export function impactSymbol(impact: RangeImpactDirection): string {
   if (impact === "negative") return "▼";
   return "●";
 }
+
+export type ImpactTone = "positive" | "negative" | "caution" | "neutral";
+
+/**
+ * Deterministic headline-color rule (News UI simplification). Uses only the
+ * two existing categorical AI fields already on every analyzed article --
+ * rangeImpact and impactStrength -- never a newly invented numeric
+ * confidence cutoff, per the existing "impactStrength is the AI's own
+ * low/medium/high judgment of how big a deal this is for Range" semantics
+ * already established in lib/news/ai/anthropic-provider.ts's system prompt.
+ *
+ * Rule, in order:
+ * 1. No AI result yet (unanalyzed or a failed analysis -- rangeImpact is
+ *    null in both) -> "neutral": nothing to signal, never fabricated.
+ * 2. rangeImpact === "neutral" -> "caution": explicitly not a directional
+ *    call.
+ * 3. rangeImpact is "positive"/"negative" but impactStrength is not
+ *    "medium" or "high" (i.e. "low", or -- defensively -- missing) ->
+ *    "caution": a low-strength directional call reads as "worth noting",
+ *    not a materially meaningful move.
+ * 4. Otherwise (positive/negative at medium or high strength) -> that
+ *    direction.
+ */
+export function rangeImpactTone(article: { rangeImpact: RangeImpactDirection | null; impactStrength: ImpactStrength | null }): ImpactTone {
+  if (!article.rangeImpact) return "neutral";
+  if (article.rangeImpact === "neutral") return "caution";
+  if (article.impactStrength !== "medium" && article.impactStrength !== "high") return "caution";
+  return article.rangeImpact;
+}

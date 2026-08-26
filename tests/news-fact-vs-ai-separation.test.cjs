@@ -13,7 +13,12 @@ test("ArticleCard labels the factual section and the AI section with distinct, e
 
 test("NewsDetailDrawer labels the factual section and the AI section with distinct, explicit wording", () => {
   assert.match(drawerSource, /<h3>Factual Summary<\/h3>/);
-  assert.match(drawerSource, /<h3>AI Range Analysis<\/h3>/);
+  assert.match(drawerSource, /<h3[^>]*>AI Range Analysis<\/h3>/);
+});
+
+test("the drawer's AI label color is scoped to the heading itself, not the whole section -- otherwise the heading and its own paragraph render in the same color and stop being distinguishable from each other", () => {
+  assert.doesNotMatch(drawerSource, /className="news-drawer-section news-ai-label"/, "news-ai-label must not be applied to the whole <section>");
+  assert.match(drawerSource, /<h3 className="news-ai-label">AI Range Analysis<\/h3>/);
 });
 
 test("the AI section carries a distinguishing CSS hook (news-ai-label) separate from the factual section", () => {

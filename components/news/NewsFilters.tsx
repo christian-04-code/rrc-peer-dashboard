@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Preserved but currently unrouted: NewsPanel.tsx no longer renders this
+ * component (the News UI simplification removed the category/impact/
+ * strength filter rows from the primary feed). Kept on disk rather than
+ * deleted, same as components/dashboard/PeersPanel.tsx -- the underlying
+ * filter data/logic it depends on (NEWS_CATEGORY_FILTERS, IMPACT_FILTERS,
+ * IMPACT_STRENGTH_FILTERS, filterArticles) is untouched and still tested.
+ */
+
 import { NEWS_CATEGORY_FILTERS, IMPACT_FILTERS, IMPACT_STRENGTH_FILTERS } from "@/lib/news/client-types";
 import type { NewsFilterState } from "@/lib/news/article-display";
 
