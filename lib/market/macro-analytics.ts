@@ -4,6 +4,7 @@ import type {
   MarketObservation,
   NormalizedMarketMetric
 } from "@/lib/market/types";
+import type { StateProductionMetric } from "@/lib/market/macro-types";
 
 export type StorageComparison = {
   latest: number;
@@ -97,6 +98,23 @@ export function monthlyMmcfToBcfd(value: number | null, period: string | null): 
   return value / days / 1000;
 }
 
+/**
+ * Converts a raw MMcf/month observation series (the unit every EIA
+ * fundamentals actual -- production, LNG exports, sector demand -- uses) to
+ * Bcf/d, matching EIA STEO's own "billion cubic feet per day" unit
+ * convention. Required before charting any actual series against a STEO
+ * forecast series on the same axis: MMcf/month and Bcf/d differ by roughly
+ * three orders of magnitude plus a days-in-month factor, so an unconverted
+ * overlay silently flattens whichever series is smaller -- exactly the kind
+ * of incompatible-unit combination this project's tests forbid. A period
+ * that fails to parse is dropped, never coerced to a wrong value.
+ */
+export function toBcfdSeries(history: MarketObservation[]): MarketObservation[] {
+  return history
+    .map((point) => ({ period: point.period, value: monthlyMmcfToBcfd(point.value, point.period) }))
+    .filter((point): point is MarketObservation => point.value !== null);
+}
+
 function isoWeek(date: Date): number {
   const working = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = working.getUTCDay() || 7;
@@ -182,6 +200,77 @@ export function buildStorageProfile(history: MarketObservation[]): StorageProfil
   });
 }
 
+export type AppalachiaProductionSummary = {
+  /** State codes actually summed. EIA's PA/WV/OH marketed production is the closest available Appalachia proxy, not an official "Marcellus" series -- callers must label it as "PA + WV + OH marketed production", never as "Marcellus production". */
+  statesIncluded: string[];
+  history: MarketObservation[];
+  current: number | null;
+  period: string | null;
+  monthOverMonthPct: number | null;
+  yearOverYearPct: number | null;
+};
+
+export function shiftMonth(period: string, delta: number): string | null {
+  if (!/^\d{4}-\d{2}$/.test(period)) return null;
+  const [year, month] = period.split("-").map(Number);
+  const total = year * 12 + (month - 1) + delta;
+  const nextYear = Math.floor(total / 12);
+  const nextMonth = (total % 12) + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+}
+
+/**
+ * EIA STEO series carry a long historical tail alongside the forecast
+ * horizon (confirmed live: STEO's Henry Hub and dry-gas series both span
+ * 2009-07 through the outlook's final forecast month in one continuous
+ * array, roughly 220 monthly points -- not just the forward-looking
+ * projection). Labeling that whole span "(forecast)" and dashing it would
+ * mislabel over a decade of EIA-reported history as a projection. This
+ * derives the one forecast-start boundary shared by every series in a
+ * single STEO publication/fetch from the most reliable monthly actual this
+ * project has (dry gas production), and filters a raw points array down to
+ * only the genuine forward-looking horizon.
+ */
+export function filterToForecastHorizon<T extends { period: string }>(points: T[], forecastStartPeriod: string | null): T[] {
+  if (!forecastStartPeriod) return points;
+  return points.filter((point) => point.period >= forecastStartPeriod);
+}
+
+/**
+ * Sums PA + WV + OH marketed production for every period all three states
+ * report -- a period where any of the three is missing is excluded entirely
+ * rather than summing the states that do have data, so the total never
+ * silently understates supply as if a non-reporting state produced zero.
+ */
+export function buildAppalachiaProduction(states: Record<string, StateProductionMetric>): AppalachiaProductionSummary {
+  const codes = ["PA", "WV", "OH"].filter((code) => states[code]);
+  if (codes.length === 0) {
+    return { statesIncluded: [], history: [], current: null, period: null, monthOverMonthPct: null, yearOverYearPct: null };
+  }
+
+  const valueByPeriod = codes.map((code) => new Map(states[code].history.map((point) => [point.period, point.value])));
+  const commonPeriods = [...valueByPeriod[0].keys()].filter((period) => valueByPeriod.every((map) => map.has(period)));
+  const history: MarketObservation[] = commonPeriods
+    .sort((a, b) => (a < b ? 1 : -1))
+    // Every map in valueByPeriod is guaranteed to have `period` by the commonPeriods
+    // filter above, so this is a real, always-present value, not a missing-value default.
+    .map((period) => ({ period, value: valueByPeriod.reduce((sum, map) => sum + (map.get(period) as number), 0) }));
+
+  const latest = history[0] ?? null;
+  const prior = history[1] ?? null;
+  const yearAgoPeriod = latest ? shiftMonth(latest.period, -12) : null;
+  const yearAgo = yearAgoPeriod ? history.find((point) => point.period === yearAgoPeriod) ?? null : null;
+
+  return {
+    statesIncluded: codes,
+    history,
+    current: latest?.value ?? null,
+    period: latest?.period ?? null,
+    monthOverMonthPct: latest && prior && prior.value !== 0 ? ((latest.value - prior.value) / Math.abs(prior.value)) * 100 : null,
+    yearOverYearPct: latest && yearAgo && yearAgo.value !== 0 ? ((latest.value - yearAgo.value) / Math.abs(yearAgo.value)) * 100 : null
+  };
+}
+
 export function periodChange(metric: NormalizedMarketMetric, periods = 1): number | null {
   const latest = metric.history[0];
   const prior = metric.history[periods];
@@ -209,6 +298,37 @@ function toneFor(state: string): SnapshotState["tone"] {
   return "neutral";
 }
 
+export type GasBalanceClassification = {
+  storageState: "Below Normal" | "Near Normal" | "Above Normal" | "Unavailable";
+  lngState: "Contracting" | "Stable" | "Expanding" | "Unavailable";
+  gasState: "Tightening" | "Balanced" | "Loosening" | "Unavailable";
+  storagePct: number | null;
+  lngYoY: number | null;
+};
+
+/**
+ * The one Gas Balance classification -- used by both the Macro Snapshot
+ * evidence list and the dedicated Gas Balance topic module (Section 5: one
+ * source of truth per metric). Deliberately does not combine marketed
+ * production with sector consumption in a raw arithmetic supply-minus-demand
+ * figure -- those EIA series have different scope/definitions (marketed
+ * production vs. delivered consumption, different unit conventions), and
+ * mixing them would be exactly the incompatible-unit aggregation this
+ * project's tests forbid. Storage deviation and LNG export growth are both
+ * pre-normalized to percentages and are the same two signals the pre-6C
+ * "Natural Gas" snapshot row already used, kept unchanged here.
+ */
+export function classifyGasBalance(storagePct: number | null, lngYoY: number | null): GasBalanceClassification {
+  const storageState = storagePct === null ? "Unavailable" : storagePct <= -5 ? "Below Normal" : storagePct >= 5 ? "Above Normal" : "Near Normal";
+  const lngState = lngYoY === null ? "Unavailable" : lngYoY >= 5 ? "Expanding" : lngYoY <= -5 ? "Contracting" : "Stable";
+  const gasState = storageState === "Below Normal" && lngState === "Expanding"
+    ? "Tightening"
+    : storageState === "Above Normal" && lngState === "Contracting"
+      ? "Loosening"
+      : storageState === "Unavailable" && lngState === "Unavailable" ? "Unavailable" : "Balanced";
+  return { storageState, lngState, gasState, storagePct, lngYoY };
+}
+
 export function buildMacroSnapshot(metrics: NormalizedMarketMetric[], context: MacroSnapshotContext = {}): SnapshotState[] {
   const byId = new Map(metrics.map((metric) => [metric.id, metric]));
   const storageMetric = byId.get("storage");
@@ -219,13 +339,7 @@ export function buildMacroSnapshot(metrics: NormalizedMarketMetric[], context: M
   const lngYoY = lngMetric ? periodChangePct(lngMetric, 12) : null;
   const propaneFourWeek = propaneMetric ? periodChangePct(propaneMetric, 4) : null;
 
-  const storageState = storagePct === null ? "Unavailable" : storagePct <= -5 ? "Below Normal" : storagePct >= 5 ? "Above Normal" : "Near Normal";
-  const lngState = lngYoY === null ? "Unavailable" : lngYoY >= 5 ? "Expanding" : lngYoY <= -5 ? "Contracting" : "Stable";
-  const gasState = storageState === "Below Normal" && lngState === "Expanding"
-    ? "Tightening"
-    : storageState === "Above Normal" && lngState === "Contracting"
-      ? "Loosening"
-      : storageState === "Unavailable" && lngState === "Unavailable" ? "Unavailable" : "Balanced";
+  const { storageState, lngState, gasState } = classifyGasBalance(storagePct, lngYoY);
   const nglState = propaneFourWeek === null ? "Unavailable" : propaneFourWeek <= -5 ? "Supportive" : propaneFourWeek >= 5 ? "Weak" : "Neutral";
   const eastStoragePct = context.eastStoragePct ?? null;
   const paProductionYoy = context.paProductionYoyPct ?? null;

@@ -8,8 +8,17 @@
  * point-in-time snapshots, not just a longer history array.
  */
 
-/** Keys we've verified against the real EIA API this session -- see EIA_STEO_SERIES in lib/eia/series.ts for why the list stops here. */
-export type SteoSeriesKey = "henryHubForecast" | "dryGasProductionForecast" | "electricPowerConsumptionForecast" | "workingGasStorageForecast";
+/** Keys verified against the real EIA API -- see EIA_STEO_SERIES in lib/eia/series.ts for why the list stops here (and for two real wrong guesses this project made and corrected). */
+export type SteoSeriesKey =
+  | "henryHubForecast"
+  | "dryGasProductionForecast"
+  | "electricPowerConsumptionForecast"
+  | "workingGasStorageForecast"
+  | "lngExportsForecast"
+  | "totalConsumptionForecast"
+  | "commercialConsumptionForecast"
+  | "residentialConsumptionForecast"
+  | "industrialConsumptionForecast";
 
 export type SteoPoint = {
   period: string;

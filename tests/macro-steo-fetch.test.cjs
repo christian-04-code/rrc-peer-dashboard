@@ -41,7 +41,10 @@ test("fetchSteoTable requests the steo/data route with a seriesId facet (not the
 
   assert.match(requestedUrl.pathname, /\/v2\/steo\/data$/);
   assert.equal(requestedUrl.searchParams.get("frequency"), "monthly");
-  assert.deepEqual(requestedUrl.searchParams.getAll("facets[seriesId][]").sort(), ["NGEPCNS_US", "NGHHMCF", "NGPRPUS", "NGWGPUS"]);
+  assert.deepEqual(
+    requestedUrl.searchParams.getAll("facets[seriesId][]").sort(),
+    ["NGCCPUS", "NGEPCNS_US", "NGEXPUS_LNG", "NGHHMCF", "NGINX_US", "NGPRPUS", "NGRCPUS", "NGTCPUS", "NGWGPUS"]
+  );
   assert.doesNotMatch(requestedUrl.search, /facets%5Bseries%5D/, "must not use the `series` facet key -- STEO's own facet key is `seriesId`");
   assert.equal(result.rows.length, 2);
 });

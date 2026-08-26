@@ -328,6 +328,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-series-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; color: var(--muted); font-size: 9px; }
 .macro-series-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .macro-series-legend i { width: 13px; height: 2px; }
+.macro-series-legend i.forecast { height: 0; border-top: 2px dashed; }
 .macro-regional-table { display: grid; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
 .macro-regional-row { display: grid; grid-template-columns: 1.05fr repeat(7, .72fr) 1.2fr; align-items: center; gap: 10px; min-height: 42px; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 11px; }
 .macro-regional-row:last-child { border-bottom: 0; }
@@ -341,6 +342,19 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
+.macro-topic-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 10px 0 4px; }
+.macro-topic-tabs button { flex: 0 0 auto; white-space: nowrap; }
+.eia-outlook { display: grid; gap: 10px; }
+.eia-outlook-select { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--muted); max-width: 320px; }
+.eia-outlook-select select { background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.eia-outlook-revisions { display: grid; gap: 6px; }
+.eia-outlook-revisions > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.eia-outlook-revision-table { display: grid; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.eia-outlook-revision-row { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1.3fr; gap: 6px; padding: 5px 8px; font-size: 10px; border-bottom: 1px solid var(--border); align-items: center; }
+.eia-outlook-revision-row.header { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+.eia-outlook-revision-row:last-child { border-bottom: 0; }
+.eia-outlook-revision-row small { color: var(--muted); }
+.appalachia-label-note { color: var(--muted); font-size: 10px; margin: 4px 0 0; }
 .macro-segmented button, .macro-map-detail button { border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 5px 8px; font-size: 10px; }
 .macro-segmented button.active { color: #04111d; background: var(--accent); }
 .macro-segmented.secondary { padding: 2px; }
@@ -411,6 +425,19 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drilling-history > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .drilling-history .macro-evidence-chart { margin-top: 4px; }
 .drilling-history .macro-evidence-chart svg { height: 92px; }
+/*
+ * .basin-detail's rig-history chart (BasinRigActivity, e.g. Permian) lives in
+ * the wide macro-map-layout column, unlike .drilling-activity's chart (PA,
+ * via DrillingActivityModule) which lives in the narrow macro-map-detail
+ * sidebar column that the 92px height above was sized for. At that much
+ * wider rendered width, a fixed 92px height stops matching the SVG's fixed
+ * viewBox aspect ratio (660:220 = 3:1), so preserveAspectRatio="xMidYMid
+ * meet" (the default) shrinks the plot to fit the height and centers it,
+ * leaving large empty margins on both sides. Deriving height from width via
+ * aspect-ratio keeps the rendered box's ratio equal to the viewBox's ratio
+ * at any container width, so the plot always fills it with no letterboxing.
+ */
+.basin-detail .drilling-history .macro-evidence-chart svg { height: auto; aspect-ratio: 660 / 220; }
 .drilling-history .macro-series-legend { margin-top: 2px; }
 .drilling-concentration { display: grid; gap: 4px; }
 .drilling-concentration > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }

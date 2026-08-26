@@ -126,19 +126,28 @@ test("interactive map exposes both metrics, semantic storage labeling, and point
   assert.match(source, /State production history/);
 });
 
-test("Macro renders the required evidence chart datasets before the deterministic snapshot", () => {
+test("Macro renders the required evidence chart datasets, organized into the Phase 6C topic-tab architecture", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroPanel.tsx"), "utf8");
   const chartLabels = [
     "Lower 48 storage current year, prior year, five-year average and range",
-    "U.S. dry natural gas production history",
-    "U.S. LNG exports history",
+    "U.S. dry natural gas production, actual and EIA STEO forecast",
+    "U.S. LNG exports, actual and EIA STEO forecast",
     "U.S. propane inventory history"
   ];
   for (const label of chartLabels) assert.match(source, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(source, /<DemandChart demand=/);
   assert.match(source, /<RegionalStorageTable regions=/);
   assert.match(source, /<StateProductionRanking states=/);
-  assert.ok(source.indexOf("07 · NGL") < source.indexOf("09 · MACRO SNAPSHOT"));
+  // Phase 6C replaced the flat numbered-section layout with topic tabs (Section
+  // 6's information architecture); the deterministic Macro Snapshot evidence
+  // panel now lives in the Gas Balance tab, the first/default topic, rather
+  // than after a numbered "07 · NGL" section -- verify it's still reachable
+  // from the default tab instead of asserting an ordering that no longer exists.
+  const gasBalanceTabStart = source.indexOf('topic === "gas-balance"');
+  const macroSnapshotIndex = source.indexOf("Macro snapshot");
+  const storageTabStart = source.indexOf('topic === "storage"');
+  assert.ok(gasBalanceTabStart >= 0 && macroSnapshotIndex >= 0 && storageTabStart >= 0);
+  assert.ok(gasBalanceTabStart < macroSnapshotIndex && macroSnapshotIndex < storageTabStart, "Macro Snapshot must render inside the first (gas-balance) topic tab");
   assert.match(source, /Sources: U\.S\. EIA · OilPriceAPI/);
   assert.match(source, /Week ending/);
   assert.match(source, /buildRrcMacroRisk/);
