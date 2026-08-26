@@ -2,12 +2,25 @@
  * Range Impact Engine scaffold. Deliberately plain, version-controlled TS
  * constants rather than a database table -- every change to how a driver is
  * described is a reviewable diff, and the framework can be imported directly
- * by both the (future, Phase 3) AI prompt-construction code and by tests
- * asserting the taxonomy stays internally consistent.
+ * by both AI prompt-construction code and by tests asserting the taxonomy
+ * stays internally consistent.
  *
  * This file describes *potential directional relationships*, never
- * guaranteed outcomes or trading signals. Phase 3's AI layer selects among
- * these drivers and directions; it must not invent new ones.
+ * guaranteed outcomes or trading signals. An AI layer selects among these
+ * drivers and directions; it must not invent new ones.
+ *
+ * Shared, domain-neutral home for the Range driver taxonomy (moved here from
+ * lib/news/impact-framework.ts during Phase 6 so the Macro EIA intelligence
+ * system can map its own deterministic signals to the same driver names
+ * instead of inventing conflicting terminology). Only this taxonomy is
+ * shared -- News keeps its own relevance/AI/persistence/UI code entirely
+ * separate from Macro's own ingestion/scoring/AI/persistence/UI code.
+ *
+ * News's AI layer (lib/news/ai/) intentionally restricts itself to the
+ * original 8 driver keys below (see NEWS_DRIVER_KEYS in
+ * lib/news/ai/relevant-drivers.ts) rather than this file's full set, so
+ * adding a Macro-only key here can never change what News sends to or
+ * accepts from its own AI provider.
  */
 
 export const IMPACT_FRAMEWORK_VERSION = "1.0.0";
@@ -20,7 +33,11 @@ export type ImpactDriverKey =
   | "storage_levels"
   | "power_data_center_demand"
   | "ngl_demand"
-  | "regulation";
+  | "regulation"
+  | "us_gas_supply"
+  | "appalachia_supply"
+  | "industrial_demand"
+  | "weather";
 
 export type ImpactDriverDefinition = {
   key: ImpactDriverKey;
@@ -96,6 +113,38 @@ export const IMPACT_DRIVERS: Record<ImpactDriverKey, ImpactDriverDefinition> = {
     potentialPositiveEffect: "Streamlined permitting or favorable pipeline approvals may support capital spending efficiency and production economics.",
     potentialNegativeEffect: "More restrictive regulation may increase operating costs, capital spending, or permitting timelines.",
     relatedMetrics: ["operating_costs", "capital_spending", "permitting_timeline"]
+  },
+  us_gas_supply: {
+    key: "us_gas_supply",
+    label: "U.S. Lower-48 Gas Supply",
+    description: "Aggregate U.S. dry natural gas production and its trend, independent of any single basin.",
+    potentialPositiveEffect: "Slower national supply growth (or declines) may tighten the broader U.S. balance and support gas pricing.",
+    potentialNegativeEffect: "Accelerating national supply growth may loosen the broader U.S. balance and pressure gas pricing.",
+    relatedMetrics: ["gas_pricing", "storage_levels"]
+  },
+  appalachia_supply: {
+    key: "appalachia_supply",
+    label: "Appalachia Basin Supply",
+    description: "Marketed natural gas production growth/decline specifically in Range's core Appalachian states (Pennsylvania, West Virginia, Ohio).",
+    potentialPositiveEffect: "Slowing Appalachian supply growth may ease regional competition for takeaway capacity and support realized basis.",
+    potentialNegativeEffect: "Accelerating Appalachian supply growth may increase regional competition for takeaway capacity and pressure realized basis.",
+    relatedMetrics: ["appalachian_takeaway", "realized_pricing"]
+  },
+  industrial_demand: {
+    key: "industrial_demand",
+    label: "Industrial Natural Gas Demand",
+    description: "Natural gas consumed by the U.S. industrial sector (manufacturing, chemicals, reshoring-linked demand).",
+    potentialPositiveEffect: "Growing industrial gas demand may tighten domestic balances and support gas pricing.",
+    potentialNegativeEffect: "Weakening industrial gas demand may loosen domestic balances and pressure gas pricing.",
+    relatedMetrics: ["gas_pricing"]
+  },
+  weather: {
+    key: "weather",
+    label: "Weather-Driven Demand",
+    description: "Heating and cooling degree days relative to normal, as a near-term driver of residential/commercial gas and power-sector gas demand.",
+    potentialPositiveEffect: "Colder-than-normal or hotter-than-normal weather may increase near-term gas demand and support prices.",
+    potentialNegativeEffect: "Milder-than-normal weather may reduce near-term gas demand and pressure prices.",
+    relatedMetrics: ["gas_pricing", "storage_levels"]
   }
 };
 

@@ -1,6 +1,15 @@
 import type { NewsCategory } from "@/lib/news/types";
-import type { ImpactDriverKey } from "@/lib/news/impact-framework";
-import { isImpactDriverKey } from "@/lib/news/impact-framework";
+import type { ImpactDriverKey } from "@/lib/range-impact-framework";
+import { NEWS_DRIVER_KEYS } from "@/lib/news/ai/relevant-drivers";
+
+/** Scoped to News's own fixed driver subset (see NEWS_DRIVER_KEYS) -- not the
+ * shared framework's generic isImpactDriverKey, which also accepts Macro-only
+ * keys (Phase 6) that News's AI provider is never shown and must never
+ * validate as if News could have selected them. */
+const NEWS_DRIVER_KEY_SET = new Set<string>(NEWS_DRIVER_KEYS);
+function isNewsImpactDriverKey(value: string): value is ImpactDriverKey {
+  return NEWS_DRIVER_KEY_SET.has(value);
+}
 
 export type RangeImpactDirection = "positive" | "negative" | "neutral";
 export type ImpactStrength = "low" | "medium" | "high";
@@ -103,7 +112,7 @@ export function validateAiAnalysisResult(value: unknown): AiAnalysisResult {
     throw new AiAnalysisValidationError("AI analysis affectedDrivers must be a non-empty array.");
   }
   for (const driver of record.affectedDrivers) {
-    if (typeof driver !== "string" || !isImpactDriverKey(driver)) {
+    if (typeof driver !== "string" || !isNewsImpactDriverKey(driver)) {
       throw new AiAnalysisValidationError(
         `AI analysis affectedDrivers contains an unrecognized driver "${String(driver)}" -- must be a key from the versioned impact framework, not an invented one.`
       );

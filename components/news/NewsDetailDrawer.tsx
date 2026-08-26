@@ -4,7 +4,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import type { NewsArticleDto } from "@/lib/news/client-types";
 import { categoryLabel, driverLabel, timeHorizonLabel } from "@/lib/news/client-types";
 import { rangeImpactTone } from "@/lib/news/article-display";
-import type { ImpactDriverKey } from "@/lib/news/impact-framework";
+import type { ImpactDriverKey } from "@/lib/range-impact-framework";
 
 /**
  * A self-contained drawer for News article detail, styled with the same

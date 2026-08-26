@@ -58,6 +58,12 @@ test("accepts multiple valid driver keys", () => {
   assert.deepEqual(result.affectedDrivers, ["appalachian_takeaway", "gas_pricing"]);
 });
 
+test("rejects a real Macro-only driver key from the shared framework (Phase 6) -- News's AI provider was never shown it and must never be able to select it", () => {
+  const { IMPACT_DRIVERS } = load("lib/range-impact-framework.ts");
+  assert.ok("us_gas_supply" in IMPACT_DRIVERS, "sanity check: this must be a real key in the shared framework, not a typo");
+  assert.throws(() => validateAiAnalysisResult(validMock({ affectedDrivers: ["us_gas_supply"] })), AiAnalysisValidationError);
+});
+
 test("rejects a confidence value outside [0, 1]", () => {
   assert.throws(() => validateAiAnalysisResult(validMock({ confidence: 1.5 })), AiAnalysisValidationError);
   assert.throws(() => validateAiAnalysisResult(validMock({ confidence: -0.1 })), AiAnalysisValidationError);

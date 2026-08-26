@@ -1,5 +1,5 @@
 import type { NewsCategory } from "@/lib/news/types";
-import { IMPACT_DRIVERS, type ImpactDriverKey } from "@/lib/news/impact-framework";
+import type { ImpactDriverKey } from "@/lib/range-impact-framework";
 
 /**
  * Narrows which framework drivers get sent to the model per article
@@ -18,11 +18,29 @@ const CATEGORY_DRIVER_MAP: Partial<Record<NewsCategory, ImpactDriverKey[]>> = {
   regulatory: ["regulation"]
 };
 
-const ALL_DRIVER_KEYS = Object.keys(IMPACT_DRIVERS) as ImpactDriverKey[];
+/**
+ * News's own fixed subset of the shared lib/range-impact-framework.ts
+ * taxonomy -- deliberately NOT `Object.keys(IMPACT_DRIVERS)`. That file also
+ * carries Macro-only driver keys (Phase 6); deriving this list from it
+ * directly would silently start sending Macro-only drivers to News's AI
+ * provider (and, via isImpactDriverKey in lib/news/ai/types.ts, accepting
+ * them back) the moment a new Macro key is added there. This explicit list
+ * is what News actually shipped before Phase 6 and must keep shipping.
+ */
+export const NEWS_DRIVER_KEYS: ImpactDriverKey[] = [
+  "gas_pricing",
+  "lng_demand",
+  "appalachian_takeaway",
+  "gas_rig_activity",
+  "storage_levels",
+  "power_data_center_demand",
+  "ngl_demand",
+  "regulation"
+];
 
 export function getRelevantDriverKeys(categories: NewsCategory[]): ImpactDriverKey[] {
   if (categories.includes("range") || categories.includes("peers")) {
-    return ALL_DRIVER_KEYS;
+    return NEWS_DRIVER_KEYS;
   }
 
   const relevant = new Set<ImpactDriverKey>();
@@ -32,5 +50,5 @@ export function getRelevantDriverKeys(categories: NewsCategory[]): ImpactDriverK
     }
   }
 
-  return relevant.size > 0 ? [...relevant] : ALL_DRIVER_KEYS;
+  return relevant.size > 0 ? [...relevant] : NEWS_DRIVER_KEYS;
 }

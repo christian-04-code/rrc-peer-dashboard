@@ -2,10 +2,21 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./helpers/ts-loader.cjs");
 
-const { getRelevantDriverKeys } = load("lib/news/ai/relevant-drivers.ts");
-const { IMPACT_DRIVERS } = load("lib/news/impact-framework.ts");
+const { getRelevantDriverKeys, NEWS_DRIVER_KEYS } = load("lib/news/ai/relevant-drivers.ts");
+const { IMPACT_DRIVERS } = load("lib/range-impact-framework.ts");
 
-const ALL_DRIVER_COUNT = Object.keys(IMPACT_DRIVERS).length;
+// News's full driver count is its own fixed subset (NEWS_DRIVER_KEYS), never
+// the shared framework's total key count -- lib/range-impact-framework.ts
+// (Phase 6) also carries Macro-only keys that News must never see or send.
+const ALL_DRIVER_COUNT = NEWS_DRIVER_KEYS.length;
+
+test("News's driver subset is exactly the original 8 keys -- Phase 6's Macro-only additions to the shared framework must never expand it", () => {
+  assert.deepEqual(
+    NEWS_DRIVER_KEYS.slice().sort(),
+    ["appalachian_takeaway", "gas_pricing", "gas_rig_activity", "lng_demand", "ngl_demand", "power_data_center_demand", "regulation", "storage_levels"]
+  );
+  assert.ok(Object.keys(IMPACT_DRIVERS).length > NEWS_DRIVER_KEYS.length, "sanity check: the shared framework must carry more keys than News uses, proving this test would catch scope creep");
+});
 
 test("a 'range' category gets the full driver framework, since company-specific news can implicate any driver", () => {
   const keys = getRelevantDriverKeys(["range"]);

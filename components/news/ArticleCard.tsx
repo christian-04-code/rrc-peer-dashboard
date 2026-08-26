@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { NewsArticleDto } from "@/lib/news/client-types";
 import { categoryLabel, driverLabel, timeHorizonLabel } from "@/lib/news/client-types";
 import { formatArticleDate, impactSymbol, rangeImpactTone, truncateText } from "@/lib/news/article-display";
-import type { ImpactDriverKey } from "@/lib/news/impact-framework";
+import type { ImpactDriverKey } from "@/lib/range-impact-framework";
 
 /** Roughly 1-2 lines at the card's font size/width -- a scan-level preview, not a second summary. */
 const EXCERPT_PREVIEW_LENGTH = 130;

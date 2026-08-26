@@ -3,7 +3,7 @@ import type { NewsAnalysisProvider } from "@/lib/news/ai/provider";
 import { NewsAnalysisProviderError } from "@/lib/news/ai/provider";
 import type { AiAnalysisResult, AnalysisInput } from "@/lib/news/ai/types";
 import { ANALYSIS_SCHEMA_VERSION, validateAiAnalysisResult } from "@/lib/news/ai/types";
-import { IMPACT_DRIVERS, IMPACT_FRAMEWORK_VERSION, getImpactDriver } from "@/lib/news/impact-framework";
+import { IMPACT_DRIVERS, IMPACT_FRAMEWORK_VERSION, getImpactDriver } from "@/lib/range-impact-framework";
 import { getRelevantDriverKeys } from "@/lib/news/ai/relevant-drivers";
 import { NEWS_ANALYSIS_MAX_OUTPUT_TOKENS, NEWS_ANALYSIS_MODEL } from "@/lib/news/ai/model-config";
 

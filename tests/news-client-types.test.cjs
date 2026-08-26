@@ -5,7 +5,7 @@ const { load } = require("./helpers/ts-loader.cjs");
 const { categoryLabel, driverLabel, timeHorizonLabel, NEWS_CATEGORY_FILTERS, IMPACT_FILTERS, IMPACT_STRENGTH_FILTERS } = load(
   "lib/news/client-types.ts"
 );
-const { IMPACT_DRIVERS } = load("lib/news/impact-framework.ts");
+const { IMPACT_DRIVERS } = load("lib/range-impact-framework.ts");
 const { NEWS_CATEGORIES } = load("lib/news/types.ts");
 
 test("categoryLabel has a human-readable label for every backend category, never raw snake_case", () => {
@@ -16,7 +16,7 @@ test("categoryLabel has a human-readable label for every backend category, never
   }
 });
 
-test("driverLabel reuses lib/news/impact-framework.ts as the single source of truth -- not a second independent list", () => {
+test("driverLabel reuses lib/range-impact-framework.ts as the single source of truth -- not a second independent list", () => {
   for (const key of Object.keys(IMPACT_DRIVERS)) {
     assert.equal(driverLabel(key), IMPACT_DRIVERS[key].label);
   }

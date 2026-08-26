@@ -1,6 +1,6 @@
 import type { NewsCategory, ProcessingStatus } from "@/lib/news/types";
 import type { RangeImpactDirection, ImpactStrength, TimeHorizon } from "@/lib/news/ai/types";
-import { IMPACT_DRIVERS, type ImpactDriverKey } from "@/lib/news/impact-framework";
+import { IMPACT_DRIVERS, type ImpactDriverKey } from "@/lib/range-impact-framework";
 
 /**
  * Client-facing article shape returned by GET /api/news. Deliberately a
@@ -97,7 +97,7 @@ export const IMPACT_STRENGTH_FILTERS: Array<{ value: ImpactStrength | "all"; lab
   { value: "high", label: "High" }
 ];
 
-/** Reuses the versioned impact-framework driver labels -- the single source of truth defined in lib/news/impact-framework.ts -- rather than a second, independent label list. */
+/** Reuses the versioned impact-framework driver labels -- the single source of truth defined in lib/range-impact-framework.ts -- rather than a second, independent label list. */
 export function driverLabel(driver: ImpactDriverKey): string {
   return IMPACT_DRIVERS[driver]?.label ?? driver;
 }
