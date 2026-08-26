@@ -44,6 +44,20 @@ export function formatArticleDate(iso: string | null): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/**
+ * Word-boundary-aware truncation for the collapsed card's short preview line
+ * (Phase 5.2: cards are collapsed by default; this is the "short takeaway"
+ * derived from the already-persisted excerpt, not a second AI-generated
+ * summary). Returns the input unchanged if it already fits.
+ */
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const cut = text.slice(0, maxLength);
+  const lastSpace = cut.lastIndexOf(" ");
+  const trimmed = lastSpace > maxLength * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${trimmed.trimEnd()}…`;
+}
+
 /** A text symbol, never color alone, so impact direction reads without relying on color perception. */
 export function impactSymbol(impact: RangeImpactDirection): string {
   if (impact === "positive") return "▲";

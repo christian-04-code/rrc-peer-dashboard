@@ -1,6 +1,7 @@
 "use client";
 
 import type { NewsStatusDto } from "@/lib/news/client-types";
+import { FeedInfoDisclosure } from "@/components/news/FeedInfoDisclosure";
 
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
@@ -24,7 +25,10 @@ export function DailyIntelligenceHeader({ status, loading }: { status: NewsStatu
     <section className="news-header panel" aria-label="Daily energy intelligence status">
       <div className="news-header-title">
         <h2>Daily Energy Intelligence</h2>
-        {status && status.available && <span className={`badge news-status-badge news-status-${status.status}`}>{statusLabel(status.status)}</span>}
+        <div className="news-header-title-controls">
+          <FeedInfoDisclosure />
+          {status && status.available && <span className={`badge news-status-badge news-status-${status.status}`}>{statusLabel(status.status)}</span>}
+        </div>
       </div>
 
       {loading ? (
