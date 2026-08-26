@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useMacroFundamentals } from "@/lib/market/use-macro-fundamentals";
 import { useMacroSteo } from "@/lib/market/use-macro-steo";
+import { useMacroRisk } from "@/lib/market/use-macro-risk";
 import type { CurrentMarketCommodityQuote, MarketObservation, NormalizedMarketMetric } from "@/lib/market/types";
 import type { SteoSeriesKey } from "@/lib/market/macro-steo-types";
+import type { RangeMacroSignalKey } from "@/lib/market/macro-risk-engine";
 import {
   buildAppalachiaProduction,
   buildMacroSnapshot,
-  buildRrcMacroRisk,
   buildStorageComparison,
   buildStorageProfile,
   classifyGasBalance,
@@ -18,6 +19,7 @@ import {
   formatMetricValue,
   formatPct,
   monthlyMmcfToBcfd,
+  monthlyYoy,
   periodChange,
   periodChangePct,
   shiftMonth,
@@ -32,6 +34,7 @@ import {
   StateProductionRanking
 } from "@/components/dashboard/MacroVisuals";
 import { EiaOutlookModule, type EiaOutlookMetricOption } from "@/components/dashboard/EiaOutlookModule";
+import { MacroRiskWidget } from "@/components/dashboard/MacroRiskWidget";
 
 const PULSE_IDS = ["henry_hub", "wti", "brent", "storage", "lng_exports", "dry_gas_production", "propane_stocks"];
 
@@ -46,6 +49,16 @@ const TOPICS: { id: Topic; label: string }[] = [
   { id: "eia-outlook", label: "EIA Outlook" },
   { id: "rigs", label: "Rigs" }
 ];
+
+const RISK_DRIVER_TOPIC: Record<RangeMacroSignalKey, Topic> = {
+  gas_pricing: "gas-balance",
+  storage_levels: "storage",
+  us_gas_supply: "supply",
+  appalachia_supply: "appalachia",
+  lng_demand: "lng",
+  power_data_center_demand: "demand",
+  industrial_demand: "demand"
+};
 
 function sourceShort(metric?: NormalizedMarketMetric): string {
   return metric?.seriesId ? `EIA · ${metric.seriesId}` : "U.S. EIA";
@@ -136,20 +149,11 @@ function observationLabel(period: string | null | undefined, frequency: "daily" 
   return frequency === "weekly" ? `Week ending ${formatted}` : formatted;
 }
 
-function monthlyYoy(history: MarketObservation[]): number | null {
-  const latest = history[0];
-  if (!latest || !/^\d{4}-\d{2}$/.test(latest.period)) return null;
-  const [year, month] = latest.period.split("-").map(Number);
-  const target = `${year - 1}-${String(month).padStart(2, "0")}`;
-  const prior = history.find((point) => point.period === target);
-  if (!prior || prior.value === 0) return null;
-  return ((latest.value - prior.value) / Math.abs(prior.value)) * 100;
-}
-
 export function MacroPanel() {
   const market = useMarketData();
   const fundamentals = useMacroFundamentals();
   const steo = useMacroSteo();
+  const macroRisk = useMacroRisk();
   const [topic, setTopic] = useState<Topic>("gas-balance");
   const metrics = market.data?.metrics ?? [];
   const byId = new Map(metrics.map((metric) => [metric.id, metric]));
@@ -173,10 +177,6 @@ export function MacroPanel() {
   const commercial = fundamentals.data?.demand.series.commercial;
   const appalachia = buildAppalachiaProduction(productionStates);
   const snapshot = buildMacroSnapshot(metrics, {
-    eastStoragePct: east?.fiveYearPct,
-    paProductionYoyPct: pa?.yearOverYearPct
-  });
-  const rrcRisk = buildRrcMacroRisk(metrics, {
     eastStoragePct: east?.fiveYearPct,
     paProductionYoyPct: pa?.yearOverYearPct
   });
@@ -315,10 +315,9 @@ export function MacroPanel() {
             <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(appalachia.yearOverYearPct)} /><Stat label="Month-over-month" value={formatPct(appalachia.monthOverMonthPct)} /></div>
             <p className="appalachia-label-note">States included: {appalachia.statesIncluded.length ? appalachia.statesIncluded.join(", ") : "none available"}. This is a state-level EIA aggregate, not an official Marcellus-play figure -- it is never labeled as "Marcellus production".</p>
           </div>
-          <div className="macro-rrc-grid polished">
-            <div className={`macro-rrc-callout ${rrcRisk.tone}`}><span className="rrc-macro-risk-label"><b>RRC</b> <em>Macro Risk</em></span><strong>{rrcRisk.title}</strong><p>{rrcRisk.explanation}</p><small>{rrcRisk.supportingMetrics}</small></div>
-            <div className="macro-regional-grid appalachia"><Stat label="East storage vs 5Y" value={formatPct(east?.fiveYearPct ?? null)} note={`${east?.current?.toFixed(0) ?? "--"} Bcf · ${observationLabel(east?.period, "weekly")}`} /><Stat label="PA production YoY" value={formatPct(pa?.yearOverYearPct ?? null)} note={`${pa?.current?.toFixed(0) ?? "--"} MMcf · ${observationLabel(pa?.period, "monthly")}`} /><Stat label="WV production YoY" value={formatPct(wv?.yearOverYearPct ?? null)} note={observationLabel(wv?.period, "monthly")} /><Stat label="OH production YoY" value={formatPct(oh?.yearOverYearPct ?? null)} note={observationLabel(oh?.period, "monthly")} /><Stat label="LNG exports YoY" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} note={observationLabel(lngMetric?.period, "monthly")} /><Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" /></div>
-          </div>
+          <div className="macro-regional-grid appalachia"><Stat label="East storage vs 5Y" value={formatPct(east?.fiveYearPct ?? null)} note={`${east?.current?.toFixed(0) ?? "--"} Bcf · ${observationLabel(east?.period, "weekly")}`} /><Stat label="PA production YoY" value={formatPct(pa?.yearOverYearPct ?? null)} note={`${pa?.current?.toFixed(0) ?? "--"} MMcf · ${observationLabel(pa?.period, "monthly")}`} /><Stat label="WV production YoY" value={formatPct(wv?.yearOverYearPct ?? null)} note={observationLabel(wv?.period, "monthly")} /><Stat label="OH production YoY" value={formatPct(oh?.yearOverYearPct ?? null)} note={observationLabel(oh?.period, "monthly")} /><Stat label="LNG exports YoY" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} note={observationLabel(lngMetric?.period, "monthly")} /><Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" /></div>
+
+          <MacroRiskWidget data={macroRisk.data} loading={macroRisk.loading} error={macroRisk.error} onViewDriver={(driver) => setTopic(RISK_DRIVER_TOPIC[driver])} />
         </section>
       ) : null}
 

@@ -21,7 +21,6 @@ function loadAnalytics() {
 
 const {
   buildMacroSnapshot,
-  buildRrcMacroRisk,
   buildStorageComparison,
   calculateFreshness,
   formatMetricValue,
@@ -129,50 +128,3 @@ test("unavailable metrics produce unavailable classifications rather than neutra
   assert.equal(result.find((item) => item.label === "NGL").state, "Unavailable");
 });
 
-test("RRC macro risk selects the highest-severity current adverse signal", () => {
-  const growingLng = Array.from({ length: 13 }, (_, index) => ({
-    period: `2026-${String(13 - index).padStart(2, "0")}`,
-    value: index === 0 ? 110 : index === 12 ? 100 : 105
-  }));
-  const risk = buildRrcMacroRisk([metric("lng_exports", "monthly", growingLng)], {
-    eastStoragePct: 6,
-    paProductionYoyPct: 12
-  });
-
-  assert.equal(risk.category, "appalachia-supply");
-  assert.equal(risk.tone, "negative");
-  assert.match(risk.title, /Appalachia supply growth/);
-  assert.match(risk.supportingMetrics, /\+12\.0%/);
-});
-
-test("RRC macro risk changes across storage, LNG, Henry Hub, and limited-risk fixtures", () => {
-  const contractingLng = Array.from({ length: 13 }, (_, index) => ({
-    period: `2026-${String(13 - index).padStart(2, "0")}`,
-    value: index === 0 ? 85 : index === 12 ? 100 : 95
-  }));
-  assert.equal(buildRrcMacroRisk([metric("lng_exports", "monthly", contractingLng)]).category, "lng-demand");
-  assert.equal(buildRrcMacroRisk([], { eastStoragePct: 8 }).category, "storage");
-
-  const fallingHenryHub = Array.from({ length: 31 }, (_, index) => ({
-    period: `2026-07-${String(31 - index).padStart(2, "0")}`,
-    value: index === 0 ? 2.7 : index === 30 ? 3.2 : 3
-  }));
-  assert.equal(buildRrcMacroRisk([metric("henry_hub", "daily", fallingHenryHub)]).category, "henry-hub");
-
-  const stableLng = Array.from({ length: 13 }, (_, index) => ({
-    period: `2026-${String(13 - index).padStart(2, "0")}`,
-    value: index === 0 ? 101 : index === 12 ? 100 : 100
-  }));
-  const limited = buildRrcMacroRisk([metric("lng_exports", "monthly", stableLng)], {
-    eastStoragePct: 3.7,
-    paProductionYoyPct: 0.6
-  });
-  assert.equal(limited.category, "limited");
-  assert.match(limited.supportingMetrics, /\+3\.7%.*\+0\.6%.*\+1\.0%/);
-});
-
-test("RRC macro risk reports unavailable instead of manufacturing a signal", () => {
-  const risk = buildRrcMacroRisk([]);
-  assert.equal(risk.category, "unavailable");
-  assert.equal(risk.tone, "neutral");
-});

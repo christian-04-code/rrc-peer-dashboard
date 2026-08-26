@@ -40,14 +40,6 @@ export type MacroSnapshotContext = {
   paProductionYoyPct?: number | null;
 };
 
-export type RrcMacroRisk = {
-  title: string;
-  explanation: string;
-  supportingMetrics: string;
-  tone: "negative" | "neutral";
-  category: "storage" | "appalachia-supply" | "lng-demand" | "henry-hub" | "limited" | "unavailable";
-};
-
 const DAY_MS = 86_400_000;
 const CURRENT_AGE_DAYS: Record<MarketFrequency, number> = {
   daily: 5,
@@ -271,6 +263,25 @@ export function buildAppalachiaProduction(states: Record<string, StateProduction
   };
 }
 
+/**
+ * Year-over-year change for a monthly MarketObservation history by exact
+ * calendar-month lookup (latest period's month, one year earlier) rather
+ * than a fixed index offset -- correct even if a month's observation is
+ * ever missing/reordered. Moved here from components/dashboard/MacroPanel.tsx
+ * (Phase 6D) so the Macro risk engine's orchestration layer can reuse the
+ * exact same calculation the Demand tab already displays, instead of a
+ * second, potentially-diverging implementation.
+ */
+export function monthlyYoy(history: MarketObservation[]): number | null {
+  const latest = history[0];
+  if (!latest || !/^\d{4}-\d{2}$/.test(latest.period)) return null;
+  const [year, month] = latest.period.split("-").map(Number);
+  const target = `${year - 1}-${String(month).padStart(2, "0")}`;
+  const prior = history.find((point) => point.period === target);
+  if (!prior || prior.value === 0) return null;
+  return ((latest.value - prior.value) / Math.abs(prior.value)) * 100;
+}
+
 export function periodChange(metric: NormalizedMarketMetric, periods = 1): number | null {
   const latest = metric.history[0];
   const prior = metric.history[periods];
@@ -376,77 +387,6 @@ export function buildMacroSnapshot(metrics: NormalizedMarketMetric[], context: M
       inputs: `Propane inventory four-week change: ${formatPct(propaneFourWeek)}.`
     }
   ];
-}
-
-export function buildRrcMacroRisk(metrics: NormalizedMarketMetric[], context: MacroSnapshotContext = {}): RrcMacroRisk {
-  const byId = new Map(metrics.map((metric) => [metric.id, metric]));
-  const lngMetric = byId.get("lng_exports");
-  const henryHubMetric = byId.get("henry_hub");
-  const eastStoragePct = context.eastStoragePct ?? null;
-  const paProductionYoyPct = context.paProductionYoyPct ?? null;
-  const lngExportsYoyPct = lngMetric ? periodChangePct(lngMetric, 12) : null;
-  const henryHubThirtyObservationPct = henryHubMetric ? periodChangePct(henryHubMetric, 30) : null;
-
-  const candidates = [
-    eastStoragePct !== null && eastStoragePct > 0 ? {
-      category: "storage" as const,
-      severity: eastStoragePct / 5,
-      title: "East storage surplus",
-      explanation: `East working gas is ${formatPct(eastStoragePct)} versus its same-week five-year average, signaling a looser regional balance that can pressure Appalachia gas realizations.`,
-      supportingMetrics: `East storage vs 5-year average: ${formatPct(eastStoragePct)}`
-    } : null,
-    paProductionYoyPct !== null && paProductionYoyPct > 0 ? {
-      category: "appalachia-supply" as const,
-      severity: paProductionYoyPct / 5,
-      title: "Appalachia supply growth",
-      explanation: `Pennsylvania marketed gas production is ${formatPct(paProductionYoyPct)} year over year, increasing regional supply competition for Range.`,
-      supportingMetrics: `PA marketed production YoY: ${formatPct(paProductionYoyPct)}`
-    } : null,
-    lngExportsYoyPct !== null && lngExportsYoyPct < 0 ? {
-      category: "lng-demand" as const,
-      severity: Math.abs(lngExportsYoyPct) / 5,
-      title: "LNG demand contraction",
-      explanation: `U.S. LNG exports are ${formatPct(lngExportsYoyPct)} year over year, reducing a key source of structural natural-gas demand.`,
-      supportingMetrics: `LNG exports YoY: ${formatPct(lngExportsYoyPct)}`
-    } : null,
-    henryHubThirtyObservationPct !== null && henryHubThirtyObservationPct < 0 ? {
-      category: "henry-hub" as const,
-      severity: Math.abs(henryHubThirtyObservationPct) / 10,
-      title: "Weakening Henry Hub momentum",
-      explanation: `Henry Hub is ${formatPct(henryHubThirtyObservationPct)} over the latest 30 daily observations, indicating near-term benchmark price pressure.`,
-      supportingMetrics: `Henry Hub 30-observation change: ${formatPct(henryHubThirtyObservationPct)}`
-    } : null
-  ].filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
-
-  const highestSeverity = candidates.sort((a, b) => b.severity - a.severity)[0];
-  if (highestSeverity && highestSeverity.severity >= 1) {
-    return { ...highestSeverity, tone: "negative" };
-  }
-
-  const availableInputs = [
-    eastStoragePct === null ? null : `East storage vs 5-year average: ${formatPct(eastStoragePct)}`,
-    paProductionYoyPct === null ? null : `PA marketed production YoY: ${formatPct(paProductionYoyPct)}`,
-    lngExportsYoyPct === null ? null : `LNG exports YoY: ${formatPct(lngExportsYoyPct)}`,
-    henryHubThirtyObservationPct === null ? null : `Henry Hub 30-observation change: ${formatPct(henryHubThirtyObservationPct)}`
-  ].filter((input): input is string => input !== null);
-
-  if (!availableInputs.length) {
-    return {
-      category: "unavailable",
-      tone: "neutral",
-      title: "Macro risk unavailable",
-      explanation: "Current Macro data does not provide enough supported inputs to identify an RRC-specific adverse signal.",
-      supportingMetrics: "No supported risk inputs available"
-    };
-  }
-
-  return {
-    category: "limited",
-    tone: "neutral",
-    title: "Limited current macro risk",
-    explanation: "No monitored adverse signal exceeds its materiality threshold in the latest available Macro data.",
-    supportingMetrics: availableInputs.join(" · ")
-  };
 }
 
 export function formatPct(value: number | null): string {

@@ -355,6 +355,33 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .eia-outlook-revision-row:last-child { border-bottom: 0; }
 .eia-outlook-revision-row small { color: var(--muted); }
 .appalachia-label-note { color: var(--muted); font-size: 10px; margin: 4px 0 0; }
+
+.macro-risk-widget { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; margin-top: 12px; display: grid; gap: 12px; }
+.macro-risk-list { display: grid; gap: 8px; }
+.macro-risk-item { border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; padding: 9px 11px; display: grid; gap: 5px; background: rgba(6,17,31,.4); }
+.macro-risk-item.high-risk { border-left-color: var(--negative); }
+.macro-risk-item.moderate-risk { border-left-color: #e5ad63; }
+.macro-risk-item.watch { border-left-color: var(--muted); }
+.macro-risk-item.supportive { border-left-color: var(--positive); }
+.macro-risk-item-head { display: flex; align-items: center; gap: 8px; }
+.macro-risk-rank { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--border); font-size: 10px; font-weight: 700; flex: 0 0 auto; }
+.macro-risk-item-head strong { font-size: 13px; flex: 1; }
+.macro-risk-badge { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); }
+.macro-risk-badge.high-risk { color: var(--negative); border-color: var(--negative); }
+.macro-risk-badge.moderate-risk { color: #e5ad63; border-color: #e5ad63; }
+.macro-risk-badge.watch { color: var(--muted); border-color: var(--border); }
+.macro-risk-badge.supportive { color: var(--positive); border-color: var(--positive); }
+.macro-risk-item-metrics { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 10px; color: var(--muted); }
+.macro-risk-item-metrics b { color: var(--text); }
+.macro-risk-item p { margin: 0; font-size: 11px; color: var(--text); line-height: 1.5; }
+.macro-risk-view { justify-self: start; border: 0; background: transparent; color: var(--accent); font-size: 10px; font-weight: 700; padding: 0; cursor: pointer; }
+.macro-risk-changes { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 4px; }
+.macro-risk-changes > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.macro-risk-changes ul { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text); }
+.macro-ai-summary { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 6px; }
+.macro-ai-summary > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.macro-ai-summary p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text); }
+.macro-ai-summary small { color: var(--muted); font-size: 9px; }
 .macro-segmented button, .macro-map-detail button { border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 5px 8px; font-size: 10px; }
 .macro-segmented button.active { color: #04111d; background: var(--accent); }
 .macro-segmented.secondary { padding: 2px; }

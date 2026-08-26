@@ -150,8 +150,10 @@ test("Macro renders the required evidence chart datasets, organized into the Pha
   assert.ok(gasBalanceTabStart < macroSnapshotIndex && macroSnapshotIndex < storageTabStart, "Macro Snapshot must render inside the first (gas-balance) topic tab");
   assert.match(source, /Sources: U\.S\. EIA · OilPriceAPI/);
   assert.match(source, /Week ending/);
-  assert.match(source, /buildRrcMacroRisk/);
-  assert.match(source, /rrcRisk\.title/);
+  // Phase 6D replaced the single-signal buildRrcMacroRisk callout with the
+  // deterministic multi-signal MacroRiskWidget (lib/market/macro-risk-engine.ts).
+  assert.match(source, /<MacroRiskWidget/);
+  assert.doesNotMatch(source, /buildRrcMacroRisk/, "the superseded single-signal risk function must not be reintroduced");
   assert.doesNotMatch(source, /RRC ENERGY FUNDAMENTALS|02 · WEEKLY CENTERPIECE|OVERALL RRC MACRO SETUP/);
 });
 

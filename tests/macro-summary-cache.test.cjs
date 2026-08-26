@@ -108,3 +108,37 @@ test("two different fingerprints (different underlying signals) cache independen
   assert.equal((await getCachedMacroSummary(pool, fingerprintA)).summary, "Summary A.");
   assert.equal((await getCachedMacroSummary(pool, fingerprintB)).summary, "Summary B.");
 });
+
+test("getLatestMacroSummary returns null when no summary has ever been saved", { skip }, async () => {
+  const { getLatestMacroSummary } = load("lib/market/persistence/summary-repo.ts");
+  assert.equal(await getLatestMacroSummary(pool), null);
+});
+
+test("getLatestMacroSummary returns the most recently generated summary regardless of fingerprint -- the Section 17 stale-fallback source", { skip }, async () => {
+  const { saveMacroSummary, getLatestMacroSummary } = load("lib/market/persistence/summary-repo.ts");
+  const fingerprintA = computeMacroSummaryFingerprint({ henryHub: 3.5 });
+  const fingerprintB = computeMacroSummaryFingerprint({ henryHub: 4.0 });
+  await saveMacroSummary(pool, summaryRecord(fingerprintA, { summary: "Older summary.", generatedAt: "2026-08-10T12:00:00.000Z" }));
+  await saveMacroSummary(pool, summaryRecord(fingerprintB, { summary: "Newer summary.", generatedAt: "2026-08-20T12:00:00.000Z" }));
+
+  const latest = await getLatestMacroSummary(pool);
+  assert.equal(latest.summary, "Newer summary.");
+});
+
+test("getPreviousMacroSummary returns null (never a fabricated placeholder) until at least two distinct snapshots exist", { skip }, async () => {
+  const { saveMacroSummary, getPreviousMacroSummary } = load("lib/market/persistence/summary-repo.ts");
+  const fingerprintA = computeMacroSummaryFingerprint({ henryHub: 3.5 });
+  await saveMacroSummary(pool, summaryRecord(fingerprintA, { summary: "Only summary." }));
+  assert.equal(await getPreviousMacroSummary(pool, fingerprintA), null);
+});
+
+test("getPreviousMacroSummary returns the most recent summary strictly before the excluded fingerprint -- real persisted history, the 'what changed' comparison source", { skip }, async () => {
+  const { saveMacroSummary, getPreviousMacroSummary } = load("lib/market/persistence/summary-repo.ts");
+  const fingerprintA = computeMacroSummaryFingerprint({ henryHub: 3.5 });
+  const fingerprintB = computeMacroSummaryFingerprint({ henryHub: 4.0 });
+  await saveMacroSummary(pool, summaryRecord(fingerprintA, { summary: "First snapshot.", generatedAt: "2026-08-10T12:00:00.000Z" }));
+  await saveMacroSummary(pool, summaryRecord(fingerprintB, { summary: "Second snapshot.", generatedAt: "2026-08-20T12:00:00.000Z" }));
+
+  const previous = await getPreviousMacroSummary(pool, fingerprintB);
+  assert.equal(previous.summary, "First snapshot.");
+});

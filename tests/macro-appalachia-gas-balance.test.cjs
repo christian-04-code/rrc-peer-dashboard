@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./helpers/ts-loader.cjs");
 
-const { buildAppalachiaProduction, classifyGasBalance, filterToForecastHorizon, toBcfdSeries } = load("lib/market/macro-analytics.ts");
+const { buildAppalachiaProduction, classifyGasBalance, filterToForecastHorizon, monthlyYoy, toBcfdSeries } = load("lib/market/macro-analytics.ts");
 
 function stateMetric(history) {
   return {
@@ -109,6 +109,20 @@ test("filterToForecastHorizon drops EIA STEO's own historical tail, keeping only
   const points = [{ period: "2009-07", value: 1 }, { period: "2026-05", value: 2 }, { period: "2026-06", value: 3 }, { period: "2027-12", value: 4 }];
   const result = filterToForecastHorizon(points, "2026-06");
   assert.deepEqual(result.map((point) => point.period), ["2026-06", "2027-12"]);
+});
+
+test("monthlyYoy looks up the exact same calendar month one year earlier, not a fixed 12-index offset", () => {
+  const history = [
+    { period: "2026-06", value: 120 },
+    { period: "2026-05", value: 110 },
+    { period: "2025-06", value: 100 }
+  ];
+  assert.equal(monthlyYoy(history).toFixed(2), "20.00");
+});
+
+test("monthlyYoy returns null when the same month one year earlier is missing, never estimates from a nearby month", () => {
+  const history = [{ period: "2026-06", value: 120 }, { period: "2025-05", value: 90 }];
+  assert.equal(monthlyYoy(history), null);
 });
 
 test("filterToForecastHorizon returns the series unfiltered when no boundary is available, rather than dropping everything", () => {

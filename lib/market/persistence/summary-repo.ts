@@ -68,6 +68,38 @@ export async function getCachedMacroSummary(pool: Pool, inputFingerprint: string
 }
 
 /**
+ * The most recently generated summary regardless of fingerprint -- used to
+ * serve a clearly-labeled "as of an older snapshot" fallback (Section 17)
+ * when the current data's fingerprint has no cached row yet (the cron
+ * hasn't run since the underlying data last changed), instead of showing
+ * nothing or silently presenting stale commentary as current.
+ */
+export async function getLatestMacroSummary(pool: Pool): Promise<MacroRiskSummaryRecord | null> {
+  const result = await pool.query(
+    `SELECT input_fingerprint, summary, risk_signals, ai_provider, ai_model, schema_version, generated_at
+     FROM macro_risk_summaries ORDER BY generated_at DESC LIMIT 1`
+  );
+  const row = result.rows[0] as MacroRiskSummaryRow | undefined;
+  return row ? mapRow(row) : null;
+}
+
+/**
+ * The most recent summary strictly before a given fingerprint's row (by
+ * generated_at) -- the "prior snapshot" the AI is given as change-detection
+ * context (Section 20). Real persisted history only; returns null (never a
+ * fabricated placeholder) until at least two distinct snapshots exist.
+ */
+export async function getPreviousMacroSummary(pool: Pool, excludeFingerprint: string): Promise<MacroRiskSummaryRecord | null> {
+  const result = await pool.query(
+    `SELECT input_fingerprint, summary, risk_signals, ai_provider, ai_model, schema_version, generated_at
+     FROM macro_risk_summaries WHERE input_fingerprint != $1 ORDER BY generated_at DESC LIMIT 1`,
+    [excludeFingerprint]
+  );
+  const row = result.rows[0] as MacroRiskSummaryRow | undefined;
+  return row ? mapRow(row) : null;
+}
+
+/**
  * `ON CONFLICT DO NOTHING` on the fingerprint means a race between two
  * concurrent callers computing the same unchanged snapshot never produces
  * two AI calls' worth of duplicate rows -- the second write is just a
