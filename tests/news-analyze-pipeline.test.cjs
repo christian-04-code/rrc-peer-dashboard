@@ -240,6 +240,45 @@ test("AI run accounting persists onto the pipeline_runs row when pipelineRunId i
   assert.equal(runRow.ai_analyses_completed, 1);
 });
 
+test("scopeArticlesToRun: false (Phase 5 scheduled orchestration) picks up a retained article left over from a different, earlier pipeline run", { skip }, async () => {
+  const { analyzeEligibleArticles } = load("lib/news/pipeline/analyze.ts");
+  const { runId: staleRunId, articleId: staleArticleId } = await insertRunAndArticle("retained", { url: "https://example.com/stale-retained-from-earlier-run" });
+  const { runId: currentRunId } = await insertRunAndArticle("retained", {
+    url: "https://example.com/current-run-article",
+    headline: "EQT Corporation announces pipeline expansion"
+  });
+  assert.notEqual(staleRunId, currentRunId);
+
+  // A scoped call (the manual-validation default) must not see the stale article.
+  const scoped = await analyzeEligibleArticles(pool, alwaysSucceedsProvider({}), { maxArticles: 5, pipelineRunId: currentRunId });
+  assert.equal(scoped.eligibleFound, 1, "scoped analysis must only see the current run's own article");
+
+  // An unscoped call (Phase 5) must still find the stale article left in
+  // 'retained' by the earlier run, since no future run's own runId would
+  // ever match it under the old scoped-only behavior.
+  const unscoped = await analyzeEligibleArticles(pool, alwaysSucceedsProvider({}), {
+    maxArticles: 5,
+    pipelineRunId: currentRunId,
+    scopeArticlesToRun: false
+  });
+  assert.ok(
+    unscoped.results.some((r) => r.articleId === staleArticleId),
+    "the stale retained article from an earlier run must be eligible when scopeArticlesToRun is false"
+  );
+});
+
+test("scopeArticlesToRun: false still writes AI accounting onto the current run's pipeline_runs row (accounting and article scope are independent)", { skip }, async () => {
+  const { analyzeEligibleArticles } = load("lib/news/pipeline/analyze.ts");
+  const { getPipelineRun } = load("lib/news/persistence/pipeline-runs-repo.ts");
+  const { runId: currentRunId } = await insertRunAndArticle("retained", { url: "https://example.com/unscoped-accounting" });
+
+  await analyzeEligibleArticles(pool, alwaysSucceedsProvider({}), { maxArticles: 5, pipelineRunId: currentRunId, scopeArticlesToRun: false });
+
+  const runRow = await getPipelineRun(pool, currentRunId);
+  assert.equal(runRow.ai_analyses_attempted, 1);
+  assert.equal(runRow.ai_analyses_completed, 1);
+});
+
 test("saveArticleAnalysis is a no-op if the article's status is no longer 'retained' -- idempotency enforced at the write, not just the earlier read", { skip }, async () => {
   const { saveArticleAnalysis, queryArticles } = load("lib/news/persistence/articles-repo.ts");
   const { articleId } = await insertRunAndArticle("analyzed", { url: "https://example.com/already-analyzed-guard" });

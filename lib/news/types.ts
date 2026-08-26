@@ -141,6 +141,7 @@ export type PipelineRunSummary = {
   articlesRetained: number;
   aiAnalysesAttempted: number;
   aiAnalysesCompleted: number;
+  aiAnalysesFailed: number;
   errors: string[];
   durationMs: number | null;
 };

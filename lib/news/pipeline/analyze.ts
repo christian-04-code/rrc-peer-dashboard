@@ -33,8 +33,20 @@ export type AnalysisRunSummary = {
 export type AnalyzeOptions = {
   /** Upper bound on how many eligible articles to analyze this call. Always additionally clamped to PIPELINE_CONFIG.maxAiAnalysesPerRun. */
   maxArticles: number;
-  /** Scopes candidate selection to one collection run, so a validation call analyzes exactly the articles it just collected -- not whatever else is sitting in the retained pool from earlier runs. Omit to fall back to the global retained pool within the lookback window. */
+  /** The pipeline_runs row AI accounting (attempted/completed/failed) is written back onto, when provided. */
   pipelineRunId?: string;
+  /**
+   * When true (the default -- preserves the Phase 3 manual-validation
+   * endpoint's behavior), candidate selection is also scoped to
+   * pipelineRunId, so a call analyzes exactly the articles it just
+   * collected. Set to false for the Phase 5 scheduled orchestration: any
+   * retained-and-unanalyzed article within the lookback window is eligible,
+   * regardless of which run collected it, so an article a previous
+   * (partially-completed, or AI-stage-skipped) daily run left in 'retained'
+   * is picked up by the next run instead of being permanently stranded --
+   * a later run's own new pipeline_run_id would otherwise never match it.
+   */
+  scopeArticlesToRun?: boolean;
 };
 
 /** Known, safe-to-surface error types get their real (truncated) message; anything else is reduced to its error name only, since an unexpected error's message is not guaranteed to be free of request/response content. */
@@ -64,7 +76,12 @@ export async function analyzeEligibleArticles(
   const cap = Math.max(0, Math.min(options.maxArticles, PIPELINE_CONFIG.maxAiAnalysesPerRun));
   const sinceIso = new Date(Date.now() - PIPELINE_CONFIG.lookbackHours * 60 * 60 * 1000).toISOString();
 
-  const eligible = await getRetainedUnanalyzedArticles(pool, { limit: cap, sinceIso, pipelineRunId: options.pipelineRunId });
+  const scopeToRun = options.scopeArticlesToRun ?? true;
+  const eligible = await getRetainedUnanalyzedArticles(pool, {
+    limit: cap,
+    sinceIso,
+    pipelineRunId: scopeToRun ? options.pipelineRunId : undefined
+  });
 
   const summary: AnalysisRunSummary = {
     eligibleFound: eligible.length,
@@ -102,7 +119,7 @@ export async function analyzeEligibleArticles(
   }
 
   if (options.pipelineRunId) {
-    await recordPipelineRunAiCounts(pool, options.pipelineRunId, summary.attempted, summary.completed).catch(() => undefined);
+    await recordPipelineRunAiCounts(pool, options.pipelineRunId, summary.attempted, summary.completed, summary.failed).catch(() => undefined);
   }
 
   return summary;

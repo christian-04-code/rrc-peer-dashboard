@@ -92,3 +92,7 @@ ALTER TABLE articles DROP CONSTRAINT IF EXISTS articles_time_horizon_check;
 ALTER TABLE articles ADD CONSTRAINT articles_time_horizon_check CHECK (
   time_horizon IS NULL OR time_horizon IN ('near_term', 'medium_term', 'long_term', 'multi_horizon')
 );
+
+-- Phase 5 addition: explicit failed-analysis accounting on the run row,
+-- alongside the pre-existing attempted/completed counts.
+ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS ai_analyses_failed INTEGER NOT NULL DEFAULT 0;

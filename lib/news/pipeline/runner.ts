@@ -158,6 +158,7 @@ export async function runNewsPipeline(options: RunPipelineOptions = {}): Promise
       articlesRetained: retainedArticles.length,
       aiAnalysesAttempted: 0,
       aiAnalysesCompleted: 0,
+      aiAnalysesFailed: 0,
       errors,
       completedAt
     };
@@ -200,6 +201,7 @@ export async function runNewsPipeline(options: RunPipelineOptions = {}): Promise
       articlesRetained: 0,
       aiAnalysesAttempted: 0,
       aiAnalysesCompleted: 0,
+      aiAnalysesFailed: 0,
       errors: [...errors, message],
       retainedArticles: [],
       rejectedArticles: []

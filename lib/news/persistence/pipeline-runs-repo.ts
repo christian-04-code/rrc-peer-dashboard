@@ -28,7 +28,8 @@ export async function completePipelineRun(
       articles_retained = $10,
       ai_analyses_attempted = $11,
       ai_analyses_completed = $12,
-      errors = $13
+      ai_analyses_failed = $13,
+      errors = $14
     WHERE id = $1`,
     [
       runId,
@@ -43,21 +44,25 @@ export async function completePipelineRun(
       summary.articlesRetained,
       summary.aiAnalysesAttempted,
       summary.aiAnalysesCompleted,
+      // Defaults to 0 for any pre-Phase-5 caller that doesn't pass this
+      // field -- additive, never a breaking change to completePipelineRun's contract.
+      summary.aiAnalysesFailed ?? 0,
       JSON.stringify(summary.errors)
     ]
   );
 }
 
-/** Phase 3: update AI accounting after the bounded analysis step finishes. */
+/** Phase 3: update AI accounting after the bounded analysis step finishes. Phase 5 added the failed count alongside attempted/completed. */
 export async function recordPipelineRunAiCounts(
   pool: Pool,
   runId: string,
   attempted: number,
-  completed: number
+  completed: number,
+  failed: number = 0
 ): Promise<void> {
   await pool.query(
-    `UPDATE pipeline_runs SET ai_analyses_attempted = $2, ai_analyses_completed = $3 WHERE id = $1`,
-    [runId, attempted, completed]
+    `UPDATE pipeline_runs SET ai_analyses_attempted = $2, ai_analyses_completed = $3, ai_analyses_failed = $4 WHERE id = $1`,
+    [runId, attempted, completed, failed]
   );
 }
 
