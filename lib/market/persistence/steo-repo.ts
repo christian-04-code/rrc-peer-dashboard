@@ -72,3 +72,4 @@ export async function getCurrentAndPreviousSteoSnapshot(
   const [current, previous] = await getLatestSteoSnapshots(pool, seriesId, 2);
   return { current: current ?? null, previous: previous ?? null };
 }
+

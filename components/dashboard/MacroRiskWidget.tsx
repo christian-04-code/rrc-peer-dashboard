@@ -2,6 +2,7 @@
 
 import type { MacroRiskResponse } from "@/app/api/macro/risk/route";
 import type { RangeMacroSignalKey, RangeMacroSignalState } from "@/lib/market/macro-risk-engine";
+import { formatDataDate, formatRefreshTimestamp } from "@/lib/market/format-dates";
 
 const STATE_LABELS: Record<RangeMacroSignalState, string> = {
   HIGH_RISK: "High Risk",
@@ -33,6 +34,7 @@ export function MacroRiskWidget({
     <div className="macro-risk-widget">
       <div className="macro-card-title">
         <div><h3>Biggest Risks &amp; Opportunities to Range Resources</h3><span>{data.allSignalsEvaluated} of 7 tracked drivers evaluated this run · deterministic ranking, AI explains only</span></div>
+        <span className="macro-risk-snapshot-date">Macro snapshot: {formatDataDate(data.snapshotAsOf)}</span>
       </div>
 
       <div className="macro-risk-list">
@@ -74,7 +76,7 @@ export function MacroRiskWidget({
             <p>{data.aiSummary.summary}</p>
             <small>
               {data.aiSummaryStatus === "stale" ? "Based on a prior data snapshot -- newer data is available and a refreshed summary will follow on the next scheduled run. " : ""}
-              Generated {new Date(data.aiSummary.generatedAt).toLocaleString()} · {data.aiSummary.aiModel}
+              Based on Macro snapshot {formatDataDate(data.aiSummary.snapshotAsOf)} · Generated {formatRefreshTimestamp(data.aiSummary.generatedAt)} · {data.aiSummary.aiModel}
             </small>
           </>
         ) : data.aiSummaryStatus === "pending" ? (

@@ -23,10 +23,30 @@ function eiaResponse(rows) {
   return new Response(JSON.stringify({ response: { data: rows } }), { status: 200, headers: { "content-type": "application/json" } });
 }
 
+/**
+ * Every fixture below was originally anchored to a fixed "today" of
+ * 2026-08-25 (chosen so the freshness-gated inputs -- daily Henry Hub,
+ * weekly storage -- land safely inside their "current" window). Real time
+ * keeps moving in this sandbox, though, and a hardcoded date silently ages
+ * past calculateFreshness()'s current/lagged/stale thresholds (this exact
+ * failure was caught live: the weekly storage fixture aged from "lagged"
+ * into "stale" a couple of real days after this suite was written,
+ * flipping storage_levels to UNAVAILABLE with no code change at all).
+ * DAY_SHIFT keeps every fixture's *latest* point pinned to "today" while
+ * preserving the exact day-offsets between all the other points in each
+ * fixture (critical for fiveYearStorageRows, whose offsets were hand-tuned
+ * to land on the same ISO week every year) -- shifting everything by the
+ * same constant preserves that alignment exactly.
+ */
+const DAY_SHIFT = Math.round((Date.now() - Date.UTC(2026, 7, 25)) / 86_400_000);
+function shiftedDate(utcMs) {
+  return new Date(utcMs + DAY_SHIFT * 86_400_000);
+}
+
 function monthlySeries(seriesId, startValue, months = 24) {
   const rows = [];
   for (let i = 0; i < months; i += 1) {
-    const date = new Date(Date.UTC(2026, 5 - i, 1));
+    const date = shiftedDate(Date.UTC(2026, 5 - i, 1));
     const period = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
     rows.push({ period, value: startValue + i * 3, series: seriesId });
   }
@@ -36,7 +56,7 @@ function monthlySeries(seriesId, startValue, months = 24) {
 function dailySeries(seriesId, startValue, days = 60) {
   const rows = [];
   for (let i = 0; i < days; i += 1) {
-    const date = new Date(Date.UTC(2026, 7, 25 - i));
+    const date = shiftedDate(Date.UTC(2026, 7, 25 - i));
     const period = date.toISOString().slice(0, 10);
     rows.push({ period, value: startValue - i * 0.01, series: seriesId });
   }
@@ -46,7 +66,7 @@ function dailySeries(seriesId, startValue, days = 60) {
 function weeklySeries(seriesId, startValue, weeks = 60) {
   const rows = [];
   for (let i = 0; i < weeks; i += 1) {
-    const date = new Date(Date.UTC(2026, 7, 14 - i * 7));
+    const date = shiftedDate(Date.UTC(2026, 7, 14 - i * 7));
     const period = date.toISOString().slice(0, 10);
     rows.push({ period, value: startValue - i * 5, series: seriesId });
   }
@@ -57,21 +77,22 @@ function weeklySeries(seriesId, startValue, weeks = 60) {
  * buildStorageComparison needs a real same-ISO-week observation from each of
  * the prior 5 years to compute a five-year average -- a generic N-weeks-back
  * loop doesn't reliably land on the same ISO week every year. Mirrors the
- * proven fixture in tests/macro-analytics.test.cjs exactly (dates chosen so
- * isoWeek() lines up across all 5 prior years), just with a distinct value
- * per row so this suite can verify a real (non-fixture) storage_levels
- * pressurePct comes out the other end.
+ * proven fixture in tests/macro-analytics.test.cjs (dates chosen so
+ * isoWeek() lines up across all 5 prior years), shifted by DAY_SHIFT so the
+ * latest point stays inside the weekly "current" freshness window no matter
+ * when this suite actually runs -- see the DAY_SHIFT comment above.
  */
 function fiveYearStorageRows(seriesId) {
-  return [
-    { period: "2026-08-07", value: 950, series: seriesId },
-    { period: "2026-07-31", value: 925, series: seriesId },
-    { period: "2025-08-08", value: 1000, series: seriesId },
-    { period: "2024-08-09", value: 1000, series: seriesId },
-    { period: "2023-08-11", value: 1000, series: seriesId },
-    { period: "2022-08-12", value: 1000, series: seriesId },
-    { period: "2021-08-13", value: 1000, series: seriesId }
+  const base = [
+    ["2026-08-07", 950],
+    ["2026-07-31", 925],
+    ["2025-08-08", 1000],
+    ["2024-08-09", 1000],
+    ["2023-08-11", 1000],
+    ["2022-08-12", 1000],
+    ["2021-08-13", 1000]
   ];
+  return base.map(([period, value]) => ({ period: shiftedDate(Date.parse(`${period}T00:00:00Z`)).toISOString().slice(0, 10), value, series: seriesId }));
 }
 
 function stateProductionRows() {
@@ -79,7 +100,7 @@ function stateProductionRows() {
   const rows = [];
   for (const state of states) {
     for (let i = 0; i < 24; i += 1) {
-      const date = new Date(Date.UTC(2026, 4 - i, 1));
+      const date = shiftedDate(Date.UTC(2026, 4 - i, 1));
       const period = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
       rows.push({ period, value: state.base + i * 500, "area-name": state.name });
     }
@@ -102,7 +123,7 @@ function steoRows() {
   const rows = [];
   for (const [seriesId, label] of Object.entries(series)) {
     for (let i = -2; i < 20; i += 1) {
-      const date = new Date(Date.UTC(2026, 5 + i, 1));
+      const date = shiftedDate(Date.UTC(2026, 5 + i, 1));
       const period = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
       rows.push({ period, value: 10 + i, seriesId, seriesDescription: label, unit: "billion cubic feet per day" });
     }

@@ -5,6 +5,8 @@ import type { MarketFrequency, MarketObservation } from "@/lib/market/types";
 import type { MacroSteoResponse } from "@/app/api/macro/steo/route";
 import type { SteoSeriesKey } from "@/lib/market/macro-steo-types";
 import { filterToForecastHorizon, formatDelta, formatPct } from "@/lib/market/macro-analytics";
+import { snapshotMonthFrom } from "@/lib/market/macro-steo";
+import { formatDataDate } from "@/lib/market/format-dates";
 import { ChartSeries, HistoricalLineChart } from "@/components/dashboard/MacroVisuals";
 
 export type EiaOutlookMetricOption = {
@@ -67,6 +69,7 @@ export function EiaOutlookModule({
 
       <div className="macro-card-title">
         <div><h3>{series.label}</h3><span>EIA Short-Term Energy Outlook · Monthly · {active.actual ? `${active.actual.frequency} actual + ` : ""}forecast</span></div>
+        <span className="macro-source-accent">STEO {formatDataDate(snapshotMonthFrom(series.fetchedAt))}</span>
       </div>
 
       <HistoricalLineChart

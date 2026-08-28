@@ -6,6 +6,7 @@ import { buildMacroRiskSnapshot } from "@/lib/market/macro-risk-orchestrate";
 import { generateMacroSummaryIfNeeded, macroSummarySafeErrorMessage } from "@/lib/market/macro-summary-service";
 import { AnthropicMacroSummaryProvider } from "@/lib/market/ai/anthropic-provider";
 import type { MacroSummaryProvider } from "@/lib/market/ai/provider";
+import { recordOrchestrationRun } from "@/lib/market/persistence/orchestration-repo";
 
 /**
  * Same fixed-advisory-lock guard lib/news/pipeline/orchestrate.ts uses,
@@ -91,6 +92,13 @@ export async function runMacroDailyOrchestration(options: { provider?: MacroSumm
         aiSkippedReason = `AI summary generation did not complete: ${macroSummarySafeErrorMessage(error)}`;
       }
     }
+
+    // Recorded only on this success path -- an exception anywhere above
+    // (migrations, the STEO fetch itself failing outright, etc.) skips this
+    // and correctly leaves "last successful run" unadvanced. This is the
+    // ONLY place anything ever writes to macro_orchestration_runs -- see its
+    // schema.sql comment for why it must stay genuinely cron-exclusive.
+    await recordOrchestrationRun(pool, { steoRefreshed: steoResult.succeeded, steoFailed: steoResult.failed, aiSummaryGenerated: aiGenerated });
 
     return {
       concurrentRunSkipped: false,

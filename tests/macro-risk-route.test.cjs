@@ -106,4 +106,53 @@ test("aiSummaryStatus is 'stale' (never silently 'ready') when a prior summary e
   assert.equal(body.aiSummaryStatus, "stale");
   assert.equal(body.aiSummary.current, false);
   assert.equal(body.aiSummary.summary, "An old cached summary from a prior data snapshot.");
+  assert.equal(body.aiSummary.snapshotAsOf, "2020-01-01", "the summary's own persisted data-period, not its generation time, must be exposed");
+});
+
+test("lastOrchestrationAt is null (never a fabricated/current timestamp) before any Macro cron run has ever completed", { skip }, async () => {
+  delete process.env.EIA_API_KEY;
+  const path = require("node:path");
+  const { pathToFileURL } = require("node:url");
+  const { runMigrations } = await import(pathToFileURL(path.resolve(__dirname, "../scripts/macro/migrate.mjs")).href);
+  await runMigrations();
+  const { getPool } = load("lib/persistence/db.ts");
+  const pool = getPool();
+  await pool.query("TRUNCATE macro_steo_snapshots, macro_risk_summaries, macro_orchestration_runs CASCADE");
+
+  const { GET } = loadRoute();
+  const response = await GET();
+  const body = await response.json();
+  assert.equal(body.lastOrchestrationAt, null);
+});
+
+test("lastOrchestrationAt reflects a real persisted cron-run timestamp once one exists", { skip }, async () => {
+  delete process.env.EIA_API_KEY;
+  const path = require("node:path");
+  const { pathToFileURL } = require("node:url");
+  const { runMigrations } = await import(pathToFileURL(path.resolve(__dirname, "../scripts/macro/migrate.mjs")).href);
+  await runMigrations();
+  const { getPool } = load("lib/persistence/db.ts");
+  const { recordOrchestrationRun } = load("lib/market/persistence/orchestration-repo.ts");
+  const pool = getPool();
+  await pool.query("TRUNCATE macro_steo_snapshots, macro_risk_summaries, macro_orchestration_runs CASCADE");
+  // A real cron run's own completion marker -- NOT a macro_steo_snapshots
+  // write, which is a deliberately different (and unreliable, see
+  // orchestration-repo.ts) signal after the Phase 6E fix.
+  await recordOrchestrationRun(pool, { steoRefreshed: 9, steoFailed: 0, aiSummaryGenerated: false });
+
+  const { GET } = loadRoute();
+  const response = await GET();
+  const body = await response.json();
+  assert.ok(body.lastOrchestrationAt && !Number.isNaN(Date.parse(body.lastOrchestrationAt)));
+});
+
+test("the top-level snapshotAsOf is the deterministic engine's own data-period marker, not a fetch timestamp", async () => {
+  delete process.env.DATABASE_URL;
+  delete process.env.POSTGRES_URL;
+  delete process.env.EIA_API_KEY;
+  const { GET } = loadRoute();
+  const response = await GET();
+  const body = await response.json();
+  // With no live EIA data reachable, every signal is UNAVAILABLE and no period exists to report.
+  assert.equal(body.snapshotAsOf, null);
 });
