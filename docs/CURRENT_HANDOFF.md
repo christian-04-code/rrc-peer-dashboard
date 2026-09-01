@@ -1,6 +1,30 @@
 # Current Handoff
 
-## PHASE 7B CLOSEOUT — READ THIS FIRST (2026-09-01)
+## PHASE 7B.1 CLOSEOUT — READ THIS FIRST (2026-09-01)
+
+Small corrective pass on Phase 7B, found during control-hub review, on `feat/daily-energy-intelligence`. Two real correctness bugs fixed; no new subsystem, no scope expansion. Full design detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §8/§20/§21/§22/§23/§24 (updated in place) — this section only summarizes.
+
+### WHAT CHANGED
+
+1. **News window re-anchored from `storageWeekEnding` to the report's own `dataCutoffAt`.** The original Phase 7B window (`[storageWeekEnding - 6 days, storageWeekEnding]`) silently dropped News published between the storage-week Friday and the report's actual (later, post-EIA-release) generation date. New window: `(previousDataCutoffAt, currentDataCutoffAt]` — start exclusive, end inclusive, so consecutive reports partition real time with no gap and no double-count. First report (no previous published snapshot) falls back to a documented `NEWS_WINDOW_FALLBACK_DAYS = 7` before the current cutoff. **Report identity (`storageWeekEnding`) is completely unchanged** — this was windowing-only.
+2. **One explicit `dataCutoffAt` established once per run**, in `snapshot-builder.ts`, immediately after the previous published snapshot is looked up — never independently recomputed by an adapter. Passed explicitly to the News adapter alongside the previous report's own frozen cutoff. Evidence items' own `period`/`asOfDate` are never overwritten by it.
+3. **Change/materiality/fingerprint comparison switched from `displayValue` text to a semantic rule.** The original comparison (`prior.displayValue !== item.displayValue`) made truth detection dependent on formatting/rounding — a real change that happened to round to the same display string (e.g. `3.326 → 3.334`, both `"$3.33"`) would go undetected. New exported `isEvidenceItemChanged()` in `changes.ts` compares `currentValue`/`period` directly for numeric evidence (falling back to `displayValue` only for genuinely non-numeric/qualitative evidence), and is now the **single** definition of "changed" shared by `computeWeeklyChanges()` and `annotateMateriality()`. `fingerprint.ts` got the matching fix: `displayValue` is no longer unconditionally fingerprinted (`qualitativeFact` replaces it, null whenever a real `currentValue` exists).
+
+### TESTS / VALIDATION (this session)
+
+- Rewrote `tests/weekly-report-news-window.test.cjs` for the new cutoff/contiguity/fallback semantics (18 tests, including an explicit "an article at a shared boundary lands in exactly one of two consecutive reports" test).
+- Extended `tests/weekly-report-changes.test.cjs` (+11 tests) and `tests/weekly-report-fingerprint.test.cjs` (+4 tests) with the brief's required numeric-vs-display, new-period-same-value, and risk-item-unaffected cases.
+- Full JS suite: 1237 tests, 1163 pass, 0 fail, 74 skipped (all DB-gated, unchanged skip set — no local Postgres in this sandbox, same standing limitation as every prior Phase 7 session).
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes, by design).
+- DB-gated tests (`weekly-report-repo`, `weekly-report-snapshot-builder`) still could not run against a real Postgres in this sandbox — unchanged, standing risk already flagged in the Phase 7B closeout below.
+
+### CONFIRMATION
+
+No AI call, no PDF/chart renderer, no artifact publication, no Production action, no cron/route added. Report identity (`storageWeekEnding`) unchanged. Phase 7C **not started**.
+
+---
+
+## PHASE 7B CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7B.1
 
 Phase 7B (Weekly Range Resources AI Intelligence Report — **frozen weekly intelligence snapshot + deterministic comparison engine**) is complete on `feat/daily-energy-intelligence`, on top of Phase 7A's persistence spine. This section is a self-contained resume point for Phase 7C; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full, especially its new §19–§26, before starting Phase 7C — this section only summarizes it).
 

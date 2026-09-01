@@ -60,12 +60,20 @@ export type NewsCollection = {
   present: boolean;
 };
 
-export async function collectNewsEvidence(pool: Pool | null, storageWeekEnding: string): Promise<NewsCollection> {
-  const window = computeNewsWindow(storageWeekEnding);
+/**
+ * `previousDataCutoffAt`/`currentDataCutoffAt` are supplied by the snapshot
+ * builder (the ONE `dataCutoffAt` established for this run -- see
+ * snapshot-builder.ts) -- this adapter never computes its own "now" and
+ * never derives the window from `storageWeekEnding` (see news-window.ts's
+ * header for why that would silently drop News between storage-week close
+ * and actual report generation).
+ */
+export async function collectNewsEvidence(pool: Pool | null, previousDataCutoffAt: string | null, currentDataCutoffAt: string): Promise<NewsCollection> {
+  const window = computeNewsWindow(previousDataCutoffAt, currentDataCutoffAt);
   if (!pool) {
     return {
       items: [],
-      manifestEntries: [{ key: "news_articles", label: "Retained/analyzed News articles", period: `${window.start.slice(0, 10)}..${window.end.slice(0, 10)}`, freshness: "unavailable", included: false }],
+      manifestEntries: [{ key: "news_articles", label: "Retained/analyzed News articles", period: `(${window.start}, ${window.end}]`, freshness: "unavailable", included: false }],
       windowStart: window.start,
       windowEnd: window.end,
       present: false
@@ -74,6 +82,8 @@ export async function collectNewsEvidence(pool: Pool | null, storageWeekEnding: 
 
   let candidates: ArticleRecord[] = [];
   try {
+    // The DB query is an inclusive superset on both ends (>=/<=); selectWeeklyNews
+    // below applies the window's own precise exclusive-start/inclusive-end semantics.
     candidates = await queryArticles(pool, { since: window.start, until: window.end, status: "analyzed", limit: 200 });
   } catch {
     candidates = [];
@@ -86,7 +96,7 @@ export async function collectNewsEvidence(pool: Pool | null, storageWeekEnding: 
     {
       key: "news_articles",
       label: "Retained/analyzed News articles",
-      period: `${window.start.slice(0, 10)}..${window.end.slice(0, 10)}`,
+      period: `(${window.start}, ${window.end}]`,
       freshness: "current",
       included: items.length > 0
     }

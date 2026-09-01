@@ -92,3 +92,35 @@ test("computeWeeklyReportFingerprint: produces a real, well-formed SHA-256 hex d
   const fingerprint = computeWeeklyReportFingerprint(payload({ storage: [evidenceItem()] }));
   assert.match(fingerprint, /^[a-f0-9]{64}$/);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 7B.1 -- displayValue is presentation-only and must not drive the
+// fingerprint for numeric evidence (matches changes.ts's isEvidenceItemChanged
+// semantic rule).
+// ---------------------------------------------------------------------------
+
+test("computeWeeklyReportFingerprint: a real currentValue change (3.326 -> 3.334) changes the fingerprint even when both round to the same displayValue '$3.33'", () => {
+  const a = computeWeeklyReportFingerprint(payload({ gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", currentValue: 3.326, displayValue: "$3.33" })] }));
+  const b = computeWeeklyReportFingerprint(payload({ gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", currentValue: 3.334, displayValue: "$3.33" })] }));
+  assert.notEqual(a, b);
+});
+
+test("computeWeeklyReportFingerprint: a pure formatting/rounding change in displayValue, with currentValue unchanged, does NOT change the fingerprint", () => {
+  const a = computeWeeklyReportFingerprint(payload({ storage: [evidenceItem({ currentValue: 3000, displayValue: "3,000 Bcf" })] }));
+  const b = computeWeeklyReportFingerprint(payload({ storage: [evidenceItem({ currentValue: 3000, displayValue: "3000.00 Bcf" })] }));
+  assert.equal(a, b, "currentValue (the semantic fact) is unchanged; displayValue is presentation-only for numeric evidence");
+});
+
+test("computeWeeklyReportFingerprint: for genuinely qualitative evidence (currentValue null on both sides), a real displayValue text change DOES change the fingerprint -- it is the only available fact", () => {
+  const qualitative = (text) => evidenceItem({ evidenceId: "range_company:guidance:RRC:capex:FY 2026", category: "range_company", currentValue: null, displayValue: text, comparisons: [] });
+  const a = computeWeeklyReportFingerprint(payload({ range_company: [qualitative("Approximately flat vs. prior guidance")] }));
+  const b = computeWeeklyReportFingerprint(payload({ range_company: [qualitative("Modestly higher than prior guidance")] }));
+  assert.notEqual(a, b);
+});
+
+test("computeWeeklyReportFingerprint: for genuinely qualitative evidence, an unchanged displayValue text keeps the fingerprint stable", () => {
+  const qualitative = evidenceItem({ evidenceId: "range_company:guidance:RRC:capex:FY 2026", category: "range_company", currentValue: null, displayValue: "Approximately flat vs. prior guidance", comparisons: [] });
+  const a = computeWeeklyReportFingerprint(payload({ range_company: [{ ...qualitative }] }));
+  const b = computeWeeklyReportFingerprint(payload({ range_company: [{ ...qualitative }] }));
+  assert.equal(a, b);
+});

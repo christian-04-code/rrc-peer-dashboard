@@ -20,6 +20,16 @@ import type { ComparisonResult, WeeklyEvidenceItem, WeeklyReportModules } from "
  * elsewhere (a DB row id, a fetch timestamp, an object-key ordering
  * difference) while staying sensitive to every field that actually
  * represents "the underlying data changed."
+ *
+ * Phase 7B.1 correction: `displayValue` is presentation-only (rounding,
+ * formatting, unit suffixes) and is fingerprinted CONDITIONALLY, never
+ * unconditionally -- see `toFingerprintView`'s comment. This is the same
+ * semantic-fact-over-display-text principle changes.ts's
+ * `isEvidenceItemChanged()` uses, applied here so a pure formatting change
+ * can never alter the fingerprint for numeric evidence, while a genuinely
+ * qualitative-only fact (no numeric `currentValue` on either side) still
+ * changes the fingerprint when its text changes -- otherwise that fact
+ * would be invisible to the fingerprint entirely.
  */
 
 function canonicalize(value: unknown): string {
@@ -41,7 +51,8 @@ type EvidenceFingerprintView = {
   category: string;
   metricKey: string;
   currentValue: number | null;
-  displayValue: string;
+  /** Null whenever `currentValue` is a real number -- see toFingerprintView's comment. Only carries real information for genuinely non-numeric/qualitative evidence. */
+  qualitativeFact: string | null;
   unit: string | null;
   period: string | null;
   freshness: string;
@@ -60,6 +71,18 @@ type EvidenceFingerprintView = {
  * non-deterministic bookkeeping -- any field inside it that genuinely
  * represents new information belongs in one of the typed fields above
  * instead, not fingerprinted indirectly through a catch-all).
+ *
+ * `displayValue` is deliberately NOT fingerprinted unconditionally: it is
+ * presentation-only (rounding/formatting/unit suffixes), and `currentValue`
+ * + `period` already carry the real semantic fact for numeric evidence --
+ * a currentValue change (e.g. 3.326 -> 3.334) always changes the
+ * fingerprint even if both round to the same displayValue string, and a
+ * pure formatting change with an unchanged currentValue never does. For
+ * genuinely non-numeric evidence (`currentValue` is null -- e.g. a
+ * qualitative-only guidance record with no numeric midpoint), `displayValue`
+ * IS the only available fact, so it is carried through as `qualitativeFact`
+ * in that case only -- never both at once, and never displayValue when a
+ * real currentValue already exists.
  */
 function toFingerprintView(item: WeeklyEvidenceItem): EvidenceFingerprintView {
   return {
@@ -67,7 +90,7 @@ function toFingerprintView(item: WeeklyEvidenceItem): EvidenceFingerprintView {
     category: item.category,
     metricKey: item.metricKey,
     currentValue: item.currentValue,
-    displayValue: item.displayValue,
+    qualitativeFact: item.currentValue === null ? item.displayValue : null,
     unit: item.unit,
     period: item.period,
     freshness: item.freshness,

@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./helpers/ts-loader.cjs");
 
-const { computeWeeklyChanges, flattenModules } = load("lib/reports/changes.ts");
+const { computeWeeklyChanges, flattenModules, isEvidenceItemChanged } = load("lib/reports/changes.ts");
 
 function evidenceItem(overrides) {
   return {
@@ -115,4 +115,83 @@ test("flattenModules: flattens every category into one evidenceId-keyed map", ()
   const flat = flattenModules(modules);
   assert.equal(flat.size, 2);
   assert.ok(flat.has("a") && flat.has("b"));
+});
+
+// ---------------------------------------------------------------------------
+// Phase 7B.1 -- Issue 2: change detection must use the semantic fact
+// (currentValue/period/category state), never displayValue text.
+// ---------------------------------------------------------------------------
+
+test("isEvidenceItemChanged: a real underlying numeric change (3.326 -> 3.334) is detected even though both round to the same displayValue '$3.33'", () => {
+  const prior = evidenceItem({ currentValue: 3.326, displayValue: "$3.33", period: "2026-08-28" });
+  const current = evidenceItem({ currentValue: 3.334, displayValue: "$3.33", period: "2026-08-28" });
+  assert.equal(isEvidenceItemChanged(current, prior), true);
+});
+
+test("isEvidenceItemChanged: a pure formatting/rounding change with an unchanged currentValue is NOT a substantive change", () => {
+  const prior = evidenceItem({ currentValue: 3.33, displayValue: "$3.3300", period: "2026-08-28" });
+  const current = evidenceItem({ currentValue: 3.33, displayValue: "$3.33", period: "2026-08-28" });
+  assert.equal(isEvidenceItemChanged(current, prior), false);
+});
+
+test("isEvidenceItemChanged: an unchanged monthly/quarterly observation (same period, same value) repeated in another weekly snapshot remains unchanged", () => {
+  const prior = evidenceItem({ currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-04" });
+  const current = evidenceItem({ currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-04" });
+  assert.equal(isEvidenceItemChanged(current, prior), false);
+});
+
+test("isEvidenceItemChanged: a genuinely new observation period is recognized as changed even when its numeric value happens to equal the previous period's", () => {
+  const prior = evidenceItem({ currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-04" });
+  const current = evidenceItem({ currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-05" });
+  assert.equal(isEvidenceItemChanged(current, prior), true, "the period advanced -- this is new information even though the coincidental value matches");
+});
+
+test("isEvidenceItemChanged: risk items compare riskState/riskRank metadata, not currentValue/displayValue -- an unchanged classification is unchanged even if pressurePct drifted slightly", () => {
+  const prior = evidenceItem({ category: "deterministic_risk_opportunity", currentValue: 4.9, displayValue: "WATCH", metadata: { riskState: "WATCH", riskRank: 2 } });
+  const current = evidenceItem({ category: "deterministic_risk_opportunity", currentValue: 4.99, displayValue: "WATCH", metadata: { riskState: "WATCH", riskRank: 2 } });
+  assert.equal(isEvidenceItemChanged(current, prior), false, "same state and rank -- a small pressurePct drift alone is not what this category tracks as 'changed'");
+});
+
+test("isEvidenceItemChanged: risk items DO register a change when riskState differs, even if currentValue (pressurePct) barely moved", () => {
+  const prior = evidenceItem({ category: "deterministic_risk_opportunity", currentValue: 4.9, displayValue: "WATCH", metadata: { riskState: "WATCH", riskRank: 2 } });
+  const current = evidenceItem({ category: "deterministic_risk_opportunity", currentValue: 5.0, displayValue: "MODERATE_RISK", metadata: { riskState: "MODERATE_RISK", riskRank: 2 } });
+  assert.equal(isEvidenceItemChanged(current, prior), true);
+});
+
+test("isEvidenceItemChanged: News items are always 'unchanged' by this function -- event identity (a unique evidenceId per article), not in-place value comparison, is what makes a News item 'new'", () => {
+  const prior = evidenceItem({ category: "news", currentValue: null, displayValue: "positive", period: "2026-08-25T00:00:00.000Z" });
+  const current = evidenceItem({ category: "news", currentValue: null, displayValue: "negative", period: "2026-08-26T00:00:00.000Z" });
+  assert.equal(isEvidenceItemChanged(current, prior), false);
+});
+
+test("isEvidenceItemChanged: qualitative-only evidence (no numeric currentValue on either side) falls back to comparing displayValue, since that IS the only fact available", () => {
+  const prior = evidenceItem({ category: "range_company", currentValue: null, displayValue: "Approximately flat vs. prior guidance", period: "FY 2026" });
+  const changedText = evidenceItem({ category: "range_company", currentValue: null, displayValue: "Modestly higher than prior guidance", period: "FY 2026" });
+  const sameText = evidenceItem({ category: "range_company", currentValue: null, displayValue: "Approximately flat vs. prior guidance", period: "FY 2026" });
+  assert.equal(isEvidenceItemChanged(changedText, prior), true);
+  assert.equal(isEvidenceItemChanged(sameText, prior), false);
+});
+
+test("computeWeeklyChanges: a numeric change masked by identical displayValue rounding is still detected as a real change entry", () => {
+  const previous = { gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", category: "gas_pricing", currentValue: 3.326, displayValue: "$3.33", period: "2026-08-27" })] };
+  const current = { gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", category: "gas_pricing", currentValue: 3.334, displayValue: "$3.33", period: "2026-08-27" })] };
+  const changes = computeWeeklyChanges(current, previous);
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].kind, "value_changed");
+});
+
+test("computeWeeklyChanges: a formatting-only displayValue difference with an unchanged currentValue and period produces NO change entry", () => {
+  const previous = { gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", category: "gas_pricing", currentValue: 3.33, displayValue: "$3.3300", period: "2026-08-27" })] };
+  const current = { gas_pricing: [evidenceItem({ evidenceId: "gas_pricing:henry_hub_spot", category: "gas_pricing", currentValue: 3.33, displayValue: "$3.33", period: "2026-08-27" })] };
+  assert.deepEqual(computeWeeklyChanges(current, previous), []);
+});
+
+test("computeWeeklyChanges: a new observation period with a coincidentally-equal numeric value uses the 'new_*' kind vocabulary, not 'value_changed'", () => {
+  const previous = { us_gas_supply: [evidenceItem({ evidenceId: "us_gas_supply:dry_gas_production", category: "us_gas_supply", currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-04" })] };
+  const current = { us_gas_supply: [evidenceItem({ evidenceId: "us_gas_supply:dry_gas_production", category: "us_gas_supply", currentValue: 3_400_000, displayValue: "3,400,000 MMcf/mo", period: "2026-05" })] };
+  const changes = computeWeeklyChanges(current, previous);
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].kind, "new_observation");
+  assert.equal(changes[0].fromValue, "3,400,000 MMcf/mo");
+  assert.equal(changes[0].toValue, "3,400,000 MMcf/mo");
 });

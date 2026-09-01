@@ -11,7 +11,7 @@ import type {
   WeeklyReportSnapshotRecord
 } from "@/lib/reports/weekly-report-types";
 import { evaluateReadiness, type ReadinessInputs, type ReadinessResult } from "@/lib/reports/readiness";
-import { computeWeeklyChanges, flattenModules } from "@/lib/reports/changes";
+import { computeWeeklyChanges, flattenModules, isEvidenceItemChanged } from "@/lib/reports/changes";
 import { computeWeeklyReportFingerprint } from "@/lib/reports/fingerprint";
 import {
   createDraftSnapshot,
@@ -52,21 +52,27 @@ export type CollectedWeeklyInputs = {
   news: Awaited<ReturnType<typeof collectNewsEvidence>>;
 };
 
+export type WeeklyDataCutoff = {
+  /** The ONE cutoff timestamp established for this entire run (see runWeeklySnapshotBuild) -- never independently recomputed by an adapter. */
+  dataCutoffAt: string;
+  /** The previous PUBLISHED report's own frozen data_cutoff_at, or null for the very first report -- the News window's contiguous-boundary basis (see news-window.ts). */
+  previousDataCutoffAt: string | null;
+};
+
 /**
  * Collects every subsystem's evidence for one candidate storage week.
- * Macro runs first because its live storage observation supplies the
- * report's own identity (Phase 7A decision #1) that the News adapter's
- * window (news-window.ts) is anchored to -- every other adapter is
- * synchronous and independent of the others, so they run after, not
- * interleaved with Macro's own async fetches.
+ * Macro already ran (its live storage observation supplied the report's
+ * own identity, Phase 7A decision #1, before this function is called) --
+ * every adapter here is either synchronous or depends only on the already-
+ * established `dataCutoffAt`, so they all run concurrently.
  */
-export async function collectWeeklyIntelligenceInputs(pool: Pool | null, storageWeekEnding: string, now: Date = new Date()): Promise<Omit<CollectedWeeklyInputs, "macro">> {
+export async function collectWeeklyIntelligenceInputs(pool: Pool | null, cutoff: WeeklyDataCutoff, now: Date = new Date()): Promise<Omit<CollectedWeeklyInputs, "macro">> {
   const [rigs, rangeCompany, peers, forecast, news] = await Promise.all([
     Promise.resolve(collectRigsEvidence(now)),
     Promise.resolve(collectRangeCompanyEvidence(now)),
     Promise.resolve(collectPeersEvidence()),
     Promise.resolve(collectForecastEvidence()),
-    collectNewsEvidence(pool, storageWeekEnding)
+    collectNewsEvidence(pool, cutoff.previousDataCutoffAt, cutoff.dataCutoffAt)
   ]);
   return { rigs, rangeCompany, peers, forecast, news };
 }
@@ -127,6 +133,11 @@ function largestComparisonMagnitude(comparisons: ComparisonResult[]): number | n
  * already carry a real riskSeverityRank/comparisonMagnitudePct from
  * macro-adapter.ts and are left untouched here except for the
  * new/changed flags, which still apply uniformly.
+ *
+ * `changedSincePreviousReport` uses `isEvidenceItemChanged()` (changes.ts)
+ * -- the exact same semantic-equality rule `computeWeeklyChanges()` uses --
+ * rather than a `displayValue` comparison, so this subsystem has exactly
+ * one definition of "changed," not two that could silently disagree.
  */
 export function annotateMateriality(modules: WeeklyReportModules, previousModules: WeeklyReportModules | null): WeeklyReportModules {
   const previous = previousModules ? flattenModules(previousModules) : new Map<string, WeeklyEvidenceItem>();
@@ -135,7 +146,7 @@ export function annotateMateriality(modules: WeeklyReportModules, previousModule
     annotated[category] = items.map((item) => {
       const prior = previous.get(item.evidenceId);
       const isNewThisWeek = !prior;
-      const changedSincePreviousReport = Boolean(prior) && prior!.displayValue !== item.displayValue;
+      const changedSincePreviousReport = Boolean(prior) && isEvidenceItemChanged(item, prior!);
       const comparisonMagnitudePct = item.materialityInputs.comparisonMagnitudePct ?? largestComparisonMagnitude(item.comparisons);
       return { ...item, materialityInputs: { ...item.materialityInputs, isNewThisWeek, changedSincePreviousReport, comparisonMagnitudePct } };
     });
@@ -172,6 +183,16 @@ export type WeeklySnapshotBuildResult =
  *  12. freeze to "ready"
  * Never called from any browser-facing route -- there isn't one that
  * imports this module.
+ *
+ * Phase 7B.1: `dataCutoffAt` is established exactly ONCE here (from `now`,
+ * this call's single wall-clock input), immediately after the previous
+ * published snapshot is known -- and is the only "now" anything downstream
+ * ever sees. It is a SNAPSHOT CUT-OFF (when this run froze its inputs), not
+ * an observation date; each evidence item's own `period`/`asOfDate` (set by
+ * its adapter from the real underlying data) are never overwritten with it.
+ * The News adapter receives it explicitly (`cutoff.dataCutoffAt`) alongside
+ * the previous published report's own frozen `dataCutoffAt`
+ * (`cutoff.previousDataCutoffAt`) -- no adapter computes its own "now".
  */
 export async function runWeeklySnapshotBuild(pool: Pool, now: Date = new Date()): Promise<WeeklySnapshotBuildResult> {
   const macro = await collectMacroEvidence(pool, now);
@@ -188,6 +209,8 @@ export async function runWeeklySnapshotBuild(pool: Pool, now: Date = new Date())
   if (activeAttempt) return { status: "active_attempt_exists", snapshot: activeAttempt };
 
   const previousSnapshot = await getPreviousPublishedSnapshot(pool, storageWeekEnding);
+  const dataCutoffAt = now.toISOString();
+  const cutoff: WeeklyDataCutoff = { dataCutoffAt, previousDataCutoffAt: previousSnapshot?.dataCutoffAt ?? null };
 
   const draft = await createDraftSnapshot(pool, { storageWeekEnding, schemaVersion: WEEKLY_REPORT_SCHEMA_VERSION, previousSnapshotId: previousSnapshot?.id ?? null });
   if (draft.status !== "pending") {
@@ -199,7 +222,7 @@ export async function runWeeklySnapshotBuild(pool: Pool, now: Date = new Date())
   const building = await transitionToBuilding(pool, draft.id);
   if (!building) return { status: "build_race_lost" };
 
-  const rest = await collectWeeklyIntelligenceInputs(pool, storageWeekEnding, now);
+  const rest = await collectWeeklyIntelligenceInputs(pool, cutoff, now);
   const collected: CollectedWeeklyInputs = { macro, ...rest };
 
   const sourceManifest = buildSourceManifest(collected);
@@ -215,7 +238,6 @@ export async function runWeeklySnapshotBuild(pool: Pool, now: Date = new Date())
   const previousModules = previousSnapshot?.payload?.modules ?? null;
   const modules = annotateMateriality(rawModules, previousModules);
 
-  const dataCutoffAt = now.toISOString();
   const payload = buildWeeklyReportPayload(storageWeekEnding, dataCutoffAt, modules, sourceManifest);
   const fingerprint = computeWeeklyReportFingerprint({ schemaVersion: payload.schemaVersion, storageWeekEnding, modules });
   const changes = computeWeeklyChanges(modules, previousModules);
