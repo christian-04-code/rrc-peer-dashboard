@@ -1,6 +1,62 @@
 # Current Handoff
 
-## PHASE 7A CLOSEOUT — READ THIS FIRST (2026-09-01)
+## PHASE 7B CLOSEOUT — READ THIS FIRST (2026-09-01)
+
+Phase 7B (Weekly Range Resources AI Intelligence Report — **frozen weekly intelligence snapshot + deterministic comparison engine**) is complete on `feat/daily-energy-intelligence`, on top of Phase 7A's persistence spine. This section is a self-contained resume point for Phase 7C; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full, especially its new §19–§26, before starting Phase 7C — this section only summarizes it).
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Branch tip before this session**: `3657977` ("Phase 7A: Weekly Report architecture + data contracts + persistence foundation") — confirmed via `git fetch origin` to exactly match `origin/feat/daily-energy-intelligence` before any Phase 7B work began; working tree was clean; branch/commit already on `feat/daily-energy-intelligence` at session start (no branch switch needed this time).
+- **Latest commit after this phase**: see `git log -1` on this branch — not hardcoded here for the same reason Phase 7A's closeout gives (the SHA is only known once the commit containing this text already exists). Titled "Phase 7B: Frozen weekly intelligence snapshot + deterministic comparison engine" (or equivalent) on top of `3657977`.
+- **PR #13**: still open, draft, not merged — untouched this phase.
+- **Production**: untouched this phase — Phase 7B shipped no new route, no new UI, nothing reachable from a running deployment (confirmed by the build's route table being unchanged from Phase 7A).
+
+### WHAT PHASE 7B BUILT
+
+Turned Phase 7A's contracts/persistence spine into a real, working deterministic snapshot layer — **no AI call, no chart renderer, no PDF renderer, no publish, no cron/orchestration route.** Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §19–§26; summary:
+
+- **Real typed evidence** (`WeeklyEvidenceItem`/`WeeklyReportModules`, §19) replaced Phase 7A's `Record<string, unknown>` placeholder. Stable evidence IDs (period-excluded for recurring series, article-id-embedded for News) are what make change detection meaningful rather than noisy.
+- **Six subsystem adapters** (`lib/reports/adapters/`): Macro (re-derives the same live EIA fetch pattern `buildMacroRiskSnapshot()` uses, plus real evidence + STEO vintage persistence/comparison), Rigs (Baker Hughes, national + Marcellus + Utica), Range's own company data (quarterly financials + guidance), Peers (6 tickers × 6 headline metrics), Forecast (RRC's parameterless default scenario only — see the documented gap below), News (7-day window anchored to the report's own storage-week identity, `"analyzed"`-only, never re-runs News's AI).
+- **Deterministic comparison engine** (`lib/reports/comparisons.ts`): WoW/YoY/vs5yrAvg for weekly storage, WoW-only (calendar-anchored) for daily Henry Hub, MoM/YoY for monthly EIA series, QoQ/priorQuarterActuals for quarterly Range/peer financials, WoW/YoY reusing the rig-import pipeline's own precomputed deltas, steoVintage only when a real second persisted vintage exists. Comparison periods always follow the underlying data's own cadence, never the weekly report-generation cadence.
+- **Deterministic change detection** (`lib/reports/changes.ts`): diffs the current snapshot against the previous *published* one; the core rule it enforces is that an unchanged monthly/quarterly figure appearing in two consecutive weekly snapshots produces zero change entries — proven by a dedicated test.
+- **Materiality foundation** (`lib/reports/materiality.ts`): structured signals (`MaterialityInputs`) plus a simple documented high/routine classifier and a plain comparator-based ranker — deliberately not a blended numeric score.
+- **Real fingerprinting** (`lib/reports/fingerprint.ts`): SHA-256 over a canonicalized, curated subset of evidence fields — proven stable/sensitive/insensitive-to-volatile-metadata by a dedicated test suite.
+- **Snapshot builder orchestration** (`lib/reports/snapshot-builder.ts`, `runWeeklySnapshotBuild()`): the full `pending → building → ready` pipeline, stopping there — never calls `publishSnapshot()`. No `app/api/...` route imports this module.
+
+### DEVIATIONS FROM PHASE 7A (both additive, not reversals — see architecture doc §24 for full reasoning)
+
+1. `EvidenceModuleKey` gained `range_company` and `deterministic_risk_opportunity` — Phase 7A's category list had no place for Range's own company results (distinct from peer positioning) or the risk engine's ranked output as first-class evidence.
+2. `comparisons.ts`'s `compareQuarterly` takes `{ value: number | null }` rather than the narrower `SourcedValue`, so one function serves all three quarterly fixture shapes in `lib/dashboard/` (`SourcedValue`, `MarketCapValue`, `EpsValue`) instead of three near-duplicates.
+
+### KNOWN DATA GAPS (documented, not papered over — architecture doc §24)
+
+1. **No `forecastRevision` comparison for Range's forecast** — `lib/forecast/` has no persisted scenario-run history (unlike STEO), and the only parameterless canonical output is the "default scenario." Closing this needs a future phase to add real scenario-state persistence.
+2. **`peerChange` is not a separately-computed comparison period** — peers get the same QoQ/YoY comparisons Range's own data gets; a bespoke Range-vs-peer relative-positioning delta was judged closer to a synthesis decision, better suited to Phase 7C/7D.
+
+### TESTS / VALIDATION (this session)
+
+- **New tests**: 8 files, ~80 new test cases — `weekly-report-comparisons` (23), `weekly-report-changes` (11), `weekly-report-materiality` (11), `weekly-report-fingerprint` (10), `weekly-report-news-window` (8), `weekly-report-macro-adapter` (8, EIA-fetch-mocked, no DB needed), `weekly-report-static-adapters` (7, real static fixtures, no DB/network), all **passing**. `weekly-report-snapshot-builder` (5, DB-gated + EIA-fetch-mocked, full `runWeeklySnapshotBuild` lifecycle incl. duplicate-attempt/already-published/required-input-failure/materiality-across-two-published-weeks) — **could not run in this sandbox**, no local `DATABASE_URL`/`POSTGRES_URL` (same limitation as Phase 7A's `weekly-report-repo.test.cjs`, still unresolved — see below). Two real test-authoring bugs were caught and fixed during this session (a wrong "no previous snapshot" expectation in the changes test, and a span-length miscalculation in the news-window test) — both were test bugs, not implementation bugs; the implementation behavior in both cases was correct on inspection.
+- **Full JS suite**: 1216 tests, 1142 pass, 0 fail, 74 skipped (56 pre-existing + 13 from Phase 7A + 5 new from Phase 7B, all DB-gated) — no regression to any pre-existing test.
+- **Python suite**: **could not run in this sandbox** — same `python`/`python3` App-execution-alias gap noted in Phase 7A's closeout (a Windows Store stub is on PATH but no real interpreter is installed behind it); zero Python files touched this phase.
+- **`npm run typecheck`**: clean.
+- **`npm run build`**: clean; route table unchanged from Phase 7A (Phase 7B added zero new routes, by design — no browser/cron entry point exists yet).
+
+### KNOWN REMAINING ITEMS / RISKS FOR PHASE 7C
+
+1. **All DB-gated Phase 7 tests (7A's `weekly-report-repo.test.cjs` + 7B's `weekly-report-snapshot-builder.test.cjs`) have never run against a real Postgres in any session so far.** This is now a standing item across two phases — strongly recommended before Phase 7C/7D build further on top of `runWeeklySnapshotBuild()`'s untested-against-real-DB lifecycle.
+2. **No blob/object storage provider is chosen or configured** (unchanged from Phase 7A) — still needed before Phase 7D can write artifact upload/download logic.
+3. **The two documented data gaps above** (forecast revision history, peer-relative comparisons) are open product/architecture questions for whoever scopes Phase 7C/7D's "what changed" narrative — they may or may not need closing before a v1 report is acceptable.
+4. **This branch's Production-promotion decision (Phase 6 closeout, below) remains unresolved** and is unaffected by Phase 7 — still a prerequisite for any of Phase 7's later phases ever reaching Production.
+
+### CONFIRMATION
+
+No AI call was implemented. No PDF/chart renderer was implemented. No artifact publication was implemented (nothing calls `publishSnapshot()`). No Production action occurred. Phase 7C was **not started** this session.
+
+---
+
+## PHASE 7A CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7B
 
 Phase 7A (Weekly Range Resources AI Intelligence Report — **architecture + data contracts + persistence foundation only**) is complete on `feat/daily-energy-intelligence`. This section is a self-contained resume point for Phase 7B; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full before starting Phase 7B — this section only summarizes it).
 
@@ -42,7 +98,7 @@ Persistence spine + type contracts only — **no snapshot builder, no AI call, n
 
 ### CONFIRMATION
 
-Phase 7B (snapshot builder), 7C (AI call), 7D (charts/PDF), 7E (delivery), 7F (orchestration), and 7G (end-to-end validation) were **not started** this session — see `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §19 for what each involves.
+Phase 7B (snapshot builder), 7C (AI call), 7D (charts/PDF), 7E (delivery), 7F (orchestration), and 7G (end-to-end validation) were **not started** this session (Phase 7B has since been completed — see the "PHASE 7B CLOSEOUT" section at the top of this document; the architecture doc's section numbers shifted when 7B's own sections were added, so this pointer is kept accurate rather than left dangling: see `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §25 for what 7C-7G each still involve).
 
 ---
 

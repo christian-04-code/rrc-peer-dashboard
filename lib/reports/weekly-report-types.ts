@@ -127,7 +127,15 @@ export type WeeklyReportPayload = {
   schemaVersion: string;
   storageWeekEnding: StorageWeekEnding;
   dataCutoffAt: string;
-  modules: Record<string, unknown>;
+  /**
+   * Phase 7B: replaced Phase 7A's placeholder `Record<string, unknown>` with
+   * the real typed evidence structure once a real snapshot builder existed
+   * to populate it (see WeeklyReportModules below). Not every key is present
+   * every week -- an absent key means that category was optional and
+   * degraded this week (see readiness.ts), never an empty/zero-filled array
+   * standing in for "no data."
+   */
+  modules: WeeklyReportModules;
   sourceManifest: SourceFreshnessManifest;
 };
 
@@ -194,7 +202,18 @@ export type EvidenceModuleKey =
   | "rigs"
   | "peers"
   | "news"
-  | "forecast_scenarios";
+  | "forecast_scenarios"
+  // Added in Phase 7B once a real snapshot builder needed them -- additive
+  // only, nothing above was renamed or removed, so this is not a Phase 7A
+  // redesign. "range_company" holds Range's own quarterly financial/
+  // operating results and management guidance (distinct from "peers",
+  // which holds comparative peer-company positioning on the same metrics).
+  // "deterministic_risk_opportunity" holds lightweight *pointers* into the
+  // deterministic Macro risk engine's ranked signals (rank + state +
+  // reference to the underlying evidence item), not a duplicate copy of
+  // those signals' own metrics -- see comparisons.ts's file header for why.
+  | "range_company"
+  | "deterministic_risk_opportunity";
 
 export type ChartKind = "line" | "bar" | "map" | "table";
 
@@ -240,6 +259,122 @@ export type ReportContentModel = {
   managementWatchItems: string[];
   bottomLine: string;
   sources: SourceManifestEntry[];
+};
+
+// ---------------------------------------------------------------------------
+// Weekly evidence model (Phase 7B) -- the real, typed replacement for Phase
+// 7A's placeholder `modules: Record<string, unknown>`. Distinct from
+// EvidenceItem/ReportContentModel above: EvidenceItem is Phase 7D's
+// *curated, presentation-ready* selection for the rendered report;
+// WeeklyEvidenceItem below is the *full, frozen, auditable* dataset a
+// snapshot actually stores, from which Phase 7C/7D later select.
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic materiality SIGNALS, not a blended score (Phase 7B
+ * decision: a single opaque numeric "materiality score" would itself be a
+ * kind of undocumented judgment call; these are the raw, transparent,
+ * independently-meaningful facts Phase 7C/7D can weigh however they choose).
+ * Every field is optional/nullable per item -- a news item has no
+ * riskSeverityRank, a risk-engine item has no rangeImpactStrength, etc.
+ */
+export type MaterialityInputs = {
+  /** True iff this evidenceId did not exist in the previous published snapshot's modules. */
+  isNewThisWeek: boolean;
+  /** True iff this evidenceId existed in the previous published snapshot and its value/state differs. */
+  changedSincePreviousReport: boolean;
+  /** 1 = most severe, from the deterministic Macro risk engine's ranking -- null for non-risk-engine items. */
+  riskSeverityRank: number | null;
+  /** The deterministic Macro risk engine's classification -- null for non-risk-engine items. */
+  riskState: "HIGH_RISK" | "MODERATE_RISK" | "WATCH" | "SUPPORTIVE" | "UNAVAILABLE" | null;
+  /** From persisted News AI analysis only -- null for non-News items, and null (never guessed) for a News item whose analysis is itself null. */
+  rangeImpactDirection: string | null;
+  rangeImpactStrength: string | null;
+  /** The largest |deltaPct| among this item's own comparisons -- null if every comparison is unavailable or the item has none. */
+  comparisonMagnitudePct: number | null;
+};
+
+/**
+ * A simple, deterministic, documented three-way split -- NOT a numeric
+ * score. "high" if the item is new, changed since the previous report, at
+ * HIGH_RISK/MODERATE_RISK, carries a "high" News impact strength, or moved
+ * by at least MATERIAL_COMPARISON_MAGNITUDE_PCT; "routine" otherwise. See
+ * materiality.ts for the implementation and MATERIAL_COMPARISON_MAGNITUDE_PCT's
+ * value/rationale.
+ */
+export type InformationLevel = "high" | "routine";
+
+export type WeeklyEvidenceItem = {
+  /**
+   * Stable and deterministic across runs for the *same underlying fact* --
+   * built from category + metricKey + period (see each adapter for its
+   * exact scheme), never a random id or a DB-generated one, so the same
+   * real-world observation always gets the same evidenceId whether this is
+   * the first time it's ever been collected or the tenth week it has
+   * appeared unchanged.
+   */
+  evidenceId: string;
+  category: EvidenceModuleKey;
+  /** Stable key for the specific metric/event within its category, e.g. "henry_hub_spot", "lower48_storage", "rrc_revenue", "risk:gas_pricing", "article:<articleId>". */
+  metricKey: string;
+  label: string;
+  currentValue: number | null;
+  displayValue: string;
+  unit: string | null;
+  /** The underlying data's own period, in whatever grain that series actually reports at -- "2026-08-28" (weekly), "2026-07" (monthly), "Q2 2026" (quarterly). Never the fetch/generation time. */
+  period: string | null;
+  /** ISO date this value is as-of, derived from `period` -- never `new Date()`/fetch time. */
+  asOfDate: string | null;
+  /** Keys into the frozen SourceFreshnessManifest's `generatedFrom` entries (by their own `key`), so every fact stays traceable to a specific, freshness-stamped source. */
+  sourceIds: string[];
+  freshness: "current" | "lagged" | "stale" | "unavailable";
+  /** Computed only where logically valid for this item's own underlying data period (Phase 7B decision -- see comparisons.ts) -- never forced to cover every ComparisonPeriod. */
+  comparisons: ComparisonResult[];
+  /** Range driver taxonomy keys (lib/range-impact-framework.ts) this item relates to -- [] if genuinely none apply, never guessed. */
+  rangeDrivers: string[];
+  materialityInputs: MaterialityInputs;
+  /** Category-specific extras that don't warrant their own top-level field (e.g. a News item's headline/url/publisher, a risk item's deterministic reason text, a guidance record's operator/status). Never a second, conflicting copy of currentValue/displayValue. */
+  metadata: Record<string, unknown>;
+};
+
+/** Not every key present every week -- see WeeklyReportPayload.modules' own comment. */
+export type WeeklyReportModules = Partial<Record<EvidenceModuleKey, WeeklyEvidenceItem[]>>;
+
+// ---------------------------------------------------------------------------
+// Deterministic weekly change set (Phase 7B) -- structured facts only, no
+// prose conclusions; Phase 7C's future AI narrates these, it does not
+// discover them.
+// ---------------------------------------------------------------------------
+
+export type WeeklyChangeKind =
+  | "new_observation"
+  | "value_changed"
+  | "risk_state_changed"
+  | "risk_rank_changed"
+  | "new_steo_vintage"
+  | "new_company_result_or_guidance"
+  | "material_peer_change"
+  | "new_retained_news_item"
+  | "forecast_revision";
+
+/**
+ * Purely structural -- every field is a plain value/state, not a sentence.
+ * Computed by diffing the current snapshot's modules against the previous
+ * *published* snapshot's modules (never by comparing a metric's own value
+ * to itself when the underlying data period hasn't actually advanced --
+ * see changes.ts's file header for the "same April production in two
+ * consecutive weekly snapshots is not a weekly change" rule this type
+ * exists to respect).
+ */
+export type WeeklyChange = {
+  kind: WeeklyChangeKind;
+  evidenceId: string;
+  category: EvidenceModuleKey;
+  label: string;
+  fromValue: string | null;
+  toValue: string | null;
+  fromState: string | null;
+  toState: string | null;
 };
 
 // ---------------------------------------------------------------------------
