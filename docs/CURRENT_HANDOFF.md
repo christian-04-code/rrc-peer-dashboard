@@ -1,5 +1,166 @@
 # Current Handoff
 
+## PHASE 6 CLOSEOUT — READ THIS FIRST (2026-08-31)
+
+Phase 6 (EIA Macro Intelligence System) is **code-complete**. This section is a
+self-contained resume point — a future session should be able to pick up work
+correctly from this section alone, without relying on prior chat history.
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Latest commit**: `a05331d` — "Phase 6E: Macro date/freshness closeout + fix Last-Updated timestamp bug"
+- **Remote verification**: `git fetch origin` confirmed `origin/feat/daily-energy-intelligence` == local `HEAD` == `a05331d`. Working tree clean, no untracked files, at the time of this closeout.
+- **PR #13**: open, **draft**, base `main`, head `feat/daily-energy-intelligence` at `a05331d` (confirmed live via the GitHub API — the PR's head SHA exactly matches the branch tip, so no completed work exists only locally). **Not merged.** Its title/body ("Daily Energy Intelligence: automated news pipeline, AI analysis, and simplified News feed (Phases 2–5.1)") predates Phase 6 and undersells current scope — cosmetic only, does not affect safety; update it whenever `gh` write access is available.
+- **Production status**: see "PRODUCTION / BRANCH RISK" below — Production does **not** currently contain any Phase 6 (Macro) work.
+- **Latest Preview URL reflecting `a05331d`**: `https://rrc-peer-dashboard-842nyfbxj-christian-04-codes-projects.vercel.app` (deployed seconds after the Phase 6E commit; content-identical to HEAD). An earlier same-day Preview, `https://rrc-peer-dashboard-l5uinm1lt-christian-04-codes-projects.vercel.app`, was the one visually QA'd during Phase 6E and is also content-identical to `a05331d` (deployed from the same, already-complete, then-uncommitted working tree).
+
+### PHASE 6 STATUS
+
+| Phase | Status | Commit |
+|---|---|---|
+| 6A — Macro/EIA audit + shared-taxonomy relocation | Complete | `6d30e43` |
+| 6B — EIA Macro Intelligence: ingestion foundation | Complete | `12c38ae` |
+| 6C — Macro UI modules + Permian chart fix | Complete | `66b05ce` |
+| 6D — Dynamic Range Macro Risk Engine + AI Summary | Complete | `8adc856` |
+| 6E — Date/freshness closeout | Complete | `a05331d` |
+
+**Phase 6 overall: code-complete, pending only one user-run live AI validation** (see below). No further code changes are required to consider Phase 6 done.
+
+### IMPORTANT COMMITS
+
+- `6d30e43` — Shared Range impact taxonomy relocation (`lib/range-impact-framework.ts`); Macro/EIA architecture audit.
+- `12c38ae` — Phase 6B: EIA STEO ingestion (API v2), `macro_steo_snapshots`/`macro_risk_summaries` schema, source registry.
+- `66b05ce` — Phase 6C: Macro topic-tab UI (Gas Balance/Storage/Supply/Appalachia/LNG/Demand/EIA Outlook/Rigs), EIA Outlook module, Permian rig chart layout fix.
+- `8adc856` — Phase 6D: deterministic Range Macro risk engine (7 signals, ranked), cached AI Macro Summary (Claude Haiku 4.5), `/api/cron/macro`.
+- `a05331d` — Phase 6E: Last-Updated box + per-module date/freshness UI, fixed a real bug where "Last Updated" reflected page views instead of cron runs.
+
+Relevant Phase 5 context (News, a separate subsystem sharing only the driver taxonomy): `efef514` (Phase 5, full daily automation), `28f957b`/`e88c28f` (Phase 5.1/5.2, News UI). Production currently runs `e88c28f` — see below.
+
+### CURRENT ARCHITECTURE
+
+**Macro data flow:**
+```
+EIA API v2 (+ OilPriceAPI) sources
+  → normalized Macro metrics (lib/market/macro-analytics.ts, macro-fundamentals.ts)
+  → Macro UI (components/dashboard/MacroPanel.tsx and topic modules)
+```
+
+**Risk/AI flow:**
+```
+validated Macro metrics
+  → deterministic risk engine (lib/market/macro-risk-engine.ts — classify + rank)
+  → ranked Range risks/opportunities
+  → structured payload (MacroRiskPayload, signals + supportingMetrics + snapshotAsOf)
+  → fingerprint/cache (macro_risk_summaries, keyed on input_fingerprint)
+  → AI Macro Summary (Claude Haiku 4.5, cron-only, commentary on the payload only)
+```
+
+### IMPORTANT DATA SAFEGUARDS
+
+- EIA API v2 is the sole ingestion method — no XLS/XLSX parsing was built (deliberate, documented omission; revisit only if a future dataset genuinely requires it).
+- No unverified EIA series ID ships — every series in `lib/eia/series.ts`/`lib/eia/macro-registry.ts` was independently confirmed live against the real `EIA_API_KEY` before being added (several initial guesses, e.g. `NGLXPUS`/`NGICPUS`, were wrong and replaced with verified IDs).
+- No zero-filling missing state data — `buildAppalachiaProduction()` excludes a period entirely if any of PA/WV/OH is missing it, never substitutes zero.
+- PA + WV + OH is always labeled "PA + WV + OH marketed production," never "Marcellus production" (EIA does not publish an official Marcellus series) — enforced in code comments, UI copy, and tests.
+- No fabricated STEO forecast-revision history — `computeForecastRevisions()` only ever diffs two real, persisted snapshots; a single-snapshot state renders an honest "more history is needed" empty state.
+- Incompatible units are never force-converted onto one chart axis — Henry Hub ($/MMBtu vs. STEO's $/Mcf) and electric-power consumption (ambiguous daily-rate convention) are deliberately left forecast-only rather than overlaid with an unverified conversion.
+- The AI provider cannot rank, reclassify, or invent a signal — its input type (`MacroRiskPayload`) contains only already-classified output from the deterministic engine; `lib/market/ai/` has no ranking logic.
+- The browser can never trigger AI generation — `/api/macro/risk` only ever reads a cached summary; AI generation happens exclusively inside `runMacroDailyOrchestration()`, reachable only via the `CRON_SECRET`-gated `/api/cron/macro`. Source-inspection tests assert neither browser-facing route imports the AI provider.
+- Stale data stays visibly stale — a metric whose `MarketFreshness` is `"stale"` renders with an explicit "· Stale" suffix rather than looking identical to current data; the AI summary state machine (`pending`/`ready`/`stale`/`unavailable`) prevents an old cached summary from being presented as current.
+
+### CURRENT CRON SCHEDULES
+
+From `vercel.json` (verified this session, not assumed):
+```json
+{ "path": "/api/cron/news",  "schedule": "15 11 * * *" }
+{ "path": "/api/cron/macro", "schedule": "15 12 * * *" }
+```
+Both UTC, both once/day (Vercel Hobby limit), Macro offset one hour after News. Actual firing time can lag up to 59 minutes past the scheduled minute (Vercel Hobby's documented imprecision) — local-time equivalents drift with US Central DST and are not restated here to avoid going stale; convert from UTC at the time you need it.
+
+### ENVIRONMENT VARIABLES (names only — no values recorded here or anywhere in this repo)
+
+`ANTHROPIC_API_KEY`, `CRON_SECRET`, `DATABASE_URL`, `POSTGRES_URL`, `NEWS_DB_SSL`, `EIA_API_KEY`, `FINNHUB_API_KEY`, `FMP_KEY`, `OIL_PRICE_API`, `SEC_USER_AGENT` (optional — gates the SEC EDGAR News source; unset in this project as of Phase 5.2).
+
+### TEST STATUS (this closeout, 2026-08-31, against HEAD `a05331d`)
+
+- **1106 JS tests**: 1050 pass, 0 fail, 56 skipped (DB-gated tests skip without a local `DATABASE_URL`/`POSTGRES_URL`; all DB-gated tests, including Phase 6E's new ones, were separately verified passing against a real local Postgres during Phase 6E and are unchanged since).
+- **14 Python tests**: all pass.
+- **`npm run typecheck`**: clean.
+- **`npm run build`**: clean, all routes build including `/api/cron/macro` and `/api/macro/risk`.
+
+These figures are unchanged from the Phase 6E report — this closeout made documentation-only changes, no source/test edits, so re-running produced identical counts.
+
+### KNOWN REMAINING ITEMS
+
+**A. Required before Production:**
+1. **PENDING — USER-RUN LIVE MACRO AI VALIDATION.** The user runs the hidden-input `CRON_SECRET` command below against the latest Preview to confirm: (1) `/api/cron/macro` succeeds; (2) the first call generates or correctly reuses a summary; (3) a second identical call is a fingerprint cache hit; (4) the second call does not regenerate/recharge AI; (5) `/api/macro/risk` then returns `aiSummaryStatus: "ready"`; (6) the persisted summary's `snapshotAsOf` is correct; (7) `generatedAt` is present and real; (8) deterministic rankings are unchanged by the AI call (the engine output is independent of AI regardless, but worth eyeballing). Do not weaken authentication, expose `CRON_SECRET`, or trigger this against Production to avoid running this command.
+
+   ```bash
+   read -s -p "CRON_SECRET: " CRON_SECRET && echo && \
+   vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-1.json && echo && \
+   echo "--- second identical call (idempotency check) ---" && \
+   vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-2.json && echo && \
+   unset CRON_SECRET && \
+   echo "--- /api/macro/risk aiSummary state ---" && \
+   vercel curl "<PREVIEW_URL>/api/macro/risk" -- -s | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify({aiSummaryStatus:d.aiSummaryStatus,generatedAt:d.aiSummary?.generatedAt,snapshotAsOf:d.aiSummary?.snapshotAsOf,lastOrchestrationAt:d.lastOrchestrationAt},null,2))"
+   ```
+   Use `<PREVIEW_URL>` = `https://rrc-peer-dashboard-842nyfbxj-christian-04-codes-projects.vercel.app` (or re-deploy a fresh Preview from this branch tip first if it has expired).
+2. Review the Preview visually one more time if meaningful time has passed since Phase 6E's QA.
+3. Explicit user approval before any merge or Production promotion.
+4. Decide the PR #13 merge/promotion strategy — see "PRODUCTION / BRANCH RISK" below; merging is not merely a formality here, since Production currently has *neither* the rest of Phase 5 *nor* any of Phase 6.
+
+**B. Future feature work (not started, not authorized to start without separate approval):**
+- Phase 7 — Weekly Range Resources Intelligence Report (see below).
+
+### PRODUCTION / BRANCH RISK
+
+Verified directly this session, not assumed:
+
+- **`main` does NOT contain Phase 5 or Phase 6.** `origin/main` is at `7a2e8ff` ("Merge PR #12: Fix Macro basin layout..."), 26 commits behind `feat/daily-energy-intelligence`'s tip. `git merge-base --is-ancestor a05331d origin/main` returns false.
+- **Production currently matches neither `main` nor the current branch tip — it's an older point on this branch, from before Phase 6 existed.** The live Production deployment (`dpl_CDmzBaMkP8oh8RpccALkds4LoVM5`, aliased to `rrc-peer-dashboard.vercel.app`) was created 2026-08-26 12:17:34 CDT via a manual `vercel deploy --prod` (not a git-triggered deploy — no GitHub↔Vercel auto-deploy integration was found evidence of in this project). That timestamp is 23 seconds after commit `e88c28f` (Phase 5.2) and *before* any Phase 6 commit (`6d30e43`, Phase 6A, was committed roughly an hour later the same day). **Conclusion: Production currently serves News through Phase 5.2, and contains zero Macro/EIA Intelligence (Phase 6) code.**
+- **Merging PR #13 is necessary before Phase 6 can ever reach Production** — there is no other path; Production was never git-connected to this branch, so nothing after the Aug 26 12:17 deploy (including all of Phase 6) will reach Production until either (a) PR #13 is merged to `main` and `main` is deployed to Production, or (b) another manual `vercel deploy --prod` is run directly from this branch (the same mechanism used for Phase 5, and NOT to be done in this closeout task).
+- **Risk to flag for a future session**: because Production was never connected to `main` via git, an ordinary `git push` to `main` by itself changes nothing in Production. The actual risk is the reverse of what earlier phase notes assumed — the danger is not "an ordinary main deploy silently overwrites this branch's work," it's that **Production is already stale relative to both `main`'s later commits (`7a2e8ff` etc.) and this branch's Phase 6 work**, and nobody has yet made a deliberate decision about which source of truth Production should follow going forward. Resolve this deliberately (merge PR #13, or continue direct-from-branch deploys) rather than letting whichever deploy happens next decide it by accident.
+
+### FUTURE WORK — Phase 7 — Weekly Range Resources Intelligence Report
+
+**Not implemented. Do not begin without separate, explicit authorization.** Recorded here only so the approved product direction survives to the next session.
+
+Approved direction:
+- One universal report, generated once per week, identical for all users (not personalized).
+- Built from a frozen, validated weekly dataset — generated once, then cached/stored, not regenerated per view.
+- Historical report archive retained.
+- Overview page gets a "Download Weekly Report" button.
+- Output is a professional PDF: Range Resources branding/logo, page numbers, a report timestamp / data-cutoff date, sources/freshness disclosure, and charts/tables drawn only from already-validated dashboard data.
+- Top section, titled **"Weekly Range Resources Intelligence Assessment"**, target ~500–800 words, synthesizing: overall Range assessment; biggest opportunity; biggest risk; what changed this week; Range-specific implications; what IR should watch next; operating/financial positioning; gas pricing; Appalachia; U.S. supply; storage; LNG; power/industrial demand; EIA/STEO; rigs; peers; material News; Forecast/scenarios; deterministic Macro risks/opportunities; and meaningful change versus the previous week's frozen report.
+
+Architecture direction:
+```
+validated dashboard data
+  → freeze weekly snapshot
+  → deterministic calculations/charts
+  → structured report payload
+  → AI assessment (synthesis/writing only)
+  → PDF renderer
+  → stored weekly report
+  → same download served to all users
+```
+The AI must never manufacture charts, metrics, rankings, or source data — same "deterministic engine computes, AI only narrates" boundary already enforced in the Phase 6D/6E risk engine and AI summary.
+
+### WHEN RESUMING THIS PROJECT
+
+1. `git fetch origin`
+2. `git checkout feat/daily-energy-intelligence`
+3. Verify `HEAD` == `a05331d` (or whatever this doc's "Latest commit" says, if updated since) and matches `origin/feat/daily-energy-intelligence`.
+4. `git status` — confirm clean, no untracked files.
+5. Read this "PHASE 6 CLOSEOUT" section in full before doing anything else.
+6. If the live Macro AI validation (above) hasn't been run yet, run it before treating Phase 6 as fully verified end-to-end.
+7. Deploy/verify a fresh Preview if the one linked above has expired.
+8. Do not merge PR #13 without explicit user approval in that session.
+9. Only start Phase 7 after a deliberate Phase 6 validation/Production-promotion decision has been made.
+
+---
+
 - **Repository**: christian-04-code/rrc-peer-dashboard
 - **Active branch**: main (production-connected; SEC ingestion + full dashboard/model/UI/API work merged here as of `94a8c6a`)
 - **Latest commit**: "Show commodity price assumptions (current market / EIA / modeled) in the Scenario Workbench"
@@ -10,7 +171,7 @@
 Not part of `main`'s git history. All work below lives only on this branch. Per explicit user direction during Phase 5, this branch's build was deployed directly to the Vercel **Production** environment (`vercel deploy --prod`) ahead of any git merge — see "Production activation" below. `main` itself still has zero News code.
 
 - **Branch**: `feat/daily-energy-intelligence`
-- **Open PR**: [#13](https://github.com/christian-04-code/rrc-peer-dashboard/pull/13), base `main`, **DRAFT**, not merged. Still titled "Phase 3: bounded AI news validation" -- retitling to reflect Phases 2–6B was attempted during Phase 5 but the agent has no GitHub write credential in this sandbox (`gh auth login` not configured, no `GH_TOKEN`, and credential-store access is blocked by the sandbox's own permission classifier). Whoever has `gh` access should update the title/body.
+- **Open PR**: [#13](https://github.com/christian-04-code/rrc-peer-dashboard/pull/13), base `main`, **DRAFT**, not merged. As of the Phase 6E closeout (2026-08-31), confirmed live via the GitHub API to be titled "Daily Energy Intelligence: automated news pipeline, AI analysis, and simplified News feed (Phases 2–5.1)" with head SHA `a05331d` (exactly this branch's tip) -- the title still undersells scope (predates Phase 6 entirely) but is no longer the stale "Phase 3" title this note used to describe. The agent still has no GitHub write credential in this sandbox (`gh auth login` not configured, no `GH_TOKEN`); whoever has `gh`/web access should update the title/body when convenient -- this is cosmetic only and does not affect safety.
 
 **Phases completed, in order**: Phase 1 (architecture-only report) → Phase 2 (deterministic collection/normalize/dedupe/relevance/persistence pipeline) → Phase 2.5 (relevance-engine hardening) → Phase 3 (Anthropic-backed Range-impact analysis, manual validation) → Phase 4 (News tab UI, read-only) → Phase 5 (full daily automation) → Phase 5.1 (News tab UI simplification) → Phase 5.2 (progressive disclosure + "how this feed works" explainer) → Phase 6A (Macro/EIA audit + shared-taxonomy relocation) → Phase 6B (EIA Macro Intelligence: ingestion foundation) → Phase 6C (Macro UI: high-value modules + Permian chart fix) → Phase 6D (Dynamic Range Macro Risk Engine + AI Macro Summary) → **Phase 6E (Macro date/freshness closeout — functionally complete, pending only user-run live cron validation)**.
 
