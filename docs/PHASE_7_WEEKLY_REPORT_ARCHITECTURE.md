@@ -1,6 +1,6 @@
 # Phase 7 — Weekly Range Resources AI Intelligence Report: Architecture
 
-**Status as of this document: Phase 7A + 7B + 7B.1 complete.** 7A built the architecture/data-contracts/persistence spine. 7B built the real deterministic snapshot layer on top of it: subsystem adapters that collect real evidence, a real comparison engine, real deterministic change detection, a real materiality foundation, a real News inclusion window, a real fingerprint algorithm, and the snapshot-builder orchestration that carries a draft through `pending → building → ready` (never further). 7B.1 was a small corrective pass, found during control-hub review, that (1) re-anchored the News inclusion window to the report's own **data cutoff** instead of the storage-week identity Friday, and (2) replaced `displayValue`-text-based change/materiality/fingerprint comparisons with a **semantic** comparison rule (`currentValue`/`period`/category state) — see §8, §20, §22, §23, and §24 for the corrected design. **No AI call, no chart renderer, no PDF renderer, no publish, no cron, no UI entry point exists yet** — those remain Phase 7C+. This document is the continuity source for Phase 7 — a future session should be able to resume Phase 7C from this document alone, without rediscovering the decisions below.
+**Status as of this document: Phase 7A + 7B + 7B.1 + 7C complete.** 7A built the architecture/data-contracts/persistence spine. 7B built the real deterministic snapshot layer on top of it: subsystem adapters that collect real evidence, a real comparison engine, real deterministic change detection, a real materiality foundation, a real News inclusion window, a real fingerprint algorithm, and the snapshot-builder orchestration that carries a draft through `pending → building → ready` (never further). 7B.1 was a small corrective pass that (1) re-anchored the News inclusion window to the report's own **data cutoff** instead of the storage-week identity Friday, and (2) replaced `displayValue`-text-based change/materiality/fingerprint comparisons with a **semantic** comparison rule (`currentValue`/`period`/category state) — see §8, §20, §22, §23. **7C built the AI analyst layer** (§26): deterministic evidence selection, a bounded structured AI input/output contract with real grounding validation, one Anthropic call per report (Claude Haiku 4.5, forced tool-use), a fingerprinted/cached persistence layer, and safe-failure behavior. **7C stops at a persisted, validated `WeeklyAnalystAssessment` — no chart renderer, no PDF renderer, no publish, no download route, no cron, no UI entry point exists yet.** This document is the continuity source for Phase 7 — a future session should be able to resume Phase 7D from this document alone, without rediscovering the decisions below.
 
 See `docs/CURRENT_HANDOFF.md`'s Phase 7A/7B closeout sections for session-level summaries (files changed, test/build results, commit). This document is the durable architecture reference; the handoff doc is the point-in-time session log.
 
@@ -392,15 +392,144 @@ Genuine **data gaps**, documented rather than papered over with a weak substitut
 - **`peerChange` as a distinct comparison period is not separately computed** -- peers get the same QoQ/`priorQuarterActuals` comparisons Range's own data gets (§10), not a bespoke "Range-vs-peer relative positioning" delta. Judged out of scope for a deterministic *data* layer; a relative-positioning delta is closer to a synthesis/selection decision, better suited to Phase 7C/7D.
 - **DB-gated tests (including the full `runWeeklySnapshotBuild` lifecycle test) have not run against a real Postgres** -- unchanged status as of Phase 7B.1; see `docs/CURRENT_HANDOFF.md`'s closeout sections for the same sandbox limitation noted in every Phase 7 session so far.
 
-## 25. What remains — Phase 7C through 7G (not started; not authorized by this phase)
+## 25. What remains — Phase 7D through 7G (not started; not authorized by this phase)
 
-- **7C — AI analyst call**: a real `WeeklyIntelligenceAIProvider` implementation (Anthropic, mirroring `AnthropicMacroSummaryProvider`), called once per report, validated by `validateWeeklyIntelligenceAIOutput`. Its input is now real: `runWeeklySnapshotBuild()`'s frozen `WeeklyReportPayload` + `WeeklyChange[]` + materiality-ranked evidence (§21) give 7C a genuine dataset to synthesize over, not a placeholder.
-- **7D — Chart renderer + PDF renderer**: real deterministic chart generation (4–6 charts target) and the HTML/CSS → headless-browser PDF pipeline (§16), including the actual Range-branded CSS primitives translated from the July reference (§15), plus wiring a real object/blob storage provider (§5 recommends Vercel Blob) behind the existing provider-agnostic `artifact_key` column.
-- **7E — Publication + delivery surface**: an Overview "Download Weekly Report" button, a "latest report" read endpoint serving `getLatestPublishedSnapshot()`'s artifact, historical-archive browsing if wanted. Also where `publishSnapshot()` gets its first real caller.
-- **7F — Orchestration**: the actual gated cron (§17) — new `vercel.json` entry, `app/api/cron/reports/route.ts`, advisory-lock-guarded orchestration function that calls `runWeeklySnapshotBuild()` (now real) and then, once 7C/7D exist, carries a `ready` snapshot the rest of the way to `published`.
+- **7C — AI analyst call — DONE, see §26.**
+- **7D — Chart renderer + PDF renderer**: real deterministic chart generation (4–6 charts target) and the HTML/CSS → headless-browser PDF pipeline (§16), including the actual Range-branded CSS primitives translated from the July reference (§15), plus wiring a real object/blob storage provider (§5 recommends Vercel Blob) behind the existing provider-agnostic `artifact_key` column. Its narrative content now has a real source: a `ready` snapshot's persisted `weekly_report_analyses.assessment` (§26.8).
+- **7E — Publication + delivery surface**: an Overview "Download Weekly Report" button (tooltip copy locked, §26.11), a "latest report" read endpoint serving `getLatestPublishedSnapshot()`'s artifact, historical-archive browsing if wanted. Also where `publishSnapshot()` gets its first real caller.
+- **7F — Orchestration**: the actual gated cron (§17) — new `vercel.json` entry, `app/api/cron/reports/route.ts`, advisory-lock-guarded orchestration function that calls `runWeeklySnapshotBuild()` and, once ready, `generateWeeklyAnalysisIfNeeded()` (§26.9 -- exists now but has no scheduled caller yet), then once 7D exists, carries a `ready` snapshot + assessment the rest of the way to `published`. Also where the first real (paid) Anthropic call for this subsystem should happen, via the same controlled-Preview-validation pattern Phase 6 established (§26.10).
 - **7G — End-to-end validation**: a real generated report, human-reviewed against the 5-page/visual-grammar requirements, before any production exposure.
 
-## 26. Files added
+## 26. Weekly AI Analyst layer (Phase 7C)
+
+Phase 7C turns a `ready` frozen snapshot (Phase 7B) into ONE validated, structured, Range-focused analyst assessment. **Stops there** -- no chart/HTML/PDF rendering, no publish, no download route, no cron. The AI boundary from Phase 7A/7B is unchanged and now enforced with real grounding checks: deterministic code owns every fact, metric, period, comparison, ranking, and risk state; the model owns only prioritization, synthesis, interpretation, and narrative framing.
+
+**Files**: `lib/reports/ai-contract.ts` (rewritten -- replaces Phase 7A's placeholder flat-narrative contract), `lib/reports/analyst-evidence-selection.ts` (pure selection), `lib/reports/analyst-input-builder.ts` (DB-touching orchestration step), `lib/reports/analyst-service.ts` (cache/generate/persist), `lib/reports/persistence/analysis-repo.ts` + a `weekly_report_analyses` table added to `schema.sql`, `lib/reports/ai/{provider.ts,model-config.ts,prompt.ts,anthropic-provider.ts}`.
+
+### 26.1 AI input contract
+
+`WeeklyAnalystInput` (`ai-contract.ts`):
+
+```ts
+type WeeklyAnalystInput = {
+  schemaVersion: string;
+  report: { storageWeekEnding: string; dataCutoffAt: string };
+  marketBackdrop: WeeklyAnalystEvidenceRef[];
+  riskCandidates: WeeklyAnalystRiskCandidate[];        // HIGH_RISK/MODERATE_RISK/WATCH
+  opportunityCandidates: WeeklyAnalystRiskCandidate[]; // SUPPORTIVE
+  whatChanged: WeeklyAnalystChangeRef[];
+  range: WeeklyAnalystEvidenceRef[];
+  peers: WeeklyAnalystEvidenceRef[];
+  news: WeeklyAnalystEvidenceRef[];
+  outlook: WeeklyAnalystEvidenceRef[];
+  sourcesFreshness: WeeklyAnalystSourceFreshness[];
+  previousReportContext: { storageWeekEnding: string; bottomLine: string } | null;
+  evidenceAllowlist: string[]; // union of every evidenceId above -- the ONLY ids the AI may cite
+};
+```
+
+`WeeklyAnalystEvidenceRef = { evidenceId, category, label, displayValue, period }`; `WeeklyAnalystRiskCandidate` adds `driver, state, rank, reason` (straight from the deterministic risk engine, via `deterministic_risk_opportunity` evidence items' own `metadata`); `WeeklyAnalystChangeRef` mirrors `WeeklyChange` (§20) directly. This is a compact, bounded, purpose-built payload -- never the raw DB row, never arbitrary unrestricted JSON.
+
+### 26.2 Deterministic evidence selection (`analyst-evidence-selection.ts`)
+
+Pure function `selectAnalystEvidence(payload, changes, previousReportContext) -> WeeklyAnalystInput`. Reuses Phase 7B's `rankEvidenceByMateriality()` (§21) to prefer new/changed evidence over routine unchanged metrics when a category must be capped. Hard, documented ceilings (never silently unbounded):
+
+| Section | Limit | Why |
+|---|---|---|
+| marketBackdrop | 10 | Typically ≤7 items exist today (one per Macro category) -- a safety ceiling for future category growth, not an active truncation in practice |
+| range (Range's own company evidence) | 8 | 9 headline metrics + variable guidance records |
+| peers | 6 | Up to 36 raw items (6 tickers × 6 metrics) -- most unchanged most weeks |
+| news | 5 | news-window.ts (§22) already caps at 8; re-capped tighter for what reaches the model |
+| outlook (STEO + forecast_scenarios) | 6 | 9 STEO series + 2 forecast items |
+| whatChanged (raw candidates offered to the model) | 8 | The model may then synthesize down to ≤5 narrative items (§26.3) |
+| riskCandidates / opportunityCandidates | 5 total | Inherited directly from `macro-adapter.ts`'s existing `rankRangeMacroSignals(allSignals, 5)` cap (Phase 7B) -- not re-capped again here |
+
+`whatChanged` raw-candidate prioritization (deterministic tie-break, not a score): `risk_state_changed`/`risk_rank_changed` first, then category-specific "new information" kinds (`new_steo_vintage`, `new_company_result_or_guidance`, `material_peer_change`, `new_retained_news_item`, `forecast_revision`), then `new_observation`, then `value_changed`; ties break by `evidenceId`. Selection is fully deterministic: identical payload + changes always produces byte-identical output (tested).
+
+`WeeklyChange[]` is not persisted (Phase 7B decision, §20) -- `analyst-input-builder.ts` recomputes it from the target snapshot's own frozen payload and the previous *published* snapshot's payload via the same `computeWeeklyChanges()` runWeeklySnapshotBuild() itself uses, so it is always exactly reproducible from already-persisted data. `previousReportContext.bottomLine` comes from the previous snapshot's own latest **ready** analysis (`getLatestAnalysisForSnapshot`), not from the snapshot itself.
+
+### 26.3 AI output contract
+
+`WeeklyAnalystAssessment` (`ai-contract.ts`):
+
+```ts
+type WeeklyAnalystAssessment = {
+  schemaVersion: string; aiProvider: string; aiModel: string; generatedAt: string;
+  executiveAssessment: string;
+  biggestRisk: { title: string; assessment: string; evidenceIds: string[] };
+  biggestOpportunity: { title: string; assessment: string; evidenceIds: string[] };
+  whatChanged: Array<{ title: string; assessment: string; evidenceIds: string[] }>;      // 0-5 items
+  managementWatchItems: Array<{ item: string; reason: string; evidenceIds: string[] }>;  // 1-6 items
+  bottomLine: string;
+  selectedEvidenceIds: string[];
+};
+```
+
+`executiveAssessment` word bounds: **350-700 words**, targeting ~450-550 (generous floor/ceiling around the target, same reasoning Phase 7A's original placeholder used, recalibrated to this brief's tighter target).
+
+### 26.4 Validation / grounding rules (`validateWeeklyAnalystAssessment`)
+
+Pure function, no AI call, reused by `anthropic-provider.ts` to reject-and-retry before persistence:
+
+- Required non-empty string fields (`schemaVersion`, `aiProvider`, `aiModel`, valid ISO `generatedAt`, `executiveAssessment`, `bottomLine`); `biggestRisk`/`biggestOpportunity` objects with non-empty `title`/`assessment`/`evidenceIds`; `whatChanged` an array of ≤5 well-formed narrative items; `managementWatchItems` an array of 1-6 well-formed watch items, each with **non-empty** `evidenceIds` (a watch item with no cited evidence is rejected outright -- never a fabricated forecast); `selectedEvidenceIds` a string array with no duplicates.
+- **Allowlist grounding**: every evidence id cited anywhere in the response (across all fields) must be a member of `input.evidenceAllowlist`. Unknown ids reject the whole response.
+- **Risk/opportunity grounding**: `biggestRisk.evidenceIds` must intersect `input.riskCandidates`' ids; `biggestOpportunity.evidenceIds` must intersect `input.opportunityCandidates`' ids. The AI cannot invent a risk/opportunity outside the deterministic risk engine's own ranking, and cannot swap the two (citing an opportunity candidate as the "biggest risk" is rejected).
+- **Change grounding**: each `whatChanged` narrative item must intersect `input.whatChanged`'s ids -- the AI cannot describe a change that was not actually supplied.
+- **Content guards**: a small denylist of generic-filler phrasing (`"market conditions remain dynamic"`, `"continue to monitor the situation"`, etc. -- Phase 7C brief's own named examples) rejects boilerplate outright rather than accepting it as a fallback; a Macro-precedent-mirrored guaranteed-outcome-language denylist (`"will rise"`, `"will outperform"`, `"guaranteed to"`, etc.) applies to `executiveAssessment` and `bottomLine`.
+
+No secondary "fix the AI's mistake" call exists anywhere -- a malformed/ungrounded response is rejected and, within the same bounded retry (§26.6), re-sampled fresh; the phase brief explicitly forbids using a second AI call to correct a first one's factual errors.
+
+### 26.5 Prompt design (`lib/reports/ai/prompt.ts`)
+
+One production system prompt (`SYSTEM_PROMPT`) establishing: persona (senior U.S. natural-gas/E&P equity-research analyst, audience = Range management/IR/decision-makers); that the supplied payload is the COMPLETE factual universe (no outside knowledge, no model-memory company facts, no browsing, no tools); that every number/date/ranking must come from supplied evidence; the risk/opportunity/whatChanged grounding rules mirrored in prose form; that mixed/uncertain evidence should be described as such, never forced into false confidence; no guaranteed-outcome or promotional language; and that `executiveAssessment` should synthesize relationships between facts (e.g. how storage + LNG demand interact for Range's realized pricing), not mechanically restate each metric in turn.
+
+`formatAnalystInputForPrompt(input)` is a separate, pure, independently-tested function: deterministically renders the structured input to text, with every evidence line carrying its `[evidenceId]` in brackets so the model can cite it precisely.
+
+**Versioning**: `WEEKLY_ANALYST_PROMPT_VERSION` (`ai/model-config.ts`, currently `"1.0.0"`) is independent of `WEEKLY_ANALYST_SCHEMA_VERSION` (`ai-contract.ts`, also `"1.0.0"`) -- a prompt wording change that doesn't touch the output schema still bumps the prompt version and therefore the analysis fingerprint (§26.7).
+
+### 26.6 Model configuration (`lib/reports/ai/model-config.ts`)
+
+`WEEKLY_ANALYST_MODEL = "claude-haiku-4-5"` -- this project's currently-approved model (unchanged; matches `MACRO_SUMMARY_MODEL`), kept as this subsystem's own constant per the Phase 6A boundary (each domain's AI config independently editable). `WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 3000` (generous headroom for the full structured output -- executiveAssessment + 2 narrative items + ≤5 whatChanged + ≤6 watch items + bottomLine + JSON overhead). Forced tool-use (`tool_choice: { type: "tool", name: "submit_weekly_range_analyst_assessment" }`), mirroring `AnthropicMacroSummaryProvider`/`AnthropicNewsAnalysisProvider` exactly, for the same reliability reason: a plain-text completion could come back conversational or malformed, a tool call must supply every required field in a type-checked shape. Retry: `withBoundedRetry` imported directly from `lib/news/ai/retry.ts` (confirmed domain-neutral, zero News coupling -- same reuse Macro's own service already established), `DEFAULT_ANALYSIS_RETRY_CONFIG` (3 attempts, 400ms base backoff) -- unchanged project-wide policy, not a new one. **Target: one model invocation per weekly report** -- no per-section calls, no per-chart calls, no iterative refinement loop.
+
+### 26.7 Analysis fingerprint / idempotency
+
+`computeWeeklyAnalystFingerprint({ snapshotFingerprint, schemaVersion, promptVersion, model })` (`analyst-service.ts`) -- SHA-256 of the four components delimiter-joined (a flat, already-stable-string join is sufficient here, unlike `fingerprint.ts`'s richer canonicalize-then-hash treatment of nested evidence). `snapshotFingerprint` is the frozen snapshot's own `input_fingerprint` (Phase 7B, §8) -- so a snapshot whose underlying evidence changed at all produces a different analysis fingerprint automatically, with no separate re-derivation. Same snapshot + same prompt version + same schema version + same model → same fingerprint → the cached `ready` row is returned, and AI is never re-invoked (verified: a cache hit results in zero provider calls). Changing any one of the four produces a new fingerprint and a fresh analysis.
+
+### 26.8 Persistence (`weekly_report_analyses`, `analysis-repo.ts`)
+
+New table, added to `lib/reports/persistence/schema.sql` (same migration path, `npm run report:migrate`). One row per generation **attempt** (mirrors `weekly_report_snapshots`' own convention exactly), linked by `snapshot_id` (`REFERENCES weekly_report_snapshots(id) ON DELETE CASCADE`):
+
+| Column | Purpose |
+|---|---|
+| `id`, `snapshot_id` | PK, FK to the frozen snapshot this analysis is for |
+| `analysis_fingerprint` | §26.7 |
+| `status` | `pending \| ready \| failed` -- simpler than the snapshot's own pending/building/ready/published/failed, since one AI call (with its own internal bounded retry) either succeeds or fails, no multi-step "building" phase |
+| `error_message` | Required (`CHECK`) when `status = 'failed'` |
+| `schema_version`, `prompt_version`, `ai_provider`, `ai_model` | Auditability |
+| `assessment` | The full validated `WeeklyAnalystAssessment` JSONB -- set only at `pending → ready`, never rewritten |
+| `attempted_at`, `completed_at`, `created_at`, `updated_at` | Timestamps |
+
+**Two partial unique indexes**, exactly mirroring `weekly_report_snapshots`' pattern (§6): `weekly_report_analyses_active_fingerprint_key` (at most one `pending` row per fingerprint -- prevents two concurrent callers both invoking AI for the same frozen snapshot+prompt+schema+model) and `weekly_report_analyses_ready_fingerprint_key` (at most one `ready` row per fingerprint, ever -- the DB-level cache/idempotency guarantee, not just application discipline). A `CHECK` constraint forbids a `ready` row from ever being incomplete, mirroring `weekly_report_snapshots_published_complete_check`.
+
+### 26.9 Cache-hit / generation flow (`generateWeeklyAnalysisIfNeeded`, `analyst-service.ts`)
+
+Mirrors `lib/market/macro-summary-service.ts`'s `generateMacroSummaryIfNeeded` structurally: (1) look up `getReadyAnalysis(fingerprint)` -- return `{status: "cache_hit"}` if found, zero provider calls; (2) look up `getActiveAnalysis(fingerprint)` -- return `{status: "in_progress"}` if another attempt is currently pending (never double-invoke); (3) `createPendingAnalysis()` (idempotent -- a concurrent caller racing this exact call gets back the same row rather than a duplicate); (4) call `provider.analyze(input)` wrapped in `withBoundedRetry`; (5a) on success, `validateWeeklyAnalystAssessment()` then `markAnalysisReady()` (atomic `pending → ready`); (5b) on failure (timeout, malformed JSON, schema violation, invalid evidence ids, failed grounding, provider error -- any thrown error), `markAnalysisFailed()` (atomic `pending → failed`) with a truncated safe error message, never a fabricated fallback narrative, and the deterministic snapshot itself is never touched. A failed attempt's row is terminal for itself but never blocks a fresh retry (a new `pending` row) for the same fingerprint, and can never be resurrected into or confused with a `ready` row.
+
+Not called from any browser-facing route -- confirmed by a source-inspection test scanning every file under `app/api/` for any reference to the Weekly Analyst AI layer (none found; no `app/api/reports` directory exists at all). Intended for a future Phase 7F scheduled orchestration (mirroring `app/api/cron/macro/route.ts` → `runMacroDailyOrchestration()`), not built in Phase 7C.
+
+### 26.10 Optional live validation (not run in Phase 7C)
+
+No live Anthropic call was made during Phase 7C implementation or testing -- every test uses an in-process fake provider (mirrors `tests/macro-summary-service.test.cjs`'s own `countingProvider` pattern exactly). The existing project pattern for a controlled first real call is Phase 6's `docs/CURRENT_HANDOFF.md`-documented `vercel curl` + hidden-input `CRON_SECRET` validation against a Preview deployment (see the Phase 6 closeout section of that document) -- Phase 7C did not build an equivalent trigger route (none is authorized yet; that is Phase 7F's job), so there is currently no way to invoke this against a live Preview at all. A future phase's orchestration route should follow that same manual-validation pattern before any scheduled/automatic invocation.
+
+### 26.11 Management tooltip copy -- LOCKED for Phase 7F (do not implement UI yet)
+
+A future phase (Phase 7F, alongside the Overview page's "Download Weekly Intelligence Report" button) will add a hover/focus tooltip on that button. **Not implemented in Phase 7C** -- copy locked here so Phase 7F implements it exactly or very closely:
+
+> "Generated automatically each week after the latest EIA natural gas storage data is validated. The report combines Range company data, natural gas market fundamentals, peer trends, forecasts and material news into a frozen weekly snapshot. Deterministic analytics identify the key changes, risks and opportunities, then AI synthesizes the validated evidence into a concise Range-focused management briefing."
+
+Required UI behavior for Phase 7F: appears on hover **and** keyboard focus (not click-only); compact, management-friendly tooltip/popover; no system jargon; must reassure the reader that AI synthesizes already-validated evidence rather than inventing the underlying analytics. If a shorter variant is needed for UI fit, preserve these five ideas: (1) generated automatically after the latest EIA storage validation, (2) combines Macro + Range + peers + forecasts + News, (3) freezes a weekly validated snapshot, (4) deterministic analytics find changes/risks/opportunities, (5) AI synthesizes that evidence into the management briefing.
+
+## 27. Files added
 
 **Phase 7A**: `lib/reports/weekly-report-types.ts`, `readiness.ts`, `ai-contract.ts`, `persistence/{schema.sql,migrate.ts,report-repo.ts}`, `scripts/reports/migrate.mjs`, `tests/weekly-report-{identity,readiness,ai-contract,repo}.test.cjs`.
 
@@ -444,4 +573,24 @@ docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md (updated)  — this document
 docs/CURRENT_HANDOFF.md (updated)                     — Phase 7B.1 closeout note
 ```
 
-No existing file outside `lib/reports/` (and its own tests) was modified in any Phase 7 session so far. No new API route, no new UI, no new npm dependency, no publish/AI/PDF code anywhere.
+**Phase 7C**:
+```
+lib/reports/ai-contract.ts (rewritten)             — real WeeklyAnalystInput/WeeklyAnalystAssessment + validateWeeklyAnalystAssessment(), §26.1/26.3/26.4
+lib/reports/analyst-evidence-selection.ts          — deterministic, bounded evidence selection, §26.2
+lib/reports/analyst-input-builder.ts               — DB-touching step: recomputes changes, fetches previous report context
+lib/reports/analyst-service.ts                     — generateWeeklyAnalysisIfNeeded(), computeWeeklyAnalystFingerprint(), §26.7/26.9
+lib/reports/persistence/analysis-repo.ts           — weekly_report_analyses CRUD/lifecycle helpers
+lib/reports/persistence/schema.sql (modified)      — +weekly_report_analyses table, §26.8
+lib/reports/ai/provider.ts                         — WeeklyAnalystProvider interface + Noop implementation
+lib/reports/ai/model-config.ts                     — model/token/pricing/prompt-version constants, §26.6
+lib/reports/ai/prompt.ts                           — SYSTEM_PROMPT + formatAnalystInputForPrompt(), §26.5
+lib/reports/ai/anthropic-provider.ts                — AnthropicWeeklyAnalystProvider, forced tool-use
+tests/weekly-report-ai-contract.test.cjs (rewritten) — validation/grounding rules (no DB)
+tests/weekly-report-analyst-evidence-selection.test.cjs — selection limits/prioritization/determinism (no DB)
+tests/weekly-report-analyst-prompt.test.cjs         — prompt formatting determinism (no DB)
+tests/weekly-report-analyst-service.test.cjs        — fingerprint (no DB) + source-inspection AI-boundary check (no DB) + cache/generate/persist/failure lifecycle (DB-gated, fake provider)
+docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md (updated) — this document
+docs/CURRENT_HANDOFF.md (updated)                    — Phase 7C closeout note
+```
+
+No existing file outside `lib/reports/` (and its own tests) was modified in any Phase 7 session so far. No new API route, no new UI, no new npm dependency, no chart/PDF-rendering or publish code anywhere. No live Anthropic call occurred during Phase 7C.

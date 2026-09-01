@@ -1,122 +1,301 @@
-import type { WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
-
 /**
- * Phase 7A -- the future Weekly Intelligence AI contract (Phase 7A decision
- * #7). This file defines shape and validation only; no AI provider is
- * implemented or called here or anywhere else in Phase 7A. Mirrors the
- * "deterministic engine computes, AI only narrates" boundary already
- * enforced for Macro (lib/market/ai/types.ts's validateMacroSummaryResult,
- * lib/market/macro-risk-engine.ts's comment that "AI does NOT rank these
- * risks"): the future AI receives only this one bounded, already-computed
- * payload per weekly report (target: one AI call per report) and returns
- * only narrative text fields. It may prioritize and synthesize the already-
- * validated evidence it was given; it may never invent a fact, metric,
- * date, ranking, guidance figure, chart, or source.
+ * Phase 7C -- the real Weekly Intelligence AI contract, replacing Phase 7A's
+ * placeholder flat-narrative-string shape (`WeeklyIntelligenceAIInput`/
+ * `WeeklyIntelligenceAIOutput`) now that a real evidence-selection layer
+ * (analyst-evidence-selection.ts) and provider (ai/anthropic-provider.ts)
+ * exist to populate/consume it. Same boundary as before, now enforced with
+ * real grounding checks: the AI receives one bounded, already-computed
+ * payload per weekly report and returns only narrative fields plus
+ * evidence-id citations -- it may prioritize/synthesize the evidence it was
+ * given; it may never invent a fact, metric, date, ranking, guidance
+ * figure, chart, or source, and every evidence id it cites must both (a)
+ * exist in the input's allowlist and (b) for biggestRisk/biggestOpportunity/
+ * whatChanged specifically, trace back to the deterministic candidate it
+ * claims to explain -- see validateWeeklyAnalystAssessment.
  */
 
-export type WeeklyIntelligenceAIInput = {
-  schemaVersion: string;
-  storageWeekEnding: string;
-  payload: WeeklyReportPayload;
-  /** The previous published report's own bottom-line narrative, for change-detection framing only -- never part of the fingerprinted/cached input, mirrors macro-summary-service.ts's priorSummary/priorContext pattern. Null until at least one prior report has been published. */
-  previousReportContext: { storageWeekEnding: string; bottomLine: string } | null;
-  /** Explicit allowlist of evidence item ids the AI may reference via selectedEvidenceIds -- so the AI can never select or imply evidence outside what was actually supplied this run. */
-  availableEvidenceIds: string[];
+export type WeeklyAnalystEvidenceRef = {
+  evidenceId: string;
+  category: string;
+  label: string;
+  displayValue: string;
+  period: string | null;
 };
 
-export type WeeklyIntelligenceAIOutput = {
+export type WeeklyAnalystRiskCandidate = {
+  evidenceId: string;
+  driver: string;
+  label: string;
+  state: string;
+  rank: number;
+  reason: string;
+};
+
+export type WeeklyAnalystChangeRef = {
+  kind: string;
+  evidenceId: string;
+  category: string;
+  label: string;
+  fromValue: string | null;
+  toValue: string | null;
+  fromState: string | null;
+  toState: string | null;
+};
+
+export type WeeklyAnalystSourceFreshness = {
+  key: string;
+  label: string;
+  period: string | null;
+  freshness: string;
+};
+
+/**
+ * The one bounded payload sent to the model. Every array here is already
+ * deterministically selected/limited (analyst-evidence-selection.ts) --
+ * this file only defines the shape, it does not select anything itself.
+ */
+export type WeeklyAnalystInput = {
+  schemaVersion: string;
+  report: { storageWeekEnding: string; dataCutoffAt: string };
+  marketBackdrop: WeeklyAnalystEvidenceRef[];
+  /** Deterministic risk-engine candidates at HIGH_RISK/MODERATE_RISK/WATCH -- the AI may explain WHY the top one(s) matter, never invent or reorder them. */
+  riskCandidates: WeeklyAnalystRiskCandidate[];
+  /** Deterministic risk-engine candidates at SUPPORTIVE. */
+  opportunityCandidates: WeeklyAnalystRiskCandidate[];
+  whatChanged: WeeklyAnalystChangeRef[];
+  range: WeeklyAnalystEvidenceRef[];
+  peers: WeeklyAnalystEvidenceRef[];
+  news: WeeklyAnalystEvidenceRef[];
+  outlook: WeeklyAnalystEvidenceRef[];
+  sourcesFreshness: WeeklyAnalystSourceFreshness[];
+  /** The previous published report's own bottom line, for change-detection framing only -- never part of the analysis fingerprint and never treated as current data. Null until at least one prior report has been published. */
+  previousReportContext: { storageWeekEnding: string; bottomLine: string } | null;
+  /** Every evidence id appearing anywhere above, union'd -- the complete, explicit allowlist the AI may cite. Nothing outside this set may appear in the output. */
+  evidenceAllowlist: string[];
+};
+
+export type WeeklyAnalystNarrativeItem = {
+  title: string;
+  assessment: string;
+  evidenceIds: string[];
+};
+
+export type WeeklyAnalystWatchItem = {
+  item: string;
+  reason: string;
+  evidenceIds: string[];
+};
+
+export type WeeklyAnalystAssessment = {
   schemaVersion: string;
   aiProvider: string;
   aiModel: string;
   generatedAt: string;
-  /** ~500-word target executive assessment for report page 1 (Phase 7A decision #8). */
   executiveAssessment: string;
-  biggestRisk: string;
-  biggestOpportunity: string;
-  whatChanged: string;
-  managementWatchItems: string[];
+  biggestRisk: WeeklyAnalystNarrativeItem;
+  biggestOpportunity: WeeklyAnalystNarrativeItem;
+  whatChanged: WeeklyAnalystNarrativeItem[];
+  managementWatchItems: WeeklyAnalystWatchItem[];
   bottomLine: string;
-  /** Must be a subset of the input's availableEvidenceIds -- enforced by validateWeeklyIntelligenceAIOutput below, never left to the provider's own judgment about what "exists". */
+  /** Every evidence id the assessment relies on, union'd across all fields above -- a convenience summary, still validated as a subset of the allowlist like everything else. */
   selectedEvidenceIds: string[];
 };
 
-export const WEEKLY_INTELLIGENCE_AI_SCHEMA_VERSION = "1.0.0";
+export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.0.0";
 
-export class WeeklyIntelligenceAIValidationError extends Error {}
+export class WeeklyAnalystValidationError extends Error {}
 
-// Generous floor/ceiling around the ~500-word target (Phase 7A decision
-// #8) -- wide enough that a genuinely quiet or genuinely eventful week
-// doesn't get rejected for being shorter/longer than an arbitrary point
-// estimate, narrow enough to keep the future PDF's 5-page hard maximum
-// (Phase 7 product brief) honest even before the renderer exists.
-const MIN_ASSESSMENT_WORDS = 250;
-const MAX_ASSESSMENT_WORDS = 900;
+// ~450-550 word target (Phase 7C brief); floor/ceiling wide enough that a
+// genuinely quiet or eventful week isn't rejected for being shorter/longer
+// than a point estimate, narrow enough to keep the future PDF's 5-page hard
+// maximum honest -- same reasoning Phase 7A's placeholder used, recalibrated
+// to the brief's tighter target range.
+const MIN_EXECUTIVE_ASSESSMENT_WORDS = 350;
+const MAX_EXECUTIVE_ASSESSMENT_WORDS = 700;
+
+const MAX_WHAT_CHANGED_ITEMS = 5;
+const MAX_WATCH_ITEMS = 6;
+const MIN_WATCH_ITEMS = 1;
+
+/**
+ * Known generic-filler phrasing this project has decided is never an
+ * acceptable substitute for a grounded assessment (Phase 7C brief: "No
+ * fallback generic AI text... fail explicitly rather than publish
+ * boilerplate"). Not an exhaustive NLP detector -- a deliberately narrow,
+ * cheap, deterministic denylist of the exact kind of filler the brief
+ * calls out by name, mirroring the same "small denylist, not a fragile
+ * classifier" approach lib/market/ai/types.ts's GUARANTEED_LANGUAGE_PATTERNS
+ * already uses for a different concern (guaranteed-outcome language).
+ */
+const GENERIC_FILLER_PATTERNS = [
+  /market conditions remain dynamic/i,
+  /continue(?:s)? to monitor the situation/i,
+  /as the situation (?:develops|evolves)/i,
+  /stay(?:ing)? informed/i,
+  /time will tell/i,
+  /only time will tell/i,
+  /remains to be seen/i,
+  /in (?:today's|this) (?:ever-changing|fast-paced|dynamic) (?:market|environment)/i
+];
+
+/** Mirrors lib/market/ai/types.ts's GUARANTEED_LANGUAGE_PATTERNS -- this output is also equity-research-adjacent commentary about Range, so the same no-guaranteed-outcome discipline applies. Kept as this subsystem's own copy (not imported) for the same reason Phase 6A drew between News/Macro: each domain's AI validation stays independently editable. */
+const GUARANTEED_LANGUAGE_PATTERNS = [
+  /\bwill increase\b/i,
+  /\bwill decrease\b/i,
+  /\bwill rise\b/i,
+  /\bwill fall\b/i,
+  /\bwill outperform\b/i,
+  /\bwill underperform\b/i,
+  /\bstock will\b/i,
+  /\bshares will\b/i,
+  /\bguaranteed to\b/i,
+  /\bcertain to\b/i,
+  /\bis certain\b/i
+];
 
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-const REQUIRED_STRING_FIELDS: (keyof WeeklyIntelligenceAIOutput)[] = [
-  "schemaVersion",
-  "aiProvider",
-  "aiModel",
-  "generatedAt",
-  "executiveAssessment",
-  "biggestRisk",
-  "biggestOpportunity",
-  "whatChanged",
-  "bottomLine"
-];
+function findPattern(patterns: RegExp[], text: string): string | null {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[0];
+  }
+  return null;
+}
+
+function fail(message: string): never {
+  throw new WeeklyAnalystValidationError(message);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function validateNarrativeItem(value: unknown, fieldName: string): WeeklyAnalystNarrativeItem {
+  if (typeof value !== "object" || value === null) fail(`Weekly analyst response "${fieldName}" is not an object.`);
+  const record = value as Record<string, unknown>;
+  if (!isNonEmptyString(record.title)) fail(`Weekly analyst response "${fieldName}.title" is missing or empty.`);
+  if (!isNonEmptyString(record.assessment)) fail(`Weekly analyst response "${fieldName}.assessment" is missing or empty.`);
+  if (!isStringArray(record.evidenceIds) || record.evidenceIds.length === 0) {
+    fail(`Weekly analyst response "${fieldName}.evidenceIds" must be a non-empty string array.`);
+  }
+  return record as WeeklyAnalystNarrativeItem;
+}
+
+function validateWatchItem(value: unknown, index: number): WeeklyAnalystWatchItem {
+  if (typeof value !== "object" || value === null) fail(`Weekly analyst response managementWatchItems[${index}] is not an object.`);
+  const record = value as Record<string, unknown>;
+  if (!isNonEmptyString(record.item)) fail(`Weekly analyst response managementWatchItems[${index}].item is missing or empty.`);
+  if (!isNonEmptyString(record.reason)) fail(`Weekly analyst response managementWatchItems[${index}].reason is missing or empty.`);
+  if (!isStringArray(record.evidenceIds) || record.evidenceIds.length === 0) {
+    fail(`Weekly analyst response managementWatchItems[${index}].evidenceIds must be a non-empty string array -- a watch item must be grounded in supplied evidence, never a fabricated forecast.`);
+  }
+  return record as WeeklyAnalystWatchItem;
+}
+
+function checkGuardedText(text: string, fieldName: string): void {
+  const filler = findPattern(GENERIC_FILLER_PATTERNS, text);
+  if (filler) fail(`Weekly analyst response "${fieldName}" uses generic filler language ("${filler}") instead of a grounded assessment.`);
+  const guaranteed = findPattern(GUARANTEED_LANGUAGE_PATTERNS, text);
+  if (guaranteed) fail(`Weekly analyst response "${fieldName}" uses guaranteed-outcome language ("${guaranteed}") instead of conditional language.`);
+}
 
 /**
- * Pure structural/content validation of a future AI response against this
- * contract -- calls no AI provider itself. Intended to be reused by Phase
- * 7B's real provider integration the same way
- * lib/market/ai/types.ts's validateMacroSummaryResult is reused by the
- * Macro AI provider: reject and retry a malformed or out-of-bounds response
- * before it is ever persisted, rather than trusting the model's raw output.
+ * Pure structural/content/grounding validation of a future AI response
+ * against this contract and the exact input that produced it -- calls no
+ * AI provider itself. Reused by ai/anthropic-provider.ts to reject and
+ * retry a malformed, out-of-bounds, or ungrounded response before it is
+ * ever persisted.
  */
-export function validateWeeklyIntelligenceAIOutput(value: unknown, input: WeeklyIntelligenceAIInput): WeeklyIntelligenceAIOutput {
-  if (typeof value !== "object" || value === null) {
-    throw new WeeklyIntelligenceAIValidationError("Weekly Intelligence AI response is not an object.");
-  }
+export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAnalystInput): WeeklyAnalystAssessment {
+  if (typeof value !== "object" || value === null) fail("Weekly analyst response is not an object.");
   const record = value as Record<string, unknown>;
 
-  for (const field of REQUIRED_STRING_FIELDS) {
-    if (typeof record[field] !== "string" || !(record[field] as string).trim()) {
-      throw new WeeklyIntelligenceAIValidationError(`Weekly Intelligence AI response is missing non-empty "${field}".`);
-    }
+  for (const field of ["schemaVersion", "aiProvider", "aiModel"] as const) {
+    if (!isNonEmptyString(record[field])) fail(`Weekly analyst response is missing non-empty "${field}".`);
+  }
+  if (!isNonEmptyString(record.generatedAt) || Number.isNaN(Date.parse(record.generatedAt as string))) {
+    fail('Weekly analyst response "generatedAt" must be a valid ISO timestamp.');
   }
 
-  if (Number.isNaN(Date.parse(record.generatedAt as string))) {
-    throw new WeeklyIntelligenceAIValidationError("Weekly Intelligence AI response generatedAt must be a valid ISO timestamp.");
-  }
+  if (!isNonEmptyString(record.executiveAssessment)) fail('Weekly analyst response is missing non-empty "executiveAssessment".');
+  if (!isNonEmptyString(record.bottomLine)) fail('Weekly analyst response is missing non-empty "bottomLine".');
 
   const words = wordCount(record.executiveAssessment as string);
-  if (words < MIN_ASSESSMENT_WORDS || words > MAX_ASSESSMENT_WORDS) {
-    throw new WeeklyIntelligenceAIValidationError(
-      `Weekly Intelligence AI executiveAssessment is ${words} words -- outside the ${MIN_ASSESSMENT_WORDS}-${MAX_ASSESSMENT_WORDS} word contract range.`
-    );
+  if (words < MIN_EXECUTIVE_ASSESSMENT_WORDS || words > MAX_EXECUTIVE_ASSESSMENT_WORDS) {
+    fail(`Weekly analyst executiveAssessment is ${words} words -- outside the ${MIN_EXECUTIVE_ASSESSMENT_WORDS}-${MAX_EXECUTIVE_ASSESSMENT_WORDS} word contract range.`);
+  }
+  checkGuardedText(record.executiveAssessment as string, "executiveAssessment");
+  checkGuardedText(record.bottomLine as string, "bottomLine");
+
+  const biggestRisk = validateNarrativeItem(record.biggestRisk, "biggestRisk");
+  const biggestOpportunity = validateNarrativeItem(record.biggestOpportunity, "biggestOpportunity");
+
+  if (!Array.isArray(record.whatChanged) || record.whatChanged.length > MAX_WHAT_CHANGED_ITEMS) {
+    fail(`Weekly analyst response "whatChanged" must be an array of at most ${MAX_WHAT_CHANGED_ITEMS} items.`);
+  }
+  const whatChanged = record.whatChanged.map((item, index) => validateNarrativeItem(item, `whatChanged[${index}]`));
+
+  if (!Array.isArray(record.managementWatchItems) || record.managementWatchItems.length < MIN_WATCH_ITEMS || record.managementWatchItems.length > MAX_WATCH_ITEMS) {
+    fail(`Weekly analyst response "managementWatchItems" must be an array of ${MIN_WATCH_ITEMS}-${MAX_WATCH_ITEMS} items.`);
+  }
+  const managementWatchItems = record.managementWatchItems.map((item, index) => validateWatchItem(item, index));
+
+  if (!isStringArray(record.selectedEvidenceIds)) fail('Weekly analyst response "selectedEvidenceIds" must be a string array.');
+  const selectedEvidenceIds = record.selectedEvidenceIds as string[];
+  if (new Set(selectedEvidenceIds).size !== selectedEvidenceIds.length) {
+    fail('Weekly analyst response "selectedEvidenceIds" contains duplicate evidence ids.');
   }
 
-  if (
-    !Array.isArray(record.managementWatchItems) ||
-    record.managementWatchItems.length === 0 ||
-    record.managementWatchItems.some((item) => typeof item !== "string" || !item.trim())
-  ) {
-    throw new WeeklyIntelligenceAIValidationError("Weekly Intelligence AI response managementWatchItems must be a non-empty array of non-empty strings.");
+  // --- Grounding: every cited evidence id must exist in the allowlist. ---
+  const allowlist = new Set(input.evidenceAllowlist);
+  const allCitedIds = [
+    ...biggestRisk.evidenceIds,
+    ...biggestOpportunity.evidenceIds,
+    ...whatChanged.flatMap((item) => item.evidenceIds),
+    ...managementWatchItems.flatMap((item) => item.evidenceIds),
+    ...selectedEvidenceIds
+  ];
+  const unknownIds = [...new Set(allCitedIds)].filter((id) => !allowlist.has(id));
+  if (unknownIds.length > 0) {
+    fail(`Weekly analyst response cites evidence id(s) not present in the supplied allowlist: ${unknownIds.join(", ")}.`);
   }
 
-  if (!Array.isArray(record.selectedEvidenceIds) || record.selectedEvidenceIds.some((id) => typeof id !== "string")) {
-    throw new WeeklyIntelligenceAIValidationError("Weekly Intelligence AI response selectedEvidenceIds must be a string array.");
+  // --- Grounding: biggestRisk/biggestOpportunity must map to a real deterministic candidate, not an AI-invented ranking. ---
+  const riskCandidateIds = new Set(input.riskCandidates.map((candidate) => candidate.evidenceId));
+  if (!biggestRisk.evidenceIds.some((id) => riskCandidateIds.has(id))) {
+    fail('Weekly analyst response "biggestRisk" does not cite any of the supplied deterministic risk candidates -- the AI may not invent a risk outside the risk engine\'s own ranking.');
   }
-  const allowed = new Set(input.availableEvidenceIds);
-  const invalidIds = (record.selectedEvidenceIds as string[]).filter((id) => !allowed.has(id));
-  if (invalidIds.length > 0) {
-    throw new WeeklyIntelligenceAIValidationError(
-      `Weekly Intelligence AI response selectedEvidenceIds references evidence not supplied in the input: ${invalidIds.join(", ")}.`
-    );
+  const opportunityCandidateIds = new Set(input.opportunityCandidates.map((candidate) => candidate.evidenceId));
+  if (!biggestOpportunity.evidenceIds.some((id) => opportunityCandidateIds.has(id))) {
+    fail('Weekly analyst response "biggestOpportunity" does not cite any of the supplied deterministic opportunity candidates -- the AI may not invent an opportunity outside the risk engine\'s own ranking.');
   }
 
-  return record as WeeklyIntelligenceAIOutput;
+  // --- Grounding: each whatChanged narrative item must trace to at least one real supplied change. ---
+  const changeIds = new Set(input.whatChanged.map((change) => change.evidenceId));
+  whatChanged.forEach((item, index) => {
+    if (!item.evidenceIds.some((id) => changeIds.has(id))) {
+      fail(`Weekly analyst response "whatChanged[${index}]" does not cite any of the supplied deterministic change evidence -- the AI may not describe a change that was not actually supplied.`);
+    }
+  });
+
+  return {
+    schemaVersion: record.schemaVersion as string,
+    aiProvider: record.aiProvider as string,
+    aiModel: record.aiModel as string,
+    generatedAt: record.generatedAt as string,
+    executiveAssessment: record.executiveAssessment as string,
+    biggestRisk,
+    biggestOpportunity,
+    whatChanged,
+    managementWatchItems,
+    bottomLine: record.bottomLine as string,
+    selectedEvidenceIds
+  };
 }

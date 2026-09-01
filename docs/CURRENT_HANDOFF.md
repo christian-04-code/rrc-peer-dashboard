@@ -1,6 +1,42 @@
 # Current Handoff
 
-## PHASE 7B.1 CLOSEOUT — READ THIS FIRST (2026-09-01)
+## PHASE 7C CLOSEOUT — READ THIS FIRST (2026-09-01)
+
+Weekly AI Analyst layer, on `feat/daily-energy-intelligence`, on top of Phase 7B/7B.1's deterministic snapshot layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26 (new) — this section only summarizes.
+
+### WHAT WAS BUILT
+
+Turns a `ready` frozen snapshot into ONE validated, structured, Range-focused analyst assessment, then stops — no chart/PDF rendering, no publish, no download route, no cron.
+
+- **Evidence selection** (`analyst-evidence-selection.ts`): deterministic, bounded, reuses Phase 7B's materiality ranking. Hard caps: marketBackdrop 10, range 8, peers 6, news 5, outlook 6, whatChanged candidates 8, risk+opportunity candidates 5 total (inherited from the existing risk engine cap).
+- **AI input/output contract** (`ai-contract.ts`, rewritten from Phase 7A's placeholder): `WeeklyAnalystInput` → `WeeklyAnalystAssessment` (executiveAssessment 350-700 words targeting ~450-550; biggestRisk/biggestOpportunity; ≤5 whatChanged items; 1-6 managementWatchItems; bottomLine; selectedEvidenceIds).
+- **Grounding validation**: every cited evidence id must exist in the supplied allowlist; biggestRisk/biggestOpportunity must each cite a real deterministic risk-engine candidate (and not swap the two); whatChanged items must cite real supplied change evidence; watch items must cite supporting evidence (never a fabricated forecast); a small generic-filler denylist and a guaranteed-outcome-language denylist both reject boilerplate/hype outright.
+- **One Anthropic call per report**: `AnthropicWeeklyAnalystProvider`, Claude Haiku 4.5 (unchanged project-standard model), forced tool-use, `withBoundedRetry` (3 attempts, existing project policy, not a new one).
+- **Fingerprinted cache**: `computeWeeklyAnalystFingerprint()` = sha256(snapshot's own input_fingerprint + AI schema version + prompt version + model). Same four inputs → same fingerprint → cached `ready` row returned, zero provider calls.
+- **Persistence**: new `weekly_report_analyses` table (added to the existing `schema.sql`, same `npm run report:migrate` path), one row per attempt, mirroring `weekly_report_snapshots`' own two-partial-unique-index pattern (`pending`/`ready` fingerprint-uniqueness) so a failed attempt can never block or overwrite a successful one, and a retry after failure is always a new row.
+- **No live Anthropic call was made** — every test uses an in-process fake provider (mirrors the existing `tests/macro-summary-service.test.cjs` pattern).
+- **Management tooltip copy locked** for Phase 7F's future Overview button (§26.11 of the architecture doc) — not implemented, copy only.
+
+### TESTS / VALIDATION
+
+- 4 new test files (`weekly-report-ai-contract` rewritten, `weekly-report-analyst-evidence-selection`, `weekly-report-analyst-prompt`, `weekly-report-analyst-service`) — pure-function tests (validation/grounding/selection/prompt-formatting/fingerprint) all passing; a source-inspection test confirms no `app/api/` file imports the AI layer and no `app/api/reports` directory exists; DB-gated cache/generate/persist/failure-lifecycle tests (fake provider, no real Anthropic) skip in this sandbox (no local Postgres — same standing limitation as every prior Phase 7 session).
+- Full JS suite: 1282 tests, 1201 pass, 0 fail, 81 skipped (all DB-gated).
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes).
+
+### KNOWN REMAINING ITEMS FOR PHASE 7D+
+
+1. DB-gated tests across all of Phase 7 (7A/7B/7C) have still never run against a real Postgres in any session — standing risk, unchanged.
+2. No blob/object storage provider configured yet (Phase 7D, unchanged from 7A).
+3. The two Phase 7B data gaps (no forecast-revision history, no separate peer-relative comparison) remain open (unchanged from 7B).
+4. No scheduled caller exists yet for `generateWeeklyAnalysisIfNeeded()` — that, plus the actual first real (paid) Anthropic call, belongs to Phase 7F's orchestration work under the same controlled-Preview-validation pattern Phase 6 established.
+
+### CONFIRMATION
+
+No live Anthropic call occurred. No chart/HTML/PDF renderer, no publish, no download route/UI, no cron, no Production action. Phase 7D **not started**.
+
+---
+
+## PHASE 7B.1 CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7C
 
 Small corrective pass on Phase 7B, found during control-hub review, on `feat/daily-energy-intelligence`. Two real correctness bugs fixed; no new subsystem, no scope expansion. Full design detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §8/§20/§21/§22/§23/§24 (updated in place) — this section only summarizes.
 

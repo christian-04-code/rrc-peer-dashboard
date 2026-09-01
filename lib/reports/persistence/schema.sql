@@ -124,3 +124,77 @@ CREATE INDEX IF NOT EXISTS weekly_report_snapshots_week_idx
 
 CREATE INDEX IF NOT EXISTS weekly_report_snapshots_status_idx
   ON weekly_report_snapshots (status);
+
+-- Weekly Analyst assessment persistence (Phase 7C). Deliberately its own
+-- table, not extra mutable columns bolted onto weekly_report_snapshots --
+-- the frozen snapshot's payload/fingerprint must never change once ready,
+-- while an AI assessment for that exact same snapshot can legitimately be
+-- retried after a failure. One row per generation ATTEMPT (mirrors
+-- weekly_report_snapshots' own convention exactly), linked by snapshot_id.
+CREATE TABLE IF NOT EXISTS weekly_report_analyses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  snapshot_id UUID NOT NULL REFERENCES weekly_report_snapshots(id) ON DELETE CASCADE,
+
+  -- The analysis input fingerprint (see lib/reports/analyst-service.ts's
+  -- computeWeeklyAnalystFingerprint): derived from the snapshot's own
+  -- input_fingerprint + AI schema version + prompt version + model
+  -- identifier. Identical on a repeat attempt over the exact same frozen
+  -- snapshot with the exact same prompt/schema/model -- that identity is
+  -- what the two partial unique indexes below key off of.
+  analysis_fingerprint TEXT NOT NULL,
+
+  -- Lifecycle: pending -> ready, or -> failed. Both ready and failed are
+  -- terminal for a given row; a retry after failure is a new row (new
+  -- attempt) for the same analysis_fingerprint, never a resurrected one --
+  -- mirrors weekly_report_snapshots' pending/building/.../failed pattern,
+  -- simplified to two terminal states since a single AI call (with its own
+  -- bounded internal retry, see withBoundedRetry) either succeeds or fails,
+  -- with no multi-step "building" phase of its own.
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready', 'failed')),
+  error_message TEXT,
+
+  schema_version TEXT NOT NULL,
+  prompt_version TEXT NOT NULL,
+  ai_provider TEXT,
+  ai_model TEXT,
+
+  -- The full validated WeeklyAnalystAssessment (ai-contract.ts) -- set only
+  -- at pending -> ready, never rewritten after.
+  assessment JSONB,
+
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- Same schema-level backstop weekly_report_snapshots uses: a "ready" row
+  -- must be genuinely complete, and a "failed" row must always explain why.
+  CONSTRAINT weekly_report_analyses_ready_complete_check CHECK (
+    status <> 'ready' OR (assessment IS NOT NULL AND ai_provider IS NOT NULL AND ai_model IS NOT NULL AND completed_at IS NOT NULL)
+  ),
+  CONSTRAINT weekly_report_analyses_failed_reason_check CHECK (
+    status <> 'failed' OR error_message IS NOT NULL
+  )
+);
+
+-- At most one *active* (pending) attempt per analysis fingerprint at a
+-- time -- prevents two concurrent callers from both invoking AI for the
+-- exact same frozen snapshot + prompt + schema + model. A failed row is
+-- excluded, so a retry after failure is a normal INSERT.
+CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_analyses_active_fingerprint_key
+  ON weekly_report_analyses (analysis_fingerprint)
+  WHERE status = 'pending';
+
+-- At most one *ready* (successful) analysis per fingerprint, ever -- the
+-- DB-level cache/idempotency guarantee: "same snapshot + prompt + schema +
+-- model returns the same cached analysis," provably, not just by
+-- application discipline. A failed attempt can never block or overwrite a
+-- successful one for the same fingerprint, and a successful one can never
+-- be duplicated.
+CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_analyses_ready_fingerprint_key
+  ON weekly_report_analyses (analysis_fingerprint)
+  WHERE status = 'ready';
+
+CREATE INDEX IF NOT EXISTS weekly_report_analyses_snapshot_idx
+  ON weekly_report_analyses (snapshot_id, created_at DESC);
