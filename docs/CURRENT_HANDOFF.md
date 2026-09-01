@@ -1,6 +1,52 @@
 # Current Handoff
 
-## PHASE 6 CLOSEOUT — READ THIS FIRST (2026-08-31)
+## PHASE 7A CLOSEOUT — READ THIS FIRST (2026-09-01)
+
+Phase 7A (Weekly Range Resources AI Intelligence Report — **architecture + data contracts + persistence foundation only**) is complete on `feat/daily-energy-intelligence`. This section is a self-contained resume point for Phase 7B; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full before starting Phase 7B — this section only summarizes it).
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Branch tip before this session**: `0c5f53f` ("docs: close out phase 6 macro intelligence") — confirmed via `git fetch origin` to exactly match `origin/feat/daily-energy-intelligence` before any Phase 7A work began; working tree was clean.
+- **This session's local checkout was on a different branch** (`forecast/rrc-ux-pass`) when the session started — switched to `feat/daily-energy-intelligence` (tracking `origin/feat/daily-energy-intelligence` at `0c5f53f`) before doing anything else, per this phase's startup-verification instructions.
+- **Latest commit after this phase**: see `git log -1` on this branch — this closeout intentionally does not hardcode that commit's own SHA (the SHA is only known once the commit including this text already exists). It is the one commit titled "Phase 7A: Weekly Report architecture + data contracts + persistence foundation" (or equivalent) on top of `0c5f53f`.
+- **PR #13**: still open, draft, not merged — untouched this phase, per this phase's explicit instruction not to merge it.
+- **Production**: untouched this phase — still the pre-Phase-6 state described in the Phase 6 closeout section below; Phase 7A shipped no new route, no new UI, nothing reachable from a running deployment.
+
+### WHAT PHASE 7A BUILT
+
+Persistence spine + type contracts only — **no snapshot builder, no AI call, no chart renderer, no PDF renderer, no cron/orchestration, no Overview download button, no "latest report" endpoint.** Full reasoning and file-by-file detail is in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`; summary:
+
+- **Report identity**: the EIA Weekly Natural Gas Storage report's "week ending" date (`StorageWeekEnding`, always a Friday) — not a calendar week, not a timestamp. `isValidStorageWeekEnding()` in `lib/reports/weekly-report-types.ts`.
+- **DB schema** (`lib/reports/persistence/schema.sql`, new table `weekly_report_snapshots`, applied via `npm run report:migrate`): one row per generation *attempt* (not per week), with two partial unique indexes doing the real idempotency/safety work — at most one active (`pending`/`building`/`ready`) attempt per week, and at most one `published` row per week, ever, enforced by Postgres itself, not just application code. A `CHECK` constraint additionally forbids a row from ever being `published` while incomplete (missing payload/fingerprint/artifact fields).
+- **Lifecycle**: `pending → building → ready → published`, or `→ failed` from any non-terminal state; `published`/`failed` are both terminal per-row; a retry after failure is a new row. Atomic CAS-style transitions in `lib/reports/persistence/report-repo.ts` (`transitionToBuilding`, `freezeSnapshot`, `publishSnapshot`, `markSnapshotFailed`), each returning `null` (never throwing) when the row wasn't in the expected prior state.
+- **Frozen payload envelope, comparison contract, report content contract, AI input/output contract, readiness contract** — all defined as types (`lib/reports/weekly-report-types.ts`, `lib/reports/readiness.ts`, `lib/reports/ai-contract.ts`); nothing computes a real comparison, calls a real AI provider, or fetches real readiness data yet.
+- **Artifact storage**: DB columns (`artifact_key`/`artifact_checksum`/`artifact_size_bytes`/`artifact_content_type`) are provider-agnostic; no blob/object storage provider is wired up yet (none was already present in this project, and adding one wasn't low-risk/already-available per this phase's scope). Vercel Blob is the architecture doc's recommendation for Phase 7D.
+
+### TESTS / VALIDATION (this session, against this phase's changes)
+
+- **New tests**: `tests/weekly-report-identity.test.cjs` (8), `tests/weekly-report-readiness.test.cjs` (5), `tests/weekly-report-ai-contract.test.cjs` (9) — all pure, no DB, all passing. `tests/weekly-report-repo.test.cjs` (13, DB-gated — lifecycle transitions, both partial-unique-index constraints exercised directly, idempotent create, previous/latest-published lookups) — **could not run in this sandbox** (no local `DATABASE_URL`/`POSTGRES_URL` configured; skips loudly with an explicit message, same established pattern as every other DB-gated test in this repo, e.g. `tests/macro-steo-persistence.test.cjs`). Needs a real local/staging Postgres run before being treated as verified end-to-end — same caveat this project has carried for every DB-gated Macro test since Phase 6B.
+- **Full JS suite**: 1141 tests, 1072 pass, 0 fail, 69 skipped (56 pre-existing DB-gated + 13 new DB-gated) — no regression to any pre-existing test.
+- **Python suite**: **could not run in this sandbox** — `python3`/`python` are not on PATH in this session's environment (unrelated to Phase 7A; zero Python files were touched this phase, so there is no plausible regression risk, but this was not independently re-verified this session the way the JS suite was).
+- **`npm run typecheck`**: clean, after running `npm install` to restore `node_modules` (this session's checkout had an incomplete `node_modules` missing `pg`/`@anthropic-ai/sdk`/`fast-xml-parser` — an environment gap, not a code issue; installing from the existing `package-lock.json` resolved it with no dependency version changes).
+- **`npm run build`**: clean; route table unchanged from Phase 6E (Phase 7A added zero new routes, by design).
+
+### KNOWN REMAINING ITEMS / RISKS FOR PHASE 7B
+
+1. **DB-gated Phase 7A tests (`tests/weekly-report-repo.test.cjs`) have never run against a real Postgres.** Run them (`DATABASE_URL=... node --test tests/weekly-report-repo.test.cjs`, or as part of the full suite) against a real database before trusting the schema's constraints end-to-end — the SQL was written to mirror already-proven Macro patterns closely, but the two partial unique indexes and the published-completeness `CHECK` are new and deserve a real run.
+2. **No blob/object storage provider is chosen or configured** — Phase 7D needs to either confirm Vercel Blob (this doc's recommendation) or pick an alternative before artifact upload/download logic can be written; the DB schema does not need to change either way.
+3. **Phase 7B must re-inspect Peers/News/Forecast-scenario current shapes before consuming them** — Phase 7A's inspection scope (per its own instructions) covered Macro/News/DB conventions closely but did not audit peer-comparison or scenario-forecast code in file-level detail; §4 of the architecture doc flags this explicitly.
+4. **Fingerprinting is not implemented** — only the column and the precedent (`computeMacroSummaryFingerprint`) to follow; Phase 7B must actually write the canonicalization + hashing for the real payload shape once one exists.
+5. **This branch's Production-promotion decision (Phase 6 closeout, below) remains unresolved** and is unaffected by Phase 7A — still a prerequisite for any of Phase 7's later phases ever reaching Production, independent of Phase 7's own readiness.
+
+### CONFIRMATION
+
+Phase 7B (snapshot builder), 7C (AI call), 7D (charts/PDF), 7E (delivery), 7F (orchestration), and 7G (end-to-end validation) were **not started** this session — see `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §19 for what each involves.
+
+---
+
+## PHASE 6 CLOSEOUT (2026-08-31) — historical; superseded above by Phase 7A
 
 Phase 6 (EIA Macro Intelligence System) is **code-complete**. This section is a
 self-contained resume point — a future session should be able to pick up work
@@ -124,9 +170,9 @@ Verified directly this session, not assumed:
 
 ### FUTURE WORK — Phase 7 — Weekly Range Resources Intelligence Report
 
-**Not implemented. Do not begin without separate, explicit authorization.** Recorded here only so the approved product direction survives to the next session.
+**Superseded by Phase 7A** (see the "PHASE 7A CLOSEOUT" section at the top of this document and `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`) — Phase 7A turned the direction below into concrete identity/lifecycle/schema/type decisions. Kept below only as the original historical product brief; the architecture doc is now authoritative for anything that conflicts (e.g. the architecture doc's title is "Weekly Range Resources AI Intelligence Report", refined from the working title below). Phase 7B (snapshot builder) onward is still not implemented and still not authorized to begin without separate approval.
 
-Approved direction:
+Original approved direction (pre-Phase-7A):
 - One universal report, generated once per week, identical for all users (not personalized).
 - Built from a frozen, validated weekly dataset — generated once, then cached/stored, not regenerated per view.
 - Historical report archive retained.
