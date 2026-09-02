@@ -1,6 +1,41 @@
 # Current Handoff
 
-## PHASE 7D.1 CLOSEOUT — READ THIS FIRST (2026-09-02)
+## PHASE 7D.2 CLOSEOUT — READ THIS FIRST (2026-09-02)
+
+Closes the one gap Phase 7D.1 left open: **a real, live Vercel Preview invocation confirmed the actual `@sparticuz/chromium` serverless binary launches and renders a valid PDF.** Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.10 — this section only summarizes.
+
+### WHAT HAPPENED
+
+1. Re-added a temporary, gated, fixture-only diagnostic route (fresh token — Phase 7D.1's own token is already visible in git history), pushed it, and located the Preview URL via the public GitHub API (same approach as 7D.1, no `gh`/`vercel` CLI touched).
+2. First live invocation (user-run, via the documented `x-vercel-protection-bypass` header, hidden-input secret never seen by this session) still redirected to Vercel SSO. **Root cause (confirmed via Vercel's own docs, not guessed):** the bypass secret is snapshotted into a deployment's environment **at build time** — a secret rotated after a deployment's build won't match until a fresh build picks it up. Pushed a trivial redeploy; the next invocation reached the real route handler.
+3. That invocation returned a real, concrete failure: `"The input directory \"/vercel/path0/node_modules/@sparticuz/chromium/bin\" does not exist. ... you must externalize @sparticuz/chromium so it is not relocated."` — a genuine Next.js/Vercel packaging bug, not a code logic bug. Root-caused via Next.js 14.2's own docs: Next's default Route Handler bundling relocates the package, and even after externalizing it (`experimental.serverComponentsExternalPackages`), Next's static file tracer (`@vercel/nft`) still couldn't see `@sparticuz/chromium`'s `bin/*.br` binary assets (loaded via a dynamically-built internal path, not a literal string it can follow) — confirmed locally by inspecting the emitted `.next/.../route.js.nft.json`, which listed the package's `.js` files but none of its `bin/` contents. Fixed with `experimental.outputFileTracingIncludes`, force-including `node_modules/@sparticuz/chromium/bin/**` for the diagnostic route's own path; re-verified locally (all 4 `bin/*.br` files now present in the rebuilt trace manifest) before pushing again.
+4. **The next live invocation passed completely**, real result:
+   ```json
+   {
+     "ok": true, "status": "rendered", "chromiumLaunched": true, "pdfProduced": true,
+     "pdfByteLength": 49301, "pdfMagicBytes": "%PDF-", "pageCount": 2, "maxPdfPages": 5,
+     "withinPageLimit": true, "reducedContent": false, "elapsedMs": 3073,
+     "runtimeInfo": { "nodeVersion": "v24.18.0", "platform": "linux", "arch": "x64", "vercelEnv": "preview", "vercelRegion": "iad1" }
+   }
+   ```
+   Confirms: the real `@sparticuz/chromium` binary launches on Vercel; `renderWeeklyReportPdf()` produces real, valid PDF bytes (`%PDF-` magic bytes); `countPdfPages()` measures a real page count from real Chromium output; the ≤5-page enforcement path executes correctly (2 ≤ 5, no reduced-content retry needed); Vercel is actually running Node v24.18.0 on Linux x64 — confirming Phase 7D.1's `engines.node` fix took effect. No AI call, no DB mutation, no publication, no Blob upload occurred (the route never touches any of those).
+5. Removed the diagnostic route entirely. Cleaned up `next.config.js`'s now-dead `outputFileTracingIncludes` entry (it was keyed to the deleted diagnostic route's path) while keeping `serverComponentsExternalPackages: ["@sparticuz/chromium"]` and a clear comment for whoever builds Phase 7F's real route: it **must** add its own `outputFileTracingIncludes` entry (keyed to its own path) or this exact failure recurs.
+
+### TESTS / VALIDATION
+
+- Full JS suite: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated, unchanged). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean, route table confirmed identical to the pre-Phase-7D-1 baseline (no diagnostic route, no new production route).
+- Both Phase 7D source-inspection guard tests ("no app/api route imports the render/PDF layer" / "...the Weekly Analyst AI layer") correctly failed while the diagnostic route existed and pass again after its removal.
+
+### CONFIRMATION
+
+No live Anthropic call. No publication, no Blob upload, no download UI, no cron/orchestration route in the final state. No PR #13 merge, no merge to `main`, no Production action. No secret (Vercel bypass or otherwise) was ever pasted into, logged by, or committed by this session — the user ran the authenticated step themselves via hidden shell input each time and only ever shared the resulting JSON. The diagnostic route existed on `origin` for a bounded window across three iterations (deploy → blocked → redeploy → packaging fix → passed) and is confirmed absent from the current `HEAD`.
+
+### PHASE 7D.2 IS NOW FULLY CLOSED — Phase 7E may begin whenever desired; the PDF renderer's live-Vercel behavior is no longer an open question.
+
+---
+
+## PHASE 7D.1 CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7D.2
 
 Small follow-up to Phase 7D: visual polish informed by a real (local-only, never-committed) look at the July 2026 reference outlook, plus the two required technical checks -- serverless-Chromium/puppeteer-core compatibility, and a real attempt at live-Vercel Chromium validation. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.9 — this section only summarizes.
 

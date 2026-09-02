@@ -12,18 +12,27 @@ const nextConfig = {
   // Node.js require/import at runtime instead. See
   // docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md §29.10 for the full record.
   experimental: {
-    serverComponentsExternalPackages: ["@sparticuz/chromium"],
-    // Externalizing alone isn't enough: @vercel/nft's static file trace
-    // still can't see @sparticuz/chromium's bin/*.br binary assets (loaded
+    serverComponentsExternalPackages: ["@sparticuz/chromium"]
+    // Externalizing alone was NOT enough: @vercel/nft's static file trace
+    // still cannot see @sparticuz/chromium's bin/*.br binary assets (loaded
     // internally via a dynamically-built path, not a literal string it can
-    // follow) -- confirmed locally by inspecting the emitted .nft.json for
-    // this exact route, which listed the package's .js files but none of
-    // its bin/ contents. Force-including them here is the documented fix.
-    // IMPORTANT for whoever builds Phase 7F's real cron route: add its
-    // route path as another key here too, or this same failure recurs.
-    outputFileTracingIncludes: {
-      "/api/diagnostic-7d2-chromium": ["./node_modules/@sparticuz/chromium/bin/**"]
-    }
+    // follow) -- confirmed live end-to-end on a real Vercel Preview
+    // invocation of a Phase 7D.2 diagnostic route (chromium launched,
+    // rendered, and produced a valid PDF within the page-count limit) that
+    // additionally set:
+    //
+    //   outputFileTracingIncludes: {
+    //     "<the route's own path, e.g. /api/cron/reports>": ["./node_modules/@sparticuz/chromium/bin/**"]
+    //   }
+    //
+    // Removed here now that the diagnostic route itself is gone (an entry
+    // keyed to a route that no longer exists is dead config, and this key
+    // is scoped per-route rather than global specifically so unrelated API
+    // routes never carry chromium's ~65MB of binary assets into their own
+    // deployment bundle unnecessarily). RE-ADD this outputFileTracingIncludes
+    // entry, keyed to its own real route path, the moment any future phase
+    // (7F's scheduled orchestration route, most likely) calls
+    // ChromiumPdfRenderer -- otherwise this exact failure recurs.
   }
 };
 
