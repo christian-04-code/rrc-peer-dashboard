@@ -1,6 +1,34 @@
 # Current Handoff
 
-## PHASE 7C.1 + PHASE 7D CLOSEOUT — READ THIS FIRST (2026-09-01)
+## PHASE 7D.1 CLOSEOUT — READ THIS FIRST (2026-09-02)
+
+Small follow-up to Phase 7D: visual polish informed by a real (local-only, never-committed) look at the July 2026 reference outlook, plus the two required technical checks -- serverless-Chromium/puppeteer-core compatibility, and a real attempt at live-Vercel Chromium validation. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.9 — this section only summarizes.
+
+### WHAT CHANGED
+
+- **Visual**: bolder accent-blue rule under section headings, an accent-blue left border on at-a-glance stat tiles, a stronger table-stripe tint. Re-rendered and re-inspected the fixture PDF after each change; page count unchanged (4 pages).
+- **Real bug fixed**: `ChromiumPdfRenderer` was launching with `args: chromium.args, headless: true` directly; `@sparticuz/chromium`'s own documented usage wraps this as `puppeteer.defaultArgs({ args: chromium.args, headless: "shell" })` with `headless: "shell"`. Fixed to match exactly.
+- **Version-compatibility finding (checked, not guessed)**: `puppeteer-core@25.9.0`'s own GitHub release notes confirm it's tested against Chrome 152.0.7977.54; `@sparticuz/chromium@149.0.0` (its latest published version — confirmed via `npm view`, no newer release exists) bundles Chromium 149. A real, documented, bounded ~3-version gap — not fixed (downgrading puppeteer-core would trade a current release for a worse one over a protocol-stable operation set), but now precisely characterized instead of assumed fine.
+- **Node runtime fixed**: added `package.json`'s `engines.node = "^22.17.0 || >=24.0.0"` (copied verbatim from `@sparticuz/chromium`'s own constraint — Vercel's docs confirm `engines.node` overrides the project's dashboard-level Node.js Version setting). Vercel currently offers 24.x (default)/22.x/20.x; this pins the deployment to a version that actually satisfies the chromium package's requirement regardless of what the dashboard was previously set to. Also exact-pinned both `puppeteer-core` and `@sparticuz/chromium` (were caret-ranged).
+- **A real, bounded live-Vercel attempt**: added a temporary, gated, fixture-only diagnostic route, pushed it (triggering Vercel's normal automatic Preview — explicitly authorized), located the resulting Preview URL entirely via the **public, unauthenticated GitHub REST API** (no `gh`/`vercel` CLI touched), and attempted to invoke it. The build succeeded. The HTTP request itself was blocked with a 302 to a Vercel authentication page — **this project's Preview deployments have Vercel Deployment Protection (SSO) enabled**, intercepting the request before it ever reached the route handler. Bypassing it requires a "Protection Bypass for Automation" secret — the same category of secret this project's own incident history records as previously exposed by an unauthorized session; this session deliberately did not attempt to obtain or use it. The diagnostic route was removed immediately in a follow-up commit once this was discovered.
+
+### WHAT THIS MEANS — STILL UNVERIFIED
+
+**Whether the real `@sparticuz/chromium` Linux binary + `chromium.args` actually launch and complete a `page.pdf()` call inside a real Vercel serverless function has NOT been confirmed.** Everything checkable without that one live call has been checked and, where wrong, fixed: the launch code now matches the documented API exactly; a local isolation test confirmed `chromium.args` (specifically `--single-process`) is what hangs against a desktop Chrome binary — expected, since those flags pair with `@sparticuz/chromium`'s own Linux binary specifically, not any local dev Chrome; Vercel's build pipeline accepted and deployed the code without error. The one remaining unknown requires a controlled invocation authenticated past Deployment Protection — only the project owner (via their own Vercel dashboard "Protection Bypass" value, or by temporarily disabling protection for a single test) can safely do this. **Recommended before Phase 7F schedules anything real**, using the same pattern Phase 6 already established for its own first live Anthropic call (user-run, hidden-input secret, never pasted into a session transcript).
+
+### TESTS / VALIDATION
+
+- Full JS suite: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated, unchanged — no local Postgres in this sandbox). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged from Phase 7D's own closeout (confirmed the temporary diagnostic route is absent from the final build).
+- The existing Phase 7D source-inspection guard test ("no app/api route imports the render/PDF layer") correctly failed while the diagnostic route existed, and passes again after its removal — confirming the guard itself works as intended.
+
+### CONFIRMATION
+
+No live Anthropic call. No publication, no Blob upload, no download UI, no cron/orchestration route added to the final state. No PR #13 merge, no merge to `main`, no Production action. The reference DOCX and every generated QA PDF/screenshot stayed local-only (scratch files, never committed, never pushed). The temporary diagnostic route existed on `origin` for a bounded window (one push-test-remove cycle within this session) and is confirmed absent from the current `HEAD`.
+
+---
+
+## PHASE 7C.1 + PHASE 7D CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7D.1
 
 Weekly report executive-summary adjustment (7C.1) + deterministic chart/table/report/PDF rendering layer (7D), on `feat/daily-energy-intelligence`, on top of Phase 7C's AI analyst layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26.12 (7C.1) and §28-§29 (7D, new) — this section only summarizes.
 
