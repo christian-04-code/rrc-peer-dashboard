@@ -1,6 +1,45 @@
 # Current Handoff
 
-## PHASE 7C CLOSEOUT — READ THIS FIRST (2026-09-01)
+## PHASE 7C.1 + PHASE 7D CLOSEOUT — READ THIS FIRST (2026-09-01)
+
+Weekly report executive-summary adjustment (7C.1) + deterministic chart/table/report/PDF rendering layer (7D), on `feat/daily-energy-intelligence`, on top of Phase 7C's AI analyst layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26.12 (7C.1) and §28-§29 (7D, new) — this section only summarizes.
+
+### STARTING STATE (verified before any work)
+
+Local HEAD, origin, and `main` all confirmed exactly as the prior session's closeout recorded: branch `feat/daily-energy-intelligence` at `8ffb5ce` == `origin/feat/daily-energy-intelligence`, working tree clean, PR #13 still open/draft/unmerged, `main` untouched. Phase 7A/7B/7B.1/7C all confirmed complete per the sections below; Phase 7D had not started.
+
+### PHASE 7C.1 — WHAT CHANGED
+
+Smallest reasonable modification to Phase 7C: `executiveAssessment`'s target shortened from ~450-550 words down to **~150-250 words across 2-3 concise paragraphs**, now that Phase 7D's evidence sections carry the report's detailed analysis instead of the executive assessment trying to. `ai-contract.ts`'s word bounds narrowed 350-700 → 120-320 (same proportional buffer around the new target); `ai/prompt.ts`'s `SYSTEM_PROMPT` rewritten to instruct the 2-3 paragraph structure and a blank-line paragraph separator (so the renderer can split paragraphs deterministically); `ai/model-config.ts`'s max output tokens reduced 3000 → 2200; `WEEKLY_ANALYST_SCHEMA_VERSION` and `WEEKLY_ANALYST_PROMPT_VERSION` both bumped to `1.1.0`. Output *shape*, all grounding/allowlist rules, and the one-call-per-report architecture are unchanged. See architecture doc §26.12 for the full diff.
+
+### PHASE 7D — WHAT WAS BUILT
+
+Turns a `ready`/`published` snapshot's frozen payload + its persisted Phase 7C assessment into real PDF bytes in memory — no publish, no download route, no cron, no UI entry point.
+
+- **Design latitude**: the phase brief's page-by-page outline was explicitly reframed mid-session as product intent/examples, not a rigid template, with ownership of the final information architecture, chart choice, and typography handed to this session. See architecture doc §28 for the actual information architecture built (materiality-ranked, dynamically-selected evidence sections; a 2-column chart+commentary layout for chart-only sections; full-width for table-bearing ones; a serif/sans typographic pairing) and the concrete fixes made from a real visual-QA pass.
+- **Visual QA performed live**: a realistic, fully deterministic, hand-authored fixture (`tests/fixtures/weekly-report-fixture.ts` — committed, reused by the automated test suite) was rendered through the complete real pipeline to actual PDF files using the local machine's own installed Google Chrome (not `@sparticuz/chromium`'s Lambda-only binary, and not committed to the repo). Two variants were inspected — a 4-page "quiet week" and a 5-page "busy week" exercising every chart kind. Concrete design bugs found and fixed this way: a bar-chart zero-baseline that flattened tightly-clustered series into near-identical bar heights; a Rig Activity chart that dwarfed two small Appalachian basin bars next to the (unrelated-scale) national U.S. count; an ambiguous "for this item" News Range Implication; a redundant STEO table title/source line; a Sources table that split across a page boundary leaving a following page nearly blank. All fixed — see §28's full list.
+- **Render model + selection**: a typed `WeeklyReportRenderModel` (`render-model.ts`); `buildWeeklyReportRenderModel()` (`render-model-builder.ts`) is the one place it's constructed, from exactly the two frozen/persisted inputs, with zero DB/live-fetch/AI calls anywhere downstream. `evidence-sections.ts` builds one candidate per plausible subject and keeps only the top `budget.maxEvidenceSections` by materiality (reusing Phase 7B's `rankEvidenceByMateriality()` twice — once per multi-item candidate, once across candidates).
+- **Deterministic charts/tables**: 4 chart kinds (`comparisonBar`, `multiItemBar`, `peerBar`, `actualVsForecastBar`, `chart-selection.ts`), every bar value traced directly to frozen evidence, rendered as dependency-free inline SVG (`svg-charts.ts`). 5 table builders (`table-builder.ts`), every cap deterministic and every truncation reported, never silent.
+- **Content budget / 5-page hard limit**: two fixed tiers (`content-budget.ts`); `weekly-report-pdf-service.ts`'s `renderWeeklyReportPdf()` implements the exact policy: standard render → if the REAL PDF page count fits, done; else exactly one reduced-content retry → if that fits, done; else fail safely. No AI retry, no third tier.
+- **Commentary**: deterministic, template-based (`commentary.ts`) — zero new AI calls anywhere in Phase 7D; the report stays at ONE AI invocation per week (Phase 7C/7C.1's analyst assessment).
+- **PDF rendering**: `puppeteer-core` + `@sparticuz/chromium` behind a swappable `PdfRenderer` interface (`pdf-renderer.ts`) — the standard serverless-Chromium pairing, chosen over bundling full `puppeteer` (too large for a serverless function) or a paid rendering service. Real headless Chromium was never launched against the actual `@sparticuz/chromium` binary this session (it's Lambda/Linux-only); local visual QA used the renderer's own `executablePath` override pointed at this Mac's installed Chrome instead.
+- **Branding**: reuses the existing approved `assets/logos/RRC.png` (same asset `config/company-logos.json` already uses), base64-embedded — never touched or copied the proprietary reference DOCX.
+- **Artifact storage**: `ArtifactStorageProvider` abstraction (`artifact-store.ts`) with an `InMemoryArtifactStore` (tests) and a real `VercelBlobArtifactStore` (token-gated, mirrors the AI provider's own gating pattern) — nothing calls `.put()` anywhere yet; wiring it to a real publish flow is Phase 7E's job.
+
+### TESTS / VALIDATION
+
+- **New tests**: 4 new files — `weekly-report-render-model` (render model/chart/table/commentary/evidence-selection + source-inspection guardrails), `weekly-report-content-budget`, `weekly-report-pdf-service` (countPdfPages, retry/fail-safe policy against fakes, artifact-store), `weekly-report-html-render` (HTML/SVG rendering + XSS-escaping regression tests) — 62 tests, all passing, no DB/live-Chromium/live-Anthropic required. Existing `weekly-report-ai-contract`/`weekly-report-analyst-prompt`/`weekly-report-analyst-service` tests updated for Phase 7C.1's new word bounds.
+- **Full JS suite**: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated — no local Postgres in this sandbox, same standing limitation as every prior Phase 7 session). No regression to any pre-existing test.
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes — Phase 7D added no `app/api/reports` and nothing under `app/` imports the new render layer, confirmed by a source-inspection test).
+- **DB-gated tests** (all of 7A/7B/7C's): still never run against a real Postgres in any session — standing risk, unchanged.
+
+### CONFIRMATION
+
+No live Anthropic call occurred. No live headless-Chromium render occurred against the real serverless (`@sparticuz/chromium`) binary — only against a local development Chrome install, for this session's own visual QA, output not committed. No PDF was published, no artifact was uploaded to a real Vercel Blob store. No download route/UI, no cron/orchestration route, no publish-transition caller, no Production action, no PR merge, no merge to `main`. Phase 7E **not started**.
+
+---
+
+## PHASE 7C CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7C.1 + 7D
 
 Weekly AI Analyst layer, on `feat/daily-energy-intelligence`, on top of Phase 7B/7B.1's deterministic snapshot layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26 (new) — this section only summarizes.
 

@@ -143,7 +143,7 @@ function fakeAssessment(overrides = {}) {
     aiProvider: "fake",
     aiModel: "fake-model",
     generatedAt: new Date(0).toISOString(),
-    executiveAssessment: words(450),
+    executiveAssessment: words(200),
     biggestRisk: { title: "Risk", assessment: "Assessment.", evidenceIds: [] },
     biggestOpportunity: { title: "Opportunity", assessment: "Assessment.", evidenceIds: [] },
     whatChanged: [],

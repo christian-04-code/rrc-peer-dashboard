@@ -15,15 +15,16 @@
 export const WEEKLY_ANALYST_MODEL = "claude-haiku-4-5";
 
 /**
- * Generous headroom for the full structured output: a ~450-550 word
- * executiveAssessment (~700 tokens) + biggestRisk/biggestOpportunity
- * narrative (~150-200 tokens each) + up to 5 whatChanged items (~100
- * tokens each) + up to 6 watch items (~60 tokens each) + bottomLine + JSON
- * structure overhead -- comfortably under 3000 output tokens in practice,
- * with headroom kept for a verbose response without giving the model an
- * effectively unbounded budget.
+ * Generous headroom for the full structured output: a ~150-250 word
+ * executiveAssessment (~350 tokens, Phase 7C.1 -- shortened from Phase 7C's
+ * original ~450-550 words now that the report's own evidence sections carry
+ * the detailed analysis) + biggestRisk/biggestOpportunity narrative (~150-200
+ * tokens each) + up to 5 whatChanged items (~100 tokens each) + up to 6
+ * watch items (~60 tokens each) + bottomLine + JSON structure overhead --
+ * comfortably under 2200 output tokens in practice, with headroom kept for a
+ * verbose response without giving the model an effectively unbounded budget.
  */
-export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 3000;
+export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 2200;
 
 /** Anthropic per-million-token pricing for WEEKLY_ANALYST_MODEL, used only for cost estimates in reporting -- not sent to the API. */
 export const WEEKLY_ANALYST_MODEL_PRICING = {
@@ -39,5 +40,9 @@ export const WEEKLY_ANALYST_MODEL_PRICING = {
  * lib/reports/analyst-service.ts's computeWeeklyAnalystFingerprint). A
  * prompt wording change that doesn't touch the output schema still
  * deserves a fresh analysis, so it gets its own version to bump.
+ *
+ * Bumped to 1.1.0 for Phase 7C.1's executiveAssessment length/structure
+ * rewording (SYSTEM_PROMPT text changed; the output shape itself did not,
+ * hence WEEKLY_ANALYST_SCHEMA_VERSION bumping independently in ai-contract.ts).
  */
-export const WEEKLY_ANALYST_PROMPT_VERSION = "1.0.0";
+export const WEEKLY_ANALYST_PROMPT_VERSION = "1.1.0";

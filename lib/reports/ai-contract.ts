@@ -101,17 +101,22 @@ export type WeeklyAnalystAssessment = {
   selectedEvidenceIds: string[];
 };
 
-export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.0.0";
+export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.1.0";
 
 export class WeeklyAnalystValidationError extends Error {}
 
-// ~450-550 word target (Phase 7C brief); floor/ceiling wide enough that a
-// genuinely quiet or eventful week isn't rejected for being shorter/longer
-// than a point estimate, narrow enough to keep the future PDF's 5-page hard
-// maximum honest -- same reasoning Phase 7A's placeholder used, recalibrated
-// to the brief's tighter target range.
-const MIN_EXECUTIVE_ASSESSMENT_WORDS = 350;
-const MAX_EXECUTIVE_ASSESSMENT_WORDS = 700;
+// ~150-250 word target (Phase 7C.1 brief -- revised down from Phase 7C's
+// original ~450-550: the executive assessment is now the report's fast-read
+// opening, not its entire analytical payload, once Phase 7D's evidence
+// sections/charts carry the detailed analysis). Floor/ceiling keep the same
+// proportional buffer around the target Phase 7C's original bounds used
+// (roughly -22%/+27% around the target's own min/max) so a genuinely quiet
+// or eventful week still isn't rejected for being modestly shorter/longer
+// than a point estimate, while staying tight enough that the executive
+// assessment reads in the intended ~30-60 seconds and the PDF's 5-page hard
+// maximum stays honest.
+const MIN_EXECUTIVE_ASSESSMENT_WORDS = 120;
+const MAX_EXECUTIVE_ASSESSMENT_WORDS = 320;
 
 const MAX_WHAT_CHANGED_ITEMS = 5;
 const MAX_WATCH_ITEMS = 6;

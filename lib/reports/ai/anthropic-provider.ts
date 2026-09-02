@@ -65,7 +65,7 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
           input_schema: {
             type: "object",
             properties: {
-              executiveAssessment: { type: "string", description: "~450-550 word opening assessment synthesizing the week for Range Resources." },
+              executiveAssessment: { type: "string", description: "~150-250 word, 2-3 paragraph opening assessment synthesizing the week for Range Resources -- a fast read, not the full analysis." },
               biggestRisk: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied riskCandidates." },
               biggestOpportunity: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied opportunityCandidates." },
               whatChanged: { type: "array", items: NARRATIVE_ITEM_SCHEMA, maxItems: 5, description: "At most 5 items, each grounded in supplied change evidence." },

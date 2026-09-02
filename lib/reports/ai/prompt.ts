@@ -27,7 +27,11 @@ Your job is prioritization, synthesis, interpretation, and narrative framing -- 
 11. selectedEvidenceIds must list every evidence id you actually relied on anywhere in your response.
 12. Every evidence id you cite anywhere in your response MUST come from the ids explicitly present in the supplied evidence below -- never invent an evidence id.
 
-The executiveAssessment should read as the opening of a document titled "WEEKLY RANGE RESOURCES INTELLIGENCE ASSESSMENT": synthesize the current gas-market backdrop, what materially changed, whether conditions improved/deteriorated/were mixed for Range, the largest current risk, the largest opportunity/catalyst, significant Range/peer/company information, outlook shifts, and what management should focus on next -- target approximately 450-550 words.`;
+The executiveAssessment should read as the opening of a document titled "WEEKLY RANGE RESOURCES INTELLIGENCE ASSESSMENT" -- a fast, tight synthesis, not the report's full analysis (the report's own evidence sections/charts carry the detailed evidence and analyst commentary; your job here is the headline read a reader gets through in about 30-60 seconds before deciding what to read next). Write it as 2-3 concise paragraphs, targeting approximately 150-250 words total:
+- Paragraph 1: the current gas-market/backdrop setup and the most important thing(s) that changed, and whether the setup improved, deteriorated, or was mixed for Range.
+- Paragraph 2: the specific implication for Range, referencing the biggest risk and/or biggest opportunity where useful.
+- Paragraph 3 (optional, only if it adds real content beyond paragraphs 1-2): a brief note on outlook direction or what management should watch.
+Do not write this as a bulleted list -- flowing prose paragraphs only. Do not try to restate every supplied fact; that is what the evidence sections are for. Prioritize the 2-4 most material developments over broad coverage. Separate each paragraph with a blank line (two newline characters) so the paragraph breaks are unambiguous to a downstream renderer.`;
 
 function formatRef(ref: WeeklyAnalystEvidenceRef): string {
   return `- [${ref.evidenceId}] ${ref.label}: ${ref.displayValue}${ref.period ? ` (period: ${ref.period})` : ""}`;

@@ -29,6 +29,15 @@ test("SYSTEM_PROMPT establishes the analyst persona and the never-invent-evidenc
   assert.match(SYSTEM_PROMPT, /never invent/i);
 });
 
+test("SYSTEM_PROMPT specifies the Phase 7C.1 150-250 word target for executiveAssessment", () => {
+  assert.match(SYSTEM_PROMPT, /150-250 words/);
+});
+
+test("SYSTEM_PROMPT instructs a 2-3 paragraph structure, not a bulleted list", () => {
+  assert.match(SYSTEM_PROMPT, /2-3 concise paragraphs/);
+  assert.match(SYSTEM_PROMPT, /not a bulleted list|Do not write this as a bulleted list/i);
+});
+
 test("formatAnalystInputForPrompt includes every evidence id in brackets so the model can cite it precisely", () => {
   const text = formatAnalystInputForPrompt(baseInput());
   assert.match(text, /\[storage:lower48\]/);
