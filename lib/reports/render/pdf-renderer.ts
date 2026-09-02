@@ -93,10 +93,16 @@ export class ChromiumPdfRenderer implements PdfRenderer {
     const [{ default: chromium }, { default: puppeteer }] = await Promise.all([import("@sparticuz/chromium"), import("puppeteer-core")]);
 
     const executablePath = this.options.executablePath ?? (await chromium.executablePath());
+    // Matches @sparticuz/chromium's own documented usage exactly (its README's
+    // Usage example) rather than passing chromium.args straight through --
+    // puppeteer.defaultArgs() merges them with puppeteer-core's own required
+    // defaults, and "shell" is the headless mode @sparticuz/chromium's launch
+    // args are tuned for.
+    const args = await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" });
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args,
       executablePath,
-      headless: true
+      headless: "shell"
     });
 
     try {

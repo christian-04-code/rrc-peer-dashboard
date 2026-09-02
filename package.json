@@ -2,6 +2,9 @@
   "name": "rrc-peer-dashboard",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^22.17.0 || >=24.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "npm run validate:config && next build",
@@ -27,12 +30,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
-    "@sparticuz/chromium": "^149.0.0",
+    "@sparticuz/chromium": "149.0.0",
     "@vercel/blob": "^2.0.0",
     "fast-xml-parser": "^5.11.0",
     "next": "14.2.15",
     "pg": "^8.23.0",
-    "puppeteer-core": "^25.9.0",
+    "puppeteer-core": "25.9.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "topojson-client": "^3.1.0",

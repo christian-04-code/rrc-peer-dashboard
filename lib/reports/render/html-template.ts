@@ -36,7 +36,7 @@ const ACCENT = "#0081c6";
 const MUTED = "#5b7288";
 const BORDER = "#d8e3ec";
 const CALLOUT_BG = "#eef3fa";
-const TABLE_STRIPE = "#f6f9fc";
+const TABLE_STRIPE = "#eaf2f9";
 const SERIF = "Georgia, 'Times New Roman', Times, serif";
 const SANS = "Arial, Helvetica, sans-serif";
 
@@ -209,7 +209,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
 
   .stat-strip-block { margin: 12px 0 10px; }
   .stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: ${BORDER}; border: 1px solid ${BORDER}; }
-  .stat-tile { background: #fff; padding: 7px 9px; }
+  .stat-tile { background: #fff; padding: 7px 9px 7px 8px; border-left: 2px solid ${ACCENT}; }
   .stat-label { font-size: 7.5pt; color: ${MUTED}; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
   .stat-value { font-size: 10.5pt; font-weight: 700; color: ${NAVY}; }
 
@@ -235,7 +235,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
 
   .page-break { break-after: page; }
   .evidence-section { break-inside: avoid; margin-bottom: 13px; }
-  .evidence-section h3 { font-size: 11pt; border-bottom: 1px solid ${BORDER}; padding-bottom: 2px; margin-bottom: 5px; }
+  .evidence-section h3 { font-size: 11pt; border-bottom: 2px solid ${ACCENT}; padding-bottom: 3px; margin-bottom: 5px; }
   .evidence-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 14px; align-items: start; }
   .chart-caption { font-size: 8.5pt; color: ${MUTED}; margin-top: 2px; }
   .commentary { font-size: 9pt; margin: 3px 0; }
@@ -245,7 +245,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .evidence-heading-rule { font-size: 8pt; color: ${MUTED}; text-transform: uppercase; letter-spacing: 0.08em; margin: 2px 0 8px; }
 
   .closing-block { margin-bottom: 12px; break-inside: avoid; }
-  .closing-block h3 { font-size: 11pt; border-bottom: 1px solid ${BORDER}; padding-bottom: 2px; }
+  .closing-block h3 { font-size: 11pt; border-bottom: 2px solid ${ACCENT}; padding-bottom: 3px; }
   .bottom-line { background: ${NAVY}; color: #fff; padding: 9px 11px; font-size: 10pt; font-weight: 600; font-family: ${SERIF}; }
 </style>
 </head>
