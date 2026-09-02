@@ -21,6 +21,7 @@ import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
+import { WeeklyReportDownloadButton } from "@/components/dashboard/WeeklyReportDownloadButton";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
@@ -145,6 +146,8 @@ export function HomeDashboard() {
           ) : (
             <>
               <CompanyHero company={company} activity={activity} />
+
+              <WeeklyReportDownloadButton />
 
               <MetricStrip metrics={metrics} companyShortName={company.shortName} ticker={focusedTicker} />
 

@@ -111,7 +111,12 @@ test("InMemoryArtifactStore round-trips a buffer and computes a stable checksum"
   assert.equal(result.key, "reports/2026-08-28.pdf");
   assert.equal(result.sizeBytes, buffer.byteLength);
   assert.equal(result.checksum, computeChecksum(buffer));
-  assert.deepEqual(store.get("reports/2026-08-28.pdf"), buffer);
+  assert.deepEqual(await store.get("reports/2026-08-28.pdf"), buffer);
+});
+
+test("InMemoryArtifactStore.get returns null for a key that was never stored", async () => {
+  const store = new InMemoryArtifactStore();
+  assert.equal(await store.get("nonexistent"), null);
 });
 
 test("VercelBlobArtifactStore throws ArtifactStorageError immediately when no token is configured", () => {

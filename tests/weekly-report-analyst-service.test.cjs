@@ -68,8 +68,16 @@ test("no app/api route imports the Weekly Analyst AI layer -- no browser-facing 
   }
 });
 
-test("no app/api/reports directory exists -- Phase 7C added no route", () => {
-  assert.equal(fs.existsSync(path.resolve(__dirname, "../app/api/reports")), false);
+test("app/api/reports contains only Phase 7E's read-only latest-report routes -- no generation/AI/cron route", () => {
+  // Phase 7C's original version of this test asserted the directory didn't
+  // exist at all. Phase 7E legitimately created it (the latest-report
+  // status/download routes) -- this replacement preserves the actual
+  // invariant that still matters: only those two read-only routes exist
+  // here, nothing that generates a report or is scheduled.
+  const reportsDir = path.resolve(__dirname, "../app/api/reports");
+  const routeFiles = listFilesRecursive(reportsDir).filter((file) => /route\.(ts|tsx|js)$/.test(file));
+  const relativePaths = routeFiles.map((file) => path.relative(reportsDir, file)).sort();
+  assert.deepEqual(relativePaths, [path.join("latest", "download", "route.ts"), path.join("latest", "route.ts")]);
 });
 
 // ---------------------------------------------------------------------------

@@ -274,7 +274,18 @@ test("no file under lib/reports/render calls publishSnapshot -- publication rema
   }
 });
 
-test("no app/api route imports the render/PDF layer -- no browser-facing entry point exists yet", () => {
+test("no app/api route can trigger PDF generation -- the only lib/reports/render/* module any route may import is artifact-store (storage I/O, not a generator)", () => {
+  // Phase 7D's original version of this guard blocked ANY import from
+  // lib/reports/render/, back when nothing under it was meant to be
+  // reachable from a route yet. Phase 7E legitimately arrived at the one
+  // intended exception: app/api/reports/latest/download/route.ts reads
+  // already-stored bytes via artifact-store.ts's ArtifactStorageProvider
+  // -- see lib/reports/latest-report-service.ts, which is what's actually
+  // unit-tested for that route's real logic. Matching actual import PATHS
+  // (not bare English words like "commentary" or "branding", which show up
+  // completely unrelated in other routes' own doc comments -- e.g.
+  // macro/risk/route.ts's own docstring uses the word "commentary") is
+  // what keeps this check precise rather than a source of false positives.
   function listFilesRecursive(dir) {
     if (!fs.existsSync(dir)) return [];
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -286,8 +297,16 @@ test("no app/api route imports the render/PDF layer -- no browser-facing entry p
   const files = listFilesRecursive(apiDir).filter((file) => /\.(ts|tsx|js)$/.test(file));
   for (const file of files) {
     const source = fs.readFileSync(file, "utf8");
-    assert.doesNotMatch(source, /lib\/reports\/render/, `${file} must not import the Phase 7D render/PDF layer`);
+    const renderImports = [...source.matchAll(/from\s+["']@\/lib\/reports\/render\/([^"']+)["']/g)].map((m) => m[1]);
+    for (const imported of renderImports) {
+      assert.equal(imported, "artifact-store", `${file} imports "${imported}" from lib/reports/render/ -- only artifact-store is allowed from a route`);
+    }
   }
+});
+
+test("the download route only ever reads (get), never writes (put), an artifact", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../app/api/reports/latest/download/route.ts"), "utf8");
+  assert.doesNotMatch(source, /\.put\(/);
 });
 
 test("vercel.json still declares exactly the two pre-existing crons -- Phase 7D added no scheduled orchestration", () => {

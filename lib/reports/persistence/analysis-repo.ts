@@ -138,6 +138,27 @@ export async function getLatestAnalysisForSnapshot(pool: Pool, snapshotId: strin
   return row ? mapRow(row) : null;
 }
 
+/**
+ * Phase 7E: the specific lookup `publish-service.ts` needs before publishing
+ * a snapshot -- "does a READY assessment exist for this snapshot," not
+ * merely "what was the latest attempt regardless of status." Deliberately
+ * distinct from `getLatestAnalysisForSnapshot()`: a snapshot's own
+ * `input_fingerprint` never changes once frozen, but a schema/prompt/model
+ * version bump between attempts could in principle produce a newer, still-
+ * pending-or-failed row for a different fingerprint while an older `ready`
+ * row for this same snapshot remains perfectly valid -- ordering by
+ * `completed_at` among `ready` rows only, rather than `created_at` among
+ * all rows, is what makes publication correctly indifferent to that case.
+ */
+export async function getReadyAnalysisForSnapshot(pool: Pool, snapshotId: string): Promise<WeeklyAnalysisRecord | null> {
+  const result = await pool.query(
+    `SELECT ${SELECT_COLUMNS} FROM weekly_report_analyses WHERE snapshot_id = $1 AND status = 'ready' ORDER BY completed_at DESC LIMIT 1`,
+    [snapshotId]
+  );
+  const row = result.rows[0] as WeeklyAnalysisRow | undefined;
+  return row ? mapRow(row) : null;
+}
+
 export type MarkAnalysisReadyInput = {
   aiProvider: string;
   aiModel: string;

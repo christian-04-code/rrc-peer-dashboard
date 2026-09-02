@@ -1,6 +1,39 @@
 # Current Handoff
 
-## PHASE 7D.2 CLOSEOUT — READ THIS FIRST (2026-09-02)
+## PHASE 7E CLOSEOUT — READ THIS FIRST (2026-09-02)
+
+Publication + delivery layer for the Weekly Range Resources AI Intelligence Report. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §30 — this section only summarizes.
+
+### WHAT WAS BUILT
+
+- **`lib/reports/publish-service.ts`**: `publishWeeklyReportIfReady()` -- render (Phase 7D's `renderWeeklyReportPdf()`) -> upload to artifact storage -> atomic `ready -> published` transition, gated on four hard preconditions (ready snapshot, ready assessment, successful render within 5 pages, successful upload). Idempotent: a second call for an already-published snapshot is a no-op that never re-renders or re-uploads. **Not called from anywhere yet** -- deciding when to publish is explicitly Phase 7F's job; this is the same "mechanism now, schedule later" pattern every prior Phase 7 phase used.
+- **Atomic "latest" semantics**: no new code was needed for this. `getLatestPublishedSnapshot()` has computed "latest" as `MAX(storage_week_ending) WHERE status='published'` at query time since Phase 7A/7B, and the schema's own unique index already guarantees at most one published row per week. There is no "unpublish old, publish new" step anywhere in this subsystem to race.
+- **Artifact storage extended with a read path**: `ArtifactStorageProvider.get(key)`. For `VercelBlobArtifactStore`, `put()` now returns the blob's own real public URL as the "key" (Vercel Blob has no separate lookup API), so `get()` is a plain `fetch()`. No schema migration needed -- `artifact_key` was always documented as a provider-agnostic opaque string.
+- **`lib/reports/latest-report-service.ts` + two routes**: `GET /api/reports/latest` (cheap JSON status) and `GET /api/reports/latest/download` (the actual PDF, correct `Content-Type`/`Content-Disposition`/filename). Both are pure reads -- no snapshot building, no AI, no Chromium, no live dashboard reconstruction, ever. Every failure mode (nothing published, DB down, no storage provider, artifact missing, store throws) degrades to the same generic `{available: false}` -- no internal detail ever leaked.
+- **Overview UI**: `WeeklyReportDownloadButton` (checks `/api/reports/latest` on mount; renders a real `<a download>` link when available, a calm unavailable state otherwise) + `InfoTip` (a new shared hover/keyboard-focus tooltip component, copied from -- not refactored out of -- Forecast's own private one, to avoid touching a working unrelated file). Rendered between the company hero and the metric strip, near the top of Overview. Tooltip copy is the exact required management-facing text. **Visually verified in a real browser this session**: unavailable state renders correctly in position; tooltip shows on hover with full copy legible; tooltip stays visible via keyboard focus alone (not just hover). The "available" (real download) state was not visually exercised -- no published report exists yet, by design (no generation trigger was built in this phase).
+
+### TESTS / VALIDATION
+
+- New tests: `weekly-report-publish-service` (13), `weekly-report-latest-report-service` (10), `weekly-report-overview-ui` (11) -- all pass, **none DB-gated/skipped**: the publish-service and latest-report-service suites use a fake `Pool` double (matching pg's own `.query()` shape) rather than a real Postgres connection, so the actual publication-safety branching gets real, always-running coverage in this sandbox instead of relying on a real DB this project has never had available. The UI suite is source-inspection-based (no JSX-capable test harness/React Testing Library exists in this project; judged out of scope to add for two small components).
+- Two pre-existing guard tests were updated (not broken by accident): "no app/api/reports directory exists" (Phase 7C-era, obsolete now that Phase 7E legitimately created one) now asserts the directory contains only the two expected read-only routes; "no app/api route imports the render/PDF layer" (Phase 7D-era) is narrowed to permit only `artifact-store` (a storage abstraction, not a generator) from any route.
+- Full JS suite: 1385 tests, 1304 pass, 0 fail, 81 skipped (all DB-gated, unchanged standing limitation). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean; route table gained exactly `/api/reports/latest` and `/api/reports/latest/download`.
+
+### SCHEMA / MIGRATIONS
+
+None. `artifact_key`/`artifact_checksum`/`artifact_size_bytes`/`artifact_content_type` already existed on `weekly_report_snapshots` since Phase 7A, always documented as provider-agnostic.
+
+### NEW DEPENDENCIES / ENV VARS
+
+None new. `BLOB_READ_WRITE_TOKEN` (already documented since Phase 7D) is what gates the real `VercelBlobArtifactStore` in the download route; unset, the route degrades to unavailable rather than erroring.
+
+### CONFIRMATION
+
+No live Anthropic call. No cron/orchestration route added (`vercel.json` unchanged, still exactly the two pre-existing crons). No Production action, no PR #13 merge, no merge to `main`. No Previous Reports UI or historical-archive browsing was added -- latest-only, per this phase's own brief.
+
+---
+
+## PHASE 7D.2 CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7E
 
 Closes the one gap Phase 7D.1 left open: **a real, live Vercel Preview invocation confirmed the actual `@sparticuz/chromium` serverless binary launches and renders a valid PDF.** Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.10 — this section only summarizes.
 

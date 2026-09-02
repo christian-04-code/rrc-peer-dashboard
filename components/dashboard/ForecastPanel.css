@@ -78,6 +78,10 @@
 .info-tip--left.info-tip--bottom .info-tip-bubble, .info-tip--left.info-tip--top .info-tip-bubble { left: 0; }
 .info-tip:hover .info-tip-bubble, .info-tip:focus-within .info-tip-bubble { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 .info-tip--left:hover .info-tip-bubble, .info-tip--left:focus-within .info-tip-bubble { transform: translateY(0); }
+/* Phase 7E: a purely additive width bump for the one tooltip whose required copy
+   (the weekly-report explainer) is longer than 300px comfortably wraps -- every
+   other .info-tip consumer is unaffected since this only applies with --wide added. */
+.info-tip--wide .info-tip-bubble { max-width: 360px; }
 
 /* Three color-coded source/status cards at the top of the page. */
 .wb-source-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
