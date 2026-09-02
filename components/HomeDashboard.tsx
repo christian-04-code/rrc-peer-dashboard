@@ -118,8 +118,8 @@ export function HomeDashboard() {
             <div className="topbar-left">
               <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
               <div className="brand">
-                <strong>RRC Peer Intelligence</strong>
-                <span>Interactive Peer Dashboard</span>
+                <strong>Range Resources Market &amp; Peer Dashboard</strong>
+                <span>Company, Market &amp; Peer Analytics</span>
               </div>
             </div>
             <nav aria-label="Primary navigation">

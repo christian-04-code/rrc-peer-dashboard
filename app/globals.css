@@ -60,14 +60,16 @@ h2 { font-size: 15px; }
 .metric-rank { position: absolute; top: 11px; right: 12px; display: grid; justify-items: end; gap: 1px; line-height: 1.05; }
 .metric-rank span { color: var(--muted); font-size: 9px; }
 .metric-rank b { color: #8fd6ff; font-size: 12px; }
-/* Phase 7E: the Overview page's Weekly Intelligence Report control -- a
-   slim, prominent row (not a hero section), consistent with the dashboard's
+/* Phase 7E/7F: the Overview page's Weekly AI Report control -- a slim,
+   prominent row (not a hero section), consistent with the dashboard's
    existing accent/panel tokens rather than a distinct visual style. */
 .weekly-report-control { display: flex; align-items: center; gap: 4px; margin: 14px 0; }
-.weekly-report-download-button { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--accent-strong); border-radius: 8px; padding: 10px 16px; background: var(--accent); color: #04111d; font-weight: 700; font-size: 13px; text-decoration: none; transition: background .12s ease, border-color .12s ease; }
+.weekly-report-download-button { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--accent-strong); border-radius: 8px; padding: 10px 16px; background: var(--accent); color: #04111d; font-weight: 700; font-size: 13px; font-family: inherit; text-decoration: none; transition: background .12s ease, border-color .12s ease; }
+.weekly-report-download-button svg { width: 15px; height: 15px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .weekly-report-download-button:hover { background: var(--accent-strong); }
 .weekly-report-download-meta { font-weight: 500; font-size: 11px; color: rgba(4, 17, 29, 0.72); }
-.weekly-report-download-button--disabled { background: var(--panel-2); color: var(--muted); border-color: var(--border); font-weight: 600; cursor: default; }
+.weekly-report-download-button--disabled { background: var(--panel-2); color: var(--muted); border-color: var(--border); font-weight: 600; cursor: not-allowed; }
+.weekly-report-download-button--disabled:hover { background: var(--panel-2); }
 
 .company-selector { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 14px 0; margin-bottom: 16px; }
 .selector-block { display: grid; gap: 8px; }

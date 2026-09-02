@@ -48,16 +48,19 @@ export function WeeklyReportDownloadButton() {
   }, []);
 
   return (
-    <section className="weekly-report-control" aria-label="Weekly Range Resources AI Intelligence Report">
+    <section className="weekly-report-control" aria-label="Weekly AI Report">
       {state.status === "available" ? (
         <a className="weekly-report-download-button" href="/api/reports/latest/download" download>
-          Download Weekly Intelligence Report
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 3v9m0 0-3.5-3.5M10 12l3.5-3.5M4 14.5V16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1.5" />
+          </svg>
+          Download Weekly AI Report
           <span className="weekly-report-download-meta">Week Ending {formatWeekEndingLabel(state.storageWeekEnding)}</span>
         </a>
       ) : (
-        <span className="weekly-report-download-button weekly-report-download-button--disabled" aria-disabled="true">
-          {state.status === "loading" ? "Checking Weekly Intelligence Report…" : "Weekly Intelligence Report not yet available"}
-        </span>
+        <button type="button" className="weekly-report-download-button weekly-report-download-button--disabled" disabled aria-disabled="true">
+          {state.status === "loading" ? "Checking Weekly AI Report…" : "Weekly AI Report — Not Available Yet"}
+        </button>
       )}
       <InfoTip text={TOOLTIP_COPY} placement="bottom" align="left" wide />
     </section>

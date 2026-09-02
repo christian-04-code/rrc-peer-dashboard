@@ -19,8 +19,8 @@ if (process.env.NODE_ENV !== "production" && registryValidation.warnings.length 
 }
 
 export const metadata: Metadata = {
-  title: "RRC Peer Intelligence",
-  description: "Interactive Range Resources peer intelligence dashboard"
+  title: "Range Resources Market & Peer Dashboard",
+  description: "Range Resources company, market and peer intelligence dashboard"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

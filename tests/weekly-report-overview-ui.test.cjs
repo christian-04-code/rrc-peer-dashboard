@@ -48,13 +48,31 @@ test("WeeklyReportDownloadButton renders the exact required management-facing to
 
 test("WeeklyReportDownloadButton has a distinct, non-alarming unavailable state (not merely a broken/disabled button with no text)", () => {
   const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
-  assert.match(source, /not yet available/i);
+  assert.match(source, /Not Available Yet/i);
 });
 
 test("WeeklyReportDownloadButton has a loading state distinct from the unavailable state -- never flashes 'unavailable' before the status check resolves", () => {
   const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
   assert.match(source, /"loading"/);
   assert.match(source, /Checking/i);
+});
+
+test("WeeklyReportDownloadButton's user-facing labels say 'Weekly AI Report', never 'Intelligence' -- that wording is reserved for the PDF's own title", () => {
+  const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
+  assert.doesNotMatch(source, /intelligence/i, "the Overview control's own labels must not say Intelligence");
+  assert.match(source, /Download Weekly AI Report/);
+  assert.match(source, /Weekly AI Report/);
+});
+
+test("the unavailable state is a real disabled <button>, not just a styled <span> with aria-disabled", () => {
+  const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
+  assert.match(source, /<button[^>]*\bdisabled\b[^>]*weekly-report-download-button--disabled|<button[^>]*weekly-report-download-button--disabled[^>]*\bdisabled\b/, "the unavailable control must be a genuinely non-clickable, natively disabled control");
+});
+
+test("the available download control still uses the same button-shaped location/structure as the unavailable state", () => {
+  const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
+  assert.match(source, /className="weekly-report-download-button"/);
+  assert.match(source, /weekly-report-download-button weekly-report-download-button--disabled/);
 });
 
 test("InfoTip's trigger is a real, keyboard-focusable <button> with an aria-label carrying the full tooltip text, and a role=\"tooltip\" bubble", () => {
