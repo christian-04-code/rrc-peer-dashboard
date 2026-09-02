@@ -11,22 +11,35 @@ const { InMemoryArtifactStore } = load("lib/reports/render/artifact-store.ts");
 /**
  * Exercises orchestrateWeeklyReport() end to end against fakes for every
  * dependency that would otherwise touch a real network/DB connection:
- * `buildSnapshot`/`buildAnalystInput` (Macro's own evidence collection is
- * entirely live-fetched -- see the file's own header), `provider`
- * (never a real Anthropic call), `pdfRenderer` (never real Chromium),
- * `artifactStorage` (never real Vercel Blob), `pool` (a fake matching pg's
- * `.query()` shape, same technique as weekly-report-publish-service.test.cjs),
- * and `runMigrations` (a no-op, since the real one always touches the real
- * shared pool regardless of what `pool` is injected here).
+ * `detectStorageCandidate`/`buildSnapshot`/`buildAnalystInput` (Macro's own
+ * evidence collection is entirely live-fetched -- see the file's own
+ * header), `provider` (never a real Anthropic call), `pdfRenderer` (never
+ * real Chromium), `artifactStorage` (never real Vercel Blob), `pool` (a
+ * fake matching pg's `.query()` shape, same technique as
+ * weekly-report-publish-service.test.cjs), and `runMigrations` (a no-op,
+ * since the real one always touches the real shared pool regardless of
+ * what `pool` is injected here).
+ *
+ * The publish safety buffer is anchored to `weekly_report_storage_
+ * observations.first_observed_at` (a ledger written directly against the
+ * injected `pool`, NOT to `detectStorageCandidate`) and is checked BEFORE
+ * `buildSnapshot` is ever called -- so every test below that needs
+ * `buildSnapshot` to run must also supply a fake pool route for the ledger
+ * INSERT (see `storageObservationRoutes`) with a `firstObservedAt` old
+ * enough to have already cleared the buffer, plus a route for the
+ * pre-check's own `getPublishedSnapshotForWeek` lookup (see
+ * `publishedCheckRoutes`).
  */
 
 const SNAPSHOT_ID = "33333333-3333-3333-3333-333333333333";
+const CANDIDATE_WEEK = "2026-08-28";
 const NOW = new Date("2026-09-04T17:00:00.000Z");
+const OLD_FIRST_OBSERVED_AT = "2026-09-04T15:00:00.000Z"; // 2h before NOW -- comfortably outside PUBLISH_SAFETY_BUFFER_MS (1h)
 
 function readySnapshot(overrides = {}) {
   return {
     id: SNAPSHOT_ID,
-    storageWeekEnding: "2026-08-28",
+    storageWeekEnding: CANDIDATE_WEEK,
     status: "ready",
     schemaVersion: "1.0.0",
     failedReason: null,
@@ -40,9 +53,8 @@ function readySnapshot(overrides = {}) {
     artifactChecksum: null,
     artifactSizeBytes: null,
     artifactContentType: null,
-    // Two hours before NOW -- comfortably outside PUBLISH_SAFETY_BUFFER_MS (1h).
-    createdAt: "2026-09-04T15:00:00.000Z",
-    updatedAt: "2026-09-04T15:00:00.000Z",
+    createdAt: "2026-09-04T16:59:00.000Z",
+    updatedAt: "2026-09-04T16:59:00.000Z",
     publishedAt: null,
     ...overrides
   };
@@ -93,11 +105,40 @@ function lockRoutes(locked = true) {
   ];
 }
 
+/** Routes for orchestrate-weekly.ts's own pre-buildSnapshot safety-buffer gate: getPublishedSnapshotForWeek() and recordStorageObservationFirstSeen(). */
+function publishedCheckRoutes(publishedSnapshot = null) {
+  return [{ match: /FROM weekly_report_snapshots WHERE storage_week_ending = \$1 AND status = 'published'/, respond: () => (publishedSnapshot ? [snapshotRow(publishedSnapshot)] : []) }];
+}
+
+function storageObservationRoutes(firstObservedAtIso) {
+  return [{ match: /INSERT INTO weekly_report_storage_observations/, respond: (params) => [{ storage_week_ending: params[0], first_observed_at: firstObservedAtIso }] }];
+}
+
+/** The full set of pre-check routes needed to reach buildSnapshot(): no prior published row for this week, and a ledger entry old enough (by default) to have already cleared the buffer. */
+function bufferGateRoutes({ firstObservedAt = OLD_FIRST_OBSERVED_AT, publishedSnapshot = null } = {}) {
+  return [...publishedCheckRoutes(publishedSnapshot), ...storageObservationRoutes(firstObservedAt)];
+}
+
+function detectCandidate(week = CANDIDATE_WEEK) {
+  return async () => ({ storageWeekEnding: week });
+}
+
+function noCandidate() {
+  return async () => ({ storageWeekEnding: null });
+}
+
+function neverCalled(label) {
+  return async () => {
+    throw new Error(`${label} must not be called`);
+  };
+}
+
 /** Routes for generateWeeklyAnalysisIfNeeded + publishWeeklyReportIfReady's own real queries, given a starting snapshot record. `analysisReadyOnFirstLookup` simulates a pre-existing cached analysis (cache-hit path). */
-function fullPipelineRoutes({ snapshot, analysisReadyOnFirstLookup = false, publishSucceeds = true } = {}) {
+function fullPipelineRoutes({ snapshot, analysisReadyOnFirstLookup = false, publishSucceeds = true, firstObservedAt = OLD_FIRST_OBSERVED_AT } = {}) {
   let pendingAnalysisRow = null;
   return [
     ...lockRoutes(true),
+    ...bufferGateRoutes({ firstObservedAt }),
     { match: /SELECT[\s\S]*FROM weekly_report_analyses WHERE analysis_fingerprint = \$1 AND status = 'ready'/, respond: () => (analysisReadyOnFirstLookup ? [analysisRow()] : pendingAnalysisRow && pendingAnalysisRow.status === "ready" ? [pendingAnalysisRow] : []) },
     { match: /SELECT[\s\S]*FROM weekly_report_analyses WHERE analysis_fingerprint = \$1 AND status = 'pending'/, respond: () => (pendingAnalysisRow && pendingAnalysisRow.status === "pending" ? [pendingAnalysisRow] : []) },
     {
@@ -185,21 +226,32 @@ function noopMigrations() {
   return async () => undefined;
 }
 
-function neverBuildSnapshot() {
-  return async () => {
-    throw new Error("buildSnapshot must not be called when the lock is unavailable");
-  };
-}
+const emptyAnalystInput = (snapshot) => async () => ({
+  schemaVersion: "1.0.0",
+  report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
+  marketBackdrop: [],
+  riskCandidates: [],
+  opportunityCandidates: [],
+  whatChanged: [],
+  range: [],
+  peers: [],
+  news: [],
+  outlook: [],
+  sourcesFreshness: [],
+  previousReportContext: null,
+  evidenceAllowlist: []
+});
 
 // ---------------------------------------------------------------------------
 
-test("orchestrateWeeklyReport: locked when the advisory lock is unavailable -- never calls buildSnapshot/AI/render/upload", async () => {
+test("orchestrateWeeklyReport: locked when the advisory lock is unavailable -- never detects a candidate, never calls buildSnapshot/AI/render/upload", async () => {
   const pool = fakePool(lockRoutes(false));
-  const buildSnapshot = neverBuildSnapshot();
+  const detectStorageCandidate = neverCalled("detectStorageCandidate");
+  const buildSnapshot = neverCalled("buildSnapshot");
   const renderer = fakeRenderer();
   const provider = fakeProvider();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate, buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "locked");
   assert.equal(provider.calls(), 0);
@@ -207,22 +259,44 @@ test("orchestrateWeeklyReport: locked when the advisory lock is unavailable -- n
 });
 
 test("orchestrateWeeklyReport: always releases the lock, even after an unexpected error", async () => {
-  const pool = fakePool(lockRoutes(true));
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => {
     throw new Error("boom");
   };
-  await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot });
+  await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
   const unlockCalls = pool.calls.filter((c) => /pg_advisory_unlock/.test(c.sql));
   assert.equal(unlockCalls.length, 1);
 });
 
-test("orchestrateWeeklyReport: already_published when the storage week is not newer than the latest published report -- no AI/render/upload", async () => {
+test("orchestrateWeeklyReport: not_ready when no valid EIA storage candidate is detected yet -- buildSnapshot is never called", async () => {
   const pool = fakePool(lockRoutes(true));
+  const buildSnapshot = neverCalled("buildSnapshot");
+
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: noCandidate(), buildSnapshot });
+
+  assert.equal(result.stage, "not_ready");
+});
+
+test("orchestrateWeeklyReport: already_published when the pre-check itself finds a published row for the candidate week -- buildSnapshot is never called, no AI/render/upload", async () => {
+  const pool = fakePool([...lockRoutes(true), ...publishedCheckRoutes(readySnapshot({ status: "published" }))]);
+  const buildSnapshot = neverCalled("buildSnapshot");
+  const provider = fakeProvider();
+  const renderer = fakeRenderer();
+
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+
+  assert.equal(result.stage, "already_published");
+  assert.equal(provider.calls(), 0);
+  assert.equal(renderer.calls(), 0);
+});
+
+test("orchestrateWeeklyReport: already_published when buildSnapshot itself reports it (defensive second path) -- no AI/render/upload", async () => {
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "already_published", snapshot: readySnapshot({ status: "published" }) });
   const provider = fakeProvider();
   const renderer = fakeRenderer();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "already_published");
   assert.equal(provider.calls(), 0);
@@ -230,54 +304,81 @@ test("orchestrateWeeklyReport: already_published when the storage week is not ne
 });
 
 test("orchestrateWeeklyReport: not_ready when required inputs have not passed readiness yet -- no AI/render/upload, never reported as 'failed'", async () => {
-  const pool = fakePool(lockRoutes(true));
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "failed", snapshot: readySnapshot({ status: "failed" }), reason: "Required input(s) missing: macroFundamentalsSnapshot" });
   const provider = fakeProvider();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, provider });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider });
 
   assert.equal(result.stage, "not_ready");
   assert.match(result.reason, /macroFundamentalsSnapshot/);
   assert.equal(provider.calls(), 0);
 });
 
-test("orchestrateWeeklyReport: not_ready when no valid EIA storage period exists yet", async () => {
-  const pool = fakePool(lockRoutes(true));
+test("orchestrateWeeklyReport: not_ready when buildSnapshot itself reports no_valid_storage_period (defensive second path)", async () => {
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "no_valid_storage_period" });
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
   assert.equal(result.stage, "not_ready");
 });
 
-test("orchestrateWeeklyReport: not_ready while a freshly-built snapshot is still inside its safety buffer -- no AI/render/upload", async () => {
-  const pool = fakePool(lockRoutes(true));
-  // createdAt === now: zero time has elapsed since this snapshot was first built.
-  const buildSnapshot = async () => ({ status: "ready", snapshot: readySnapshot({ createdAt: NOW.toISOString(), updatedAt: NOW.toISOString() }), changes: [] });
+test("orchestrateWeeklyReport: data inside the buffer -- no snapshot freeze, no AI, no render/upload", async () => {
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes({ firstObservedAt: NOW.toISOString() })]); // just observed, zero elapsed
+  const buildSnapshot = neverCalled("buildSnapshot");
   const provider = fakeProvider();
   const renderer = fakeRenderer();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "not_ready");
   assert.match(result.reason, /safety buffer/);
+  assert.match(result.reason, /no snapshot build has been attempted/);
   assert.equal(provider.calls(), 0);
   assert.equal(renderer.calls(), 0);
 });
 
-test("orchestrateWeeklyReport: a snapshot built exactly at the buffer boundary is not yet eligible (strictly greater-than-buffer required)", async () => {
-  const pool = fakePool(lockRoutes(true));
-  const createdAt = new Date(NOW.getTime() - PUBLISH_SAFETY_BUFFER_MS + 1000).toISOString(); // 1s short of the full buffer
-  const buildSnapshot = async () => ({ status: "ready", snapshot: readySnapshot({ createdAt, updatedAt: createdAt }), changes: [] });
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot });
+test("orchestrateWeeklyReport: an observation exactly at the buffer boundary is not yet eligible (strictly greater-than-buffer required) -- buildSnapshot is never called", async () => {
+  const firstObservedAt = new Date(NOW.getTime() - PUBLISH_SAFETY_BUFFER_MS + 1000).toISOString(); // 1s short of the full buffer
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes({ firstObservedAt })]);
+  const buildSnapshot = neverCalled("buildSnapshot");
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
   assert.equal(result.stage, "not_ready");
 });
 
+test("orchestrateWeeklyReport: data older than the buffer -- buildSnapshot may proceed", async () => {
+  const firstObservedAt = new Date(NOW.getTime() - PUBLISH_SAFETY_BUFFER_MS - 1000).toISOString(); // 1s past the full buffer
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes({ firstObservedAt })]);
+  let buildSnapshotCalls = 0;
+  const buildSnapshot = async () => {
+    buildSnapshotCalls += 1;
+    return { status: "no_valid_storage_period" }; // any reachable status proves buildSnapshot ran
+  };
+  await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
+  assert.equal(buildSnapshotCalls, 1, "buildSnapshot must be called once the buffer has elapsed");
+});
+
+test("orchestrateWeeklyReport: reused first-observed-at from an earlier run (ledger already existed) still gates correctly -- the ledger's own upsert-and-return-existing semantics are respected", async () => {
+  // Simulates a SECOND orchestration run for the same still-buffering week: the ledger
+  // INSERT hits its ON CONFLICT branch and must return the ORIGINAL first_observed_at,
+  // not a fresh one -- this fake pool route always returns the same fixed timestamp
+  // regardless of how many times it's called, exactly like the real upsert would.
+  const firstObservedAt = new Date(NOW.getTime() - 30 * 60 * 1000).toISOString(); // 30 min ago -- still inside the 1h buffer
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes({ firstObservedAt })]);
+  const buildSnapshot = neverCalled("buildSnapshot");
+
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
+
+  assert.equal(result.stage, "not_ready");
+  assert.match(result.reason, /30 minutes remaining|29 minutes remaining/); // Math.ceil of ~30 min remaining
+});
+
 test("orchestrateWeeklyReport: not_ready (not failed) when ANTHROPIC_API_KEY is not configured -- deterministic snapshot work is unaffected", async () => {
-  const pool = fakePool(lockRoutes(true));
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "ready", snapshot: readySnapshot(), changes: [] });
   const originalKey = process.env.ANTHROPIC_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;
   try {
-    const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot });
+    const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
     assert.equal(result.stage, "not_ready");
     assert.equal(result.analysisStatus, "skipped_not_configured");
   } finally {
@@ -286,12 +387,12 @@ test("orchestrateWeeklyReport: not_ready (not failed) when ANTHROPIC_API_KEY is 
 });
 
 test("orchestrateWeeklyReport: not_ready (not failed) when BLOB_READ_WRITE_TOKEN is not configured", async () => {
-  const pool = fakePool(lockRoutes(true));
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "ready", snapshot: readySnapshot(), changes: [] });
   const originalToken = process.env.BLOB_READ_WRITE_TOKEN;
   delete process.env.BLOB_READ_WRITE_TOKEN;
   try {
-    const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, provider: fakeProvider() });
+    const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider: fakeProvider() });
     assert.equal(result.stage, "not_ready");
     assert.equal(result.publishStatus, "skipped_not_configured");
   } finally {
@@ -303,26 +404,11 @@ test("orchestrateWeeklyReport: the full happy path reaches 'published' with exac
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
   const provider = fakeProvider();
   const renderer = fakeRenderer(3);
   const store = new InMemoryArtifactStore();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider, pdfRenderer: renderer, artifactStorage: store });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider, pdfRenderer: renderer, artifactStorage: store });
 
   assert.equal(result.stage, "published");
   assert.equal(result.snapshotStatus, "built");
@@ -332,36 +418,21 @@ test("orchestrateWeeklyReport: the full happy path reaches 'published' with exac
   assert.equal(renderer.calls(), 1);
 });
 
-test("orchestrateWeeklyReport: reuses an existing ready snapshot (active_attempt_exists) once its own buffer has elapsed", async () => {
-  const snapshot = readySnapshot(); // createdAt is 2h before NOW
+test("orchestrateWeeklyReport: reuses an existing ready snapshot (active_attempt_exists) once the buffer has elapsed", async () => {
+  const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot }));
   const buildSnapshot = async () => ({ status: "active_attempt_exists", snapshot });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "published");
   assert.equal(result.snapshotStatus, "reused");
 });
 
 test("orchestrateWeeklyReport: locked (not failed) when another process's snapshot attempt is still pending/building", async () => {
-  const pool = fakePool(lockRoutes(true));
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "active_attempt_exists", snapshot: readySnapshot({ status: "building" }) });
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
   assert.equal(result.stage, "locked");
 });
 
@@ -369,25 +440,10 @@ test("orchestrateWeeklyReport: reuses a cached ready analysis (cache_hit) -- the
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot, analysisReadyOnFirstLookup: true }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
   const provider = fakeProvider();
   const renderer = fakeRenderer();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "published");
   assert.equal(result.analysisStatus, "cache_hit");
@@ -399,25 +455,10 @@ test("orchestrateWeeklyReport: AI failure -- no render, no publish", async () =>
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
   const provider = fakeProvider(SAMPLE_WEEKLY_ANALYST_ASSESSMENT, 99); // always fails
   const renderer = fakeRenderer();
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "failed");
   assert.equal(result.analysisStatus, "failed");
@@ -428,28 +469,13 @@ test("orchestrateWeeklyReport: render failure (oversized even after the reduced-
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
   const renderer = fakeRenderer(7); // always over the 5-page limit
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider: fakeProvider(), pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider: fakeProvider(), pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "failed");
   assert.equal(result.publishStatus, "render_failed");
-  const publishCalls = pool.calls.filter((c) => /status = 'published'/.test(c.sql));
+  const publishCalls = pool.calls.filter((c) => /UPDATE weekly_report_snapshots SET[\s\S]*status = 'published'/.test(c.sql));
   assert.equal(publishCalls.length, 0, "the previous published report must remain untouched -- no publish transition attempted");
 });
 
@@ -457,28 +483,13 @@ test("orchestrateWeeklyReport: artifact storage failure -- the snapshot is never
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
   const throwingStore = { async put() { throw new Error("blob upload failed"); }, async get() { return null; } };
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: throwingStore });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: throwingStore });
 
   assert.equal(result.stage, "failed");
   assert.equal(result.publishStatus, "storage_failed");
-  const publishCalls = pool.calls.filter((c) => /status = 'published'/.test(c.sql));
+  const publishCalls = pool.calls.filter((c) => /UPDATE weekly_report_snapshots SET[\s\S]*status = 'published'/.test(c.sql));
   assert.equal(publishCalls.length, 0);
 });
 
@@ -486,26 +497,24 @@ test("orchestrateWeeklyReport: locked (not failed) when the final publish transi
   const snapshot = readySnapshot();
   const pool = fakePool(fullPipelineRoutes({ snapshot, publishSucceeds: false }));
   const buildSnapshot = async () => ({ status: "ready", snapshot, changes: [] });
-  const buildAnalystInput = async () => ({
-    schemaVersion: "1.0.0",
-    report: { storageWeekEnding: snapshot.storageWeekEnding, dataCutoffAt: snapshot.dataCutoffAt },
-    marketBackdrop: [],
-    riskCandidates: [],
-    opportunityCandidates: [],
-    whatChanged: [],
-    range: [],
-    peers: [],
-    news: [],
-    outlook: [],
-    sourcesFreshness: [],
-    previousReportContext: null,
-    evidenceAllowlist: []
-  });
 
-  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), buildSnapshot, buildAnalystInput, provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: new InMemoryArtifactStore() });
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, buildAnalystInput: emptyAnalystInput(snapshot), provider: fakeProvider(), pdfRenderer: fakeRenderer(), artifactStorage: new InMemoryArtifactStore() });
 
   assert.equal(result.stage, "locked");
   assert.equal(result.publishStatus, "race_lost");
+});
+
+test("orchestrateWeeklyReport: duplicate/retry after publish -- an already-published week is a clean no-op with no AI/render/upload", async () => {
+  const pool = fakePool([...lockRoutes(true), ...publishedCheckRoutes(readySnapshot({ status: "published" }))]);
+  const buildSnapshot = neverCalled("buildSnapshot");
+  const provider = fakeProvider();
+  const renderer = fakeRenderer();
+
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot, provider, pdfRenderer: renderer, artifactStorage: new InMemoryArtifactStore() });
+
+  assert.equal(result.stage, "already_published");
+  assert.equal(provider.calls(), 0);
+  assert.equal(renderer.calls(), 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -523,6 +532,20 @@ test("orchestrate-weekly.ts constructs at most one AnthropicWeeklyAnalystProvide
   const source = fs.readFileSync(path.resolve(__dirname, "../lib/reports/orchestrate-weekly.ts"), "utf8");
   const constructions = source.match(/new AnthropicWeeklyAnalystProvider\(/g) ?? [];
   assert.equal(constructions.length, 1);
+});
+
+test("orchestrate-weekly.ts checks the safety buffer (recordStorageObservationFirstSeen) BEFORE it ever calls buildSnapshot(pool, now)", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../lib/reports/orchestrate-weekly.ts"), "utf8");
+  const bufferCallIndex = source.indexOf("recordStorageObservationFirstSeen(pool, candidateWeek)");
+  const buildSnapshotCallIndex = source.indexOf("await buildSnapshot(pool, now)");
+  assert.ok(bufferCallIndex > -1, "recordStorageObservationFirstSeen must be called");
+  assert.ok(buildSnapshotCallIndex > -1, "buildSnapshot(pool, now) must be called");
+  assert.ok(bufferCallIndex < buildSnapshotCallIndex, "the safety-buffer check must run before the snapshot is built/frozen");
+});
+
+test("orchestrate-weekly.ts never anchors the safety buffer to a snapshot's own createdAt", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../lib/reports/orchestrate-weekly.ts"), "utf8");
+  assert.doesNotMatch(source, /bufferRemainingMs\(snapshot/, "the buffer must be anchored to the storage-observation ledger, not to the report-attempt's own createdAt");
 });
 
 // ---------------------------------------------------------------------------

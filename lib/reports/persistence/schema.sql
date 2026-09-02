@@ -198,3 +198,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS weekly_report_analyses_ready_fingerprint_key
 
 CREATE INDEX IF NOT EXISTS weekly_report_analyses_snapshot_idx
   ON weekly_report_analyses (snapshot_id, created_at DESC);
+
+-- Phase 7F correction: durable "when did our system first confirm this EIA
+-- storage week's observation was live" ledger, keyed by storage week --
+-- the anchor for orchestrate-weekly.ts's publish safety buffer. Deliberately
+-- its OWN tiny table, not a reuse of weekly_report_snapshots.created_at:
+-- that column is only ever set once a full snapshot BUILD succeeds
+-- (collect every subsystem's evidence, evaluate full readiness, freeze the
+-- payload) -- on a once-daily Hobby cron, anchoring the buffer there means
+-- freezing happens first and the buffer is checked after, so the buffer
+-- always reads "just built" the very run that first detects a new week,
+-- guaranteeing a needless extra day's delay even when the underlying EIA
+-- data was already safely more than an hour old by the time the cron ran.
+-- This table instead records the instant the storage candidate was first
+-- observed live from EIA, independent of whether a snapshot build is ever
+-- attempted for it that run -- see storage-observation-repo.ts.
+CREATE TABLE IF NOT EXISTS weekly_report_storage_observations (
+  storage_week_ending TEXT PRIMARY KEY,
+  first_observed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

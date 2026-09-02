@@ -2,6 +2,10 @@ import type { Pool } from "pg";
 import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { runWeeklyReportMigrations } from "@/lib/reports/persistence/migrate";
 import { runWeeklySnapshotBuild } from "@/lib/reports/snapshot-builder";
+import { collectMacroEvidence } from "@/lib/reports/adapters/macro-adapter";
+import { isValidStorageWeekEnding } from "@/lib/reports/weekly-report-types";
+import { getPublishedSnapshotForWeek } from "@/lib/reports/persistence/report-repo";
+import { recordStorageObservationFirstSeen } from "@/lib/reports/persistence/storage-observation-repo";
 import { buildWeeklyAnalystInput } from "@/lib/reports/analyst-input-builder";
 import { generateWeeklyAnalysisIfNeeded, computeWeeklyAnalystFingerprint } from "@/lib/reports/analyst-service";
 import { WEEKLY_ANALYST_SCHEMA_VERSION } from "@/lib/reports/ai-contract";
@@ -48,25 +52,40 @@ import type { WeeklyReportSnapshotRecord } from "@/lib/reports/weekly-report-typ
  * snapshot-builder.ts, both unchanged by this phase. This file adds
  * exactly ONE new check on top: requirement (5), the safety buffer.
  *
- * --- The safety buffer is DATA-DRIVEN, not wall-clock (Section: "not
- * brittle wall-clock dependence") ---
- * A snapshot's own `createdAt` timestamp already records, precisely and
- * durably, the moment THIS system first detected the current candidate
- * storage week and began building it (createDraftSnapshot() sets it once,
- * before any freshness/AI/render work happens, and it never changes
- * across pending -> building -> ready). The buffer gate is simply: "has at
- * least PUBLISH_SAFETY_BUFFER_MS elapsed since this snapshot's own
- * createdAt?" -- anchored to a real, observed, persisted event on OUR OWN
- * side, never to an assumed EIA release clock time or to Vercel's
- * imprecise cron firing time. Because this cron runs at most once a day
- * (Hobby's own limit), the buffer is almost always already satisfied by
- * the day AFTER a snapshot is first detected (roughly 24h > 1h) -- the
- * ONLY day it is ever unsatisfied is the very same run that first created
- * the snapshot, which correctly exits as "not_ready" and lets the next
- * day's run publish it. See the architecture doc's own section on the
- * chosen cron time for why this means a real Thursday EIA release
- * realistically publishes the following day, and why that is the correct,
- * documented trade-off for a Hobby-tier, non-minute-precise schedule.
+ * --- The safety buffer is DATA-DRIVEN, not wall-clock, AND checked BEFORE
+ * the snapshot is built/frozen (Section: "not brittle wall-clock
+ * dependence") ---
+ * A prior version of this file anchored the buffer to
+ * `weekly_report_snapshots.created_at` and checked it AFTER
+ * `runWeeklySnapshotBuild()` had already collected every subsystem's
+ * evidence and frozen the payload. That was wrong: `created_at` is set by
+ * OUR OWN build attempt, not by the underlying data event, and freezing
+ * before checking the buffer meant the buffer always read "just built" on
+ * the very run that first detected a new week -- guaranteeing a needless
+ * extra day's delay on a once-daily Hobby cron even when the real EIA data
+ * was already safely more than an hour old by the time the cron ran.
+ *
+ * The corrected sequence, matching the intended product semantics exactly:
+ * detect the current candidate storage week (a cheap live-EIA peek, via
+ * `detectStorageCandidate`) -> record/read this candidate's own
+ * `first_observed_at` in `weekly_report_storage_observations` (a tiny,
+ * dedicated, append-only ledger -- see storage-observation-repo.ts for why
+ * this is a NEW durable timestamp rather than a reuse of any existing
+ * field: no existing persisted timestamp represents "when this specific
+ * storage observation became available," since Macro's storage/production/
+ * demand metrics are deliberately entirely live-fetched with no Neon
+ * cache) -> only once at least `PUBLISH_SAFETY_BUFFER_MS` has elapsed since
+ * that FIRST observation does this file call `buildSnapshot()` at all. A
+ * week still inside its buffer never reaches `runWeeklySnapshotBuild()`,
+ * so no draft/pending/building/frozen row is ever created prematurely for
+ * it. Because this cron runs at most once a day (Hobby's own limit), a
+ * storage week whose data has already been live for over an hour by the
+ * time a given day's cron runs (the common case, since EIA's typical
+ * Thursday release time is hours before this subsystem's own 17:00 UTC
+ * schedule -- see the architecture doc) can build and publish on that SAME
+ * run, not merely "the day after." The buffer still guarantees at least
+ * one real hour has elapsed since first observation before any AI/render/
+ * publish work happens, exactly as required.
  */
 
 export const PUBLISH_SAFETY_BUFFER_MS = 60 * 60 * 1000; // 1 hour
@@ -106,10 +125,39 @@ function safeErrorMessage(error: unknown): string {
   return "Weekly report orchestration failed (unknown error).";
 }
 
-function bufferRemainingMs(snapshot: WeeklyReportSnapshotRecord, now: Date): number {
-  const createdAtMs = new Date(snapshot.createdAt).getTime();
-  const elapsed = now.getTime() - createdAtMs;
+function bufferRemainingMs(firstObservedAtIso: string, now: Date): number {
+  const firstObservedAtMs = new Date(firstObservedAtIso).getTime();
+  const elapsed = now.getTime() - firstObservedAtMs;
   return Math.max(0, PUBLISH_SAFETY_BUFFER_MS - elapsed);
+}
+
+export type StorageCandidateDetectionResult = {
+  /** The current EIA storage week-ending candidate, or null if none is available yet (mirrors runWeeklySnapshotBuild()'s own "no_valid_storage_period" check -- deliberately re-evaluated here via the same live Macro fetch, not cached, so a stale/missing observation is never mistaken for a fresh one). */
+  storageWeekEnding: string | null;
+};
+
+/**
+ * The default, real implementation of `detectStorageCandidate`: a live
+ * Macro/EIA peek, reusing the exact same `collectMacroEvidence()` +
+ * `isValidStorageWeekEnding()` logic `runWeeklySnapshotBuild()` itself uses
+ * to establish the report's own identity (snapshot-builder.ts) -- never a
+ * second, divergent implementation of "what counts as a valid current
+ * storage week." This does mean a full run that clears the buffer performs
+ * two live Macro fetches (one here, one inside `runWeeklySnapshotBuild()`
+ * moments later) -- an accepted, deliberately small inefficiency: this
+ * cron runs at most once a day, and every Macro/EIA fetch in this
+ * subsystem is already documented as safe to repeat (see the architecture
+ * doc's own research into `refreshSteoSnapshots()`'s idempotent-by-month
+ * upsert). Injectable specifically so tests never make a real live EIA
+ * call.
+ */
+async function detectStorageCandidateReal(pool: Pool, now: Date): Promise<StorageCandidateDetectionResult> {
+  const macro = await collectMacroEvidence(pool, now);
+  const candidate = macro.storageWeekEndingCandidate;
+  if (!macro.storageObservationPresent || !candidate || !isValidStorageWeekEnding(candidate)) {
+    return { storageWeekEnding: null };
+  }
+  return { storageWeekEnding: candidate };
 }
 
 export type OrchestrateWeeklyReportOptions = {
@@ -127,6 +175,8 @@ export type OrchestrateWeeklyReportOptions = {
    * branch of its own stage-sequencing logic testable against fakes.
    */
   buildSnapshot?: typeof runWeeklySnapshotBuild;
+  /** Defaults to `detectStorageCandidateReal` (a live Macro/EIA peek) -- injectable so tests can simulate a candidate week (or its absence) without a real EIA HTTP call, independent of whatever `buildSnapshot` fake is also injected. */
+  detectStorageCandidate?: (pool: Pool, now: Date) => Promise<StorageCandidateDetectionResult>;
   buildAnalystInput?: typeof buildWeeklyAnalystInput;
   provider?: WeeklyAnalystProvider;
   pdfRenderer?: PdfRenderer;
@@ -163,6 +213,29 @@ export async function orchestrateWeeklyReport(options: OrchestrateWeeklyReportOp
   try {
     const runMigrations = options.runMigrations ?? runWeeklyReportMigrations;
     await runMigrations();
+
+    // --- Safety-buffer gate, BEFORE any snapshot build/freeze work ---
+    const detectStorageCandidate = options.detectStorageCandidate ?? detectStorageCandidateReal;
+    const { storageWeekEnding: candidateWeek } = await detectStorageCandidate(pool, now);
+
+    if (!candidateWeek) {
+      return { stage: "not_ready", reason: "No valid EIA storage week-ending observation is available yet." };
+    }
+
+    const alreadyPublishedForCandidate = await getPublishedSnapshotForWeek(pool, candidateWeek);
+    if (alreadyPublishedForCandidate) {
+      return { stage: "already_published", storageWeekEnding: alreadyPublishedForCandidate.storageWeekEnding, snapshotId: alreadyPublishedForCandidate.id };
+    }
+
+    const observation = await recordStorageObservationFirstSeen(pool, candidateWeek);
+    const remainingBufferMs = bufferRemainingMs(observation.firstObservedAt, now);
+    if (remainingBufferMs > 0) {
+      return {
+        stage: "not_ready",
+        reason: `Storage week ${candidateWeek}'s observation was first confirmed at ${observation.firstObservedAt} and is still inside its ${PUBLISH_SAFETY_BUFFER_MS / 60000}-minute safety buffer (${Math.ceil(remainingBufferMs / 60000)} minutes remaining) -- no snapshot build has been attempted.`,
+        storageWeekEnding: candidateWeek
+      };
+    }
 
     const buildSnapshot = options.buildSnapshot ?? runWeeklySnapshotBuild;
     const buildResult = await buildSnapshot(pool, now);
@@ -213,17 +286,6 @@ export async function orchestrateWeeklyReport(options: OrchestrateWeeklyReportOp
         const exhaustive: never = buildResult;
         throw new Error(`Unhandled runWeeklySnapshotBuild status: ${JSON.stringify(exhaustive)}`);
       }
-    }
-
-    const remainingBufferMs = bufferRemainingMs(snapshot, now);
-    if (remainingBufferMs > 0) {
-      return {
-        stage: "not_ready",
-        reason: `Snapshot for week ${snapshot.storageWeekEnding} is ready but still inside its ${PUBLISH_SAFETY_BUFFER_MS / 60000}-minute safety buffer (${Math.ceil(remainingBufferMs / 60000)} minutes remaining).`,
-        storageWeekEnding: snapshot.storageWeekEnding,
-        snapshotId: snapshot.id,
-        snapshotStatus
-      };
     }
 
     if (!options.provider && !process.env.ANTHROPIC_API_KEY) {
