@@ -1,6 +1,58 @@
 # Current Handoff
 
-## PHASE 7E CLOSEOUT — READ THIS FIRST (2026-09-02)
+## PHASE 7F CLOSEOUT — READ THIS FIRST (2026-09-04) — IMPLEMENTATION COMPLETE, LIVE PREVIEW VALIDATION STILL PENDING
+
+Weekly Report Orchestration + Scheduled Generation. Turns Phase 7A–7E's individually-callable services (snapshot build, analyst assessment, PDF render, Blob upload, publish) into one automatically-scheduled, end-to-end pipeline. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §31 — this section only summarizes. **This phase has NOT yet made a real Anthropic call or a real Vercel Preview invocation** — that is the one deliberately-deferred next step, per this phase's own brief (see "NEXT STEP" below).
+
+### WHAT WAS BUILT
+
+- **`lib/reports/orchestrate-weekly.ts`**: `orchestrateWeeklyReport()` — the one new orchestration entry point. Acquires a Postgres advisory lock (`rrc_weekly_report_orchestration`), then in order: runs schema migrations, calls the existing `runWeeklySnapshotBuild()`, checks a new one-hour **data-driven safety buffer** against the snapshot's own `createdAt`, calls the existing `generateWeeklyAnalysisIfNeeded()` (bounded-retry, cached, exactly one semantic Anthropic call per report), calls the existing `publishWeeklyReportIfReady()` (render → Blob upload → atomic `ready → published`). Every dependency (`pool`, `runMigrations`, `buildSnapshot`, `buildAnalystInput`, `provider`, `pdfRenderer`, `artifactStorage`, `now`) is injectable, defaulting to the real implementation — the same pattern `runMacroDailyOrchestration()` already established — so the full pipeline is unit-testable without ever touching live EIA, Anthropic, Chromium, Blob, or Postgres.
+- **`app/api/cron/reports/route.ts`**: a thin, `CRON_SECRET`-protected `GET` route (identical `Authorization: Bearer` pattern to `/api/cron/macro` and `/api/cron/news`) that calls `orchestrateWeeklyReport()` and returns its concise, machine-readable stage/status result. No internal detail (Anthropic key, Blob token, DB credentials, stack traces) ever reaches the response body. No user-facing manual-generation endpoint was added, per the brief.
+- **`vercel.json`**: added exactly one new cron, `{"path": "/api/cron/reports", "schedule": "0 17 * * *"}` (17:00 UTC daily) — a third, Hobby-compliant (≤1 run/day) entry alongside the pre-existing News (11:15 UTC) and Macro (12:15 UTC) crons, both left untouched.
+- **`next.config.js`**: the mandatory `@sparticuz/chromium` packaging fix (proven live in Phase 7D.2) now points at the real permanent route — `outputFileTracingIncludes: {"/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"]}`, alongside the pre-existing `serverComponentsExternalPackages: ["@sparticuz/chromium"]`. Verified by direct inspection of the built `.next/server/app/api/cron/reports/route.js.nft.json`: all 4 required chromium bin files (`al2023.tar.br`, `chromium.br`, `fonts.tar.br`, `swiftshader.tar.br`) are traced into this route's bundle.
+
+### WHY 17:00 UTC, AND WHY THE SAFETY BUFFER ISN'T A WALL-CLOCK OFFSET
+
+A dedicated research pass (read-only, no code changes) confirmed Phase 7's Macro-adapter evidence collection (`lib/reports/adapters/macro-adapter.ts`) is **entirely live-fetched from EIA's own API on every call** — it has zero dependency on the Macro cron having run that day; `refreshSteoSnapshots()`'s upsert is safely idempotent by calendar month regardless of call order. The **only** genuine same-day cron-ordering dependency in the whole Phase 7 pipeline is optional News evidence, which needs `/api/cron/news` (11:15 UTC) to have already completed its AI-analysis step that day. 17:00 UTC is therefore chosen simply to run comfortably after both News and Macro's own crons and comfortably after EIA's typical Thursday storage-release window (~14:30–15:30 UTC across EDT/EST) — **not** as the mechanism that enforces freshness. The actual one-hour safety buffer is enforced **data-drivenly**, via the already-existing `createdAt` timestamp on the frozen `WeeklyReportSnapshotRecord`: a snapshot must be at least one hour old (by wall-clock elapsed time, checked against the *injectable* `now`) before the pipeline will generate AI/render/publish for it. Because Hobby crons run at most once/day and timing isn't guaranteed to the minute, this means a Thursday EIA release will realistically publish **the following day** in the common case, not within one precise hour of release — an explicitly accepted tradeoff (correctness over exact wall-clock precision), not an oversight.
+
+### READINESS, LOCKING, IDEMPOTENCY, FAILURE SEMANTICS
+
+- **Readiness** is fully reused, unmodified, from `runWeeklySnapshotBuild()`/`readiness.ts`: valid EIA storage observation, storage week newer than latest published, required inputs available, source/freshness requirements met. Orchestration adds exactly one new check on top: the safety buffer above. Any of these unmet → `stage: "not_ready"`, clean exit, no AI/render/upload call, never recorded as failed.
+- **Locking**: a single Postgres advisory lock (`pg_try_advisory_lock`) wraps the *entire* orchestration body, not just the final publish step — this is the primary defense against duplicate Anthropic calls, PDF renders, Blob uploads, or publish races between concurrent/retried invocations. Lock-acquisition failure → `stage: "locked"`, clean exit (not a pipeline failure). The pre-existing DB-level uniqueness constraints (one active row per week, one published row per week) remain the second line of defense, unchanged.
+- **Idempotency**: an already-published week → `stage: "already_published"`, no new work. A cached ready analyst assessment (matching schema/prompt/model/input fingerprint) is reused via `generateWeeklyAnalysisIfNeeded()`'s existing cache-hit path — confirmed in tests that this skips the Anthropic call entirely while still proceeding to render/publish from the cached assessment.
+- **Failure semantics** are fully differentiated: `not_ready` (readiness/buffer unmet, or `ANTHROPIC_API_KEY`/`BLOB_READ_WRITE_TOKEN` not configured) vs. `locked` (concurrent run, or a lost build/publish race) vs. `already_published` vs. `failed` (a real AI, render, or storage failure, or an unexpected error) vs. `published`. **The previous valid published report is never touched by any failure path** — `publishWeeklyReportIfReady()` never writes to any row but the one being published, so a failed new-week attempt can never hide or replace an older published report.
+- **Cost/duplicate-call guard**: `generateWeeklyAnalysisIfNeeded()` is called exactly once per `orchestrateWeeklyReport()` invocation (confirmed by a source-inspection test counting call sites), wrapped entirely inside the advisory lock, so no concurrent invocation can also call it. Provider-level bounded retry (unchanged from Phase 7C) handles transient failures — this is not a second semantic call.
+
+### RESIDUAL BLOB ORPHAN RISK (documented, not solved this phase)
+
+`publishWeeklyReportIfReady()` (Phase 7E, unchanged) uploads to Blob *before* the atomic `ready → published` DB transition. The Phase 7F advisory lock eliminates the *concurrent-caller* version of this race (two processes both trying to publish the same snapshot). It does **not** eliminate a *single-process-crash-mid-flight* scenario: if the process is killed after a successful Blob upload but before `publishSnapshot()`'s `UPDATE` commits, the uploaded PDF becomes an orphan with no DB row referencing it. Per the brief, no garbage collector was built for this — the residual risk is small (a narrow window, Hobby's `maxDuration` ceiling, no evidence of unreliable termination in prior phases) and is documented here rather than engineered around.
+
+### TESTS / VALIDATION
+
+- New test file `weekly-report-orchestrate-weekly` (26 tests, all pass, none DB-gated): covers full happy-path publish, already-published no-op, not-ready for missing readiness/unmet buffer (including an exact-boundary case), lock-unavailable no-op, active-attempt-exists reuse vs. lock, missing-env-var not-ready (both `ANTHROPIC_API_KEY` and `BLOB_READ_WRITE_TOKEN`), cached-analysis reuse with zero provider calls, AI/render/storage failure isolation (each confirmed to leave the previous published report's row untouched), publish-race-lost → locked, cron-route auth rejection (missing header, wrong secret, unconfigured secret), no-internal-detail-leaked, and source-inspection checks for the Chromium tracing config, the single `generateWeeklyAnalysisIfNeeded` call site, and the `vercel.json` cron shape. Uses the established "fake Pool" technique plus full dependency injection — no live EIA/Anthropic/Chromium/Blob/Postgres access anywhere in the suite.
+- Two pre-existing Phase 7D/7E guard tests asserting `vercel.json` had "exactly the two pre-existing crons" were updated (not broken by accident) — they now assert the known three-cron set, since Phase 7F legitimately added its own.
+- Full JS suite: 1411 tests, 1330 pass, 0 fail, 81 skipped (all DB-gated, unchanged standing limitation). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean; route table gained exactly `/api/cron/reports`. Chromium bin-file tracing directly verified against the built output (see above).
+
+### SCHEMA / MIGRATIONS
+
+None new. `runWeeklyReportMigrations()` (Phase 7A) is called at the top of every orchestration run, same as it's always been safe to call redundantly.
+
+### NEW DEPENDENCIES / ENV VARS
+
+None new. Reuses `ANTHROPIC_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET`, `DATABASE_URL`/`POSTGRES_URL` — all already documented from prior Phase 7 sub-phases.
+
+### CONFIRMATION
+
+No live Anthropic call has been made. No live Vercel Preview invocation has been made yet. No Production action, no merge to `main`. Phase 7G has not begun.
+
+### NEXT STEP — ONE CONTROLLED LIVE PREVIEW INVOCATION (not yet performed)
+
+Per the brief, this session will not invoke the cron route itself (that would trigger a real, billed Anthropic call). Once this branch's changes are pushed and a fresh Preview deployment is confirmed, the user will run **one** controlled, authenticated invocation of `/api/cron/reports` on that Preview URL themselves, using a local hidden-input shell command (never pasting secrets into chat) requiring both the Vercel Protection Bypass secret (`x-vercel-protection-bypass` header) and `CRON_SECRET` (`Authorization: Bearer` header). Only the resulting sanitized JSON result will be shared back. Repeated live invocations will not be performed.
+
+---
+
+## PHASE 7E CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7F
 
 Publication + delivery layer for the Weekly Range Resources AI Intelligence Report. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §30 — this section only summarizes.
 

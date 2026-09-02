@@ -260,10 +260,9 @@ test("no app/api route imports publish-service.ts yet -- Phase 7E builds the pub
   }
 });
 
-test("vercel.json still declares exactly the two pre-existing crons -- Phase 7E added no scheduled orchestration", () => {
+test("vercel.json declares only the known, intentionally-scheduled crons -- Phase 7E itself added no scheduled orchestration (that's Phase 7F's own, separately-tested addition)", () => {
   const fs = require("node:fs");
   const path = require("node:path");
   const vercelConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../vercel.json"), "utf8"));
-  assert.equal(vercelConfig.crons.length, 2);
-  assert.deepEqual(vercelConfig.crons.map((c) => c.path).sort(), ["/api/cron/macro", "/api/cron/news"]);
+  assert.deepEqual(vercelConfig.crons.map((c) => c.path).sort(), ["/api/cron/macro", "/api/cron/news", "/api/cron/reports"]);
 });

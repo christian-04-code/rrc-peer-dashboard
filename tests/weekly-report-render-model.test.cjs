@@ -309,8 +309,7 @@ test("the download route only ever reads (get), never writes (put), an artifact"
   assert.doesNotMatch(source, /\.put\(/);
 });
 
-test("vercel.json still declares exactly the two pre-existing crons -- Phase 7D added no scheduled orchestration", () => {
+test("vercel.json declares only the known, intentionally-scheduled crons -- Phase 7D itself added no scheduled orchestration (that's Phase 7F's own, separately-tested addition)", () => {
   const vercelConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../vercel.json"), "utf8"));
-  assert.equal(vercelConfig.crons.length, 2);
-  assert.deepEqual(vercelConfig.crons.map((c) => c.path).sort(), ["/api/cron/macro", "/api/cron/news"]);
+  assert.deepEqual(vercelConfig.crons.map((c) => c.path).sort(), ["/api/cron/macro", "/api/cron/news", "/api/cron/reports"]);
 });

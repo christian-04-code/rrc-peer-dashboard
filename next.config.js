@@ -12,27 +12,20 @@ const nextConfig = {
   // Node.js require/import at runtime instead. See
   // docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md §29.10 for the full record.
   experimental: {
-    serverComponentsExternalPackages: ["@sparticuz/chromium"]
-    // Externalizing alone was NOT enough: @vercel/nft's static file trace
+    serverComponentsExternalPackages: ["@sparticuz/chromium"],
+    // Externalizing alone is NOT enough: @vercel/nft's static file trace
     // still cannot see @sparticuz/chromium's bin/*.br binary assets (loaded
     // internally via a dynamically-built path, not a literal string it can
     // follow) -- confirmed live end-to-end on a real Vercel Preview
-    // invocation of a Phase 7D.2 diagnostic route (chromium launched,
-    // rendered, and produced a valid PDF within the page-count limit) that
-    // additionally set:
-    //
-    //   outputFileTracingIncludes: {
-    //     "<the route's own path, e.g. /api/cron/reports>": ["./node_modules/@sparticuz/chromium/bin/**"]
-    //   }
-    //
-    // Removed here now that the diagnostic route itself is gone (an entry
-    // keyed to a route that no longer exists is dead config, and this key
-    // is scoped per-route rather than global specifically so unrelated API
-    // routes never carry chromium's ~65MB of binary assets into their own
-    // deployment bundle unnecessarily). RE-ADD this outputFileTracingIncludes
-    // entry, keyed to its own real route path, the moment any future phase
-    // (7F's scheduled orchestration route, most likely) calls
-    // ChromiumPdfRenderer -- otherwise this exact failure recurs.
+    // invocation in Phase 7D.2 (chromium launched, rendered, and produced a
+    // valid PDF within the page-count limit) only once this was added.
+    // Phase 7F's real scheduled route (the only place that now constructs
+    // ChromiumPdfRenderer automatically) is the key below -- scoped
+    // per-route rather than global so unrelated API routes never carry
+    // chromium's ~65MB of binary assets into their own deployment bundle.
+    outputFileTracingIncludes: {
+      "/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"]
+    }
   }
 };
 
