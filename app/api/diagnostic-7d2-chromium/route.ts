@@ -20,6 +20,12 @@ import type { WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
  *
  * REMOVE THIS ENTIRE DIRECTORY once the live check has run -- see the
  * architecture doc for confirmation it was removed.
+ *
+ * Redeployed once (no functional change) to bake in the project's current
+ * Protection Bypass for Automation secret -- per Vercel's own docs, that
+ * secret is snapshotted into a deployment's environment at build time, so
+ * a secret rotated after this route's first deploy would not match until
+ * a fresh build picks up the current value.
  */
 
 const DIAGNOSTIC_TOKEN = "baf5291523635b1d623966fd7f6b81f46eb27ab27fef53abea3e9e84ea9465c5";
