@@ -372,6 +372,24 @@ test("orchestrateWeeklyReport: reused first-observed-at from an earlier run (led
   assert.match(result.reason, /30 minutes remaining|29 minutes remaining/); // Math.ceil of ~30 min remaining
 });
 
+test("orchestrateWeeklyReport: a freshly-recorded observation whose DB timestamp lands a moment after `now` never displays more than the full buffer remaining", async () => {
+  // Reproduces a real Preview observation: on a week's very first detection, the
+  // ledger's DB-side `now()` default can land a fraction of a second after the
+  // orchestrator's own `now` (captured before migrations + the live EIA call +
+  // the INSERT round-trip). That must never inflate the displayed remainder
+  // past the buffer's own configured size (e.g. "61 minutes remaining" on a
+  // 60-minute buffer), even though it's still correctly gated as not_ready.
+  const firstObservedAt = new Date(NOW.getTime() + 5000).toISOString(); // 5s AFTER now
+  const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes({ firstObservedAt })]);
+  const buildSnapshot = neverCalled("buildSnapshot");
+
+  const result = await orchestrateWeeklyReport({ pool, now: NOW, runMigrations: noopMigrations(), detectStorageCandidate: detectCandidate(), buildSnapshot });
+
+  assert.equal(result.stage, "not_ready");
+  assert.match(result.reason, /60 minutes remaining/);
+  assert.doesNotMatch(result.reason, /61 minutes remaining/);
+});
+
 test("orchestrateWeeklyReport: not_ready (not failed) when ANTHROPIC_API_KEY is not configured -- deterministic snapshot work is unaffected", async () => {
   const pool = fakePool([...lockRoutes(true), ...bufferGateRoutes()]);
   const buildSnapshot = async () => ({ status: "ready", snapshot: readySnapshot(), changes: [] });

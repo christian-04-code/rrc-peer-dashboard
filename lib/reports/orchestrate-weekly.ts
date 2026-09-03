@@ -128,7 +128,15 @@ function safeErrorMessage(error: unknown): string {
 function bufferRemainingMs(firstObservedAtIso: string, now: Date): number {
   const firstObservedAtMs = new Date(firstObservedAtIso).getTime();
   const elapsed = now.getTime() - firstObservedAtMs;
-  return Math.max(0, PUBLISH_SAFETY_BUFFER_MS - elapsed);
+  // `elapsed` can be momentarily negative on a week's very first observation:
+  // `now` is captured at orchestration start, before migrations + the live EIA
+  // detection call + the ledger INSERT's own DB-side `now()` default, so
+  // `firstObservedAtIso` (authoritatively the database's clock) can land a
+  // fraction of a second after `now` (the application's clock). Clamping to
+  // PUBLISH_SAFETY_BUFFER_MS keeps "remaining" a sane [0, buffer] value in
+  // that case instead of overstating it -- this never shortens the buffer,
+  // only prevents display of an impossible "more than the buffer" remainder.
+  return Math.min(PUBLISH_SAFETY_BUFFER_MS, Math.max(0, PUBLISH_SAFETY_BUFFER_MS - elapsed));
 }
 
 export type StorageCandidateDetectionResult = {
