@@ -4,6 +4,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const routeSource = fs.readFileSync(path.join(process.cwd(), "app", "api", "market", "route.ts"), "utf8");
+// Phase 6D: the metric definitions moved out of the route file into a shared
+// lib/market/build-market-metrics.ts (so the Macro risk engine's orchestration
+// layer can reuse them without a second, divergent set of EIA fetch calls).
+// The route itself now just calls buildNormalizedMarketMetrics().
+const buildMetricsSource = fs.readFileSync(path.join(process.cwd(), "lib", "market", "build-market-metrics.ts"), "utf8");
 const panelSource = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroPanel.tsx"), "utf8");
 
 const REQUIRED_METRIC_IDS = [
@@ -16,9 +21,10 @@ const REQUIRED_METRIC_IDS = [
   "propane_stocks"
 ];
 
-test("/api/market defines every metric id the Macro tab depends on (guards against a renamed/dropped id silently emptying the panel)", () => {
+test("/api/market's route calls the shared metric builder, and every metric id the Macro tab depends on is defined there (guards against a renamed/dropped id silently emptying the panel)", () => {
+  assert.match(routeSource, /buildNormalizedMarketMetrics/, "app/api/market/route.ts must call the shared builder, not redefine metrics inline");
   for (const id of REQUIRED_METRIC_IDS) {
-    assert.match(routeSource, new RegExp(`id: "${id}"`), `app/api/market/route.ts is missing definition for "${id}"`);
+    assert.match(buildMetricsSource, new RegExp(`id: "${id}"`), `lib/market/build-market-metrics.ts is missing definition for "${id}"`);
   }
 });
 

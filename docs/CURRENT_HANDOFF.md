@@ -1,9 +1,767 @@
 # Current Handoff
 
+## PHASE 7F PREVIEW VALIDATION IN PROGRESS (2026-09-03) — READ THIS FIRST
+
+Since the Phase 7F correction closeout below, two more rounds of work happened, both still on `feat/daily-energy-intelligence`, still pre-live-invocation:
+
+**Dashboard rebrand + Weekly AI Report control rename** (commits `5a592e3`, `0202bc6`): the dashboard's primary product name changed from "RRC Peer Intelligence" to "Range Resources Market & Peer Dashboard" (subtitle: "Company, Market & Peer Analytics"), and the Overview weekly-report control was renamed to "Weekly AI Report" everywhere except the PDF's own title, which is intentionally unchanged ("Weekly Range Resources AI Intelligence Report"). The unavailable state is now a real disabled `<button>` reading "Weekly AI Report — Not Available Yet"; the available state reads "Download Weekly AI Report" with an inline download icon (no new dependency). Full detail and file list in that phase's own chat checkpoint; all targeted/full tests, typecheck, and build were verified clean at the time.
+
+**Preview `/api/cron/reports` Unauthorized investigation** (still open): a manual authenticated call kept returning `{"error":"Unauthorized"}`. Root-caused across two findings:
+1. `CRON_SECRET` (and every other secret in this project) is a Vercel **Sensitive Environment Variable** — confirmed via `vercel env ls --json` (`"type": "sensitive"`). Sensitive variables are write-only: Vercel injects them into deployments normally, but the value can never be read back via `vercel env pull`, the dashboard, or the API once set, by anyone, including the project owner. This is why `vercel env pull` returned an empty string for it (and for every other secret) — not a bug, and not evidence about the deployed runtime either way.
+2. A **branch-specific Preview override of `CRON_SECRET`** was then created (scoped to `Preview (feat/daily-energy-intelligence)` only). A CLI-triggered `vercel deploy --force` still returned Unauthorized against it. Root cause: `vercel deploy` has no `--git-branch` flag, and `vercel inspect --json` confirms deployments created this way carry no git-branch metadata at all — Vercel's branch-scoped environment variable resolution depends on that metadata, which only deployments created through Vercel's own Git integration (a real `git push`) carry. A CLI deploy is therefore branch-blind and receives no `CRON_SECRET` at all once the variable is branch-scoped rather than project-wide. **Fix: trigger the Preview deployment via `git push`, never `vercel deploy --force`, for as long as `CRON_SECRET` stays branch-scoped.** A temporary, narrowly-scoped, token-gated diagnostic route (`app/api/diag/cron-secret/route.ts` — never CRON_SECRET-gated, returns only non-reversible SHA-256 fingerprints, never the secret itself) confirmed this empirically across both deployment types before this fix was applied. It is still present as of this note and must be removed before any Production deploy or merge.
+
+**Also discovered, not yet fixed (owner action, not touched by this session):** creating the branch-scoped `CRON_SECRET` override appears to have replaced rather than added to the variable's target list — `vercel env ls` now shows `CRON_SECRET` scoped to `Preview (feat/daily-energy-intelligence)` only, with **no Production scope at all** (contrast `ANTHROPIC_API_KEY`, still correctly `Preview, Production`). Production's own `/api/cron/macro` and `/api/cron/news` will start failing Unauthorized the next time Production redeploys unless this is restored. This is an account-level Vercel dashboard change, deliberately left to the project owner.
+
+**Status:** the branch-scoped Preview `CRON_SECRET` was confirmed to correctly reach a Git-triggered Preview deployment's runtime. The project owner is now rotating that branch-scoped value to one they can save locally, since the original value was never saved anywhere retrievable. The one controlled, authenticated, user-run invocation of `/api/cron/reports` (the step that makes a real Anthropic call and a real publish) has still **not** occurred. No Anthropic call, no publish, no report generation of any kind has happened yet in this phase.
+
+---
+
+## PHASE 7F CLOSEOUT (2026-09-04) — IMPLEMENTATION COMPLETE, LIVE PREVIEW VALIDATION STILL PENDING
+
+Weekly Report Orchestration + Scheduled Generation. Turns Phase 7A–7E's individually-callable services (snapshot build, analyst assessment, PDF render, Blob upload, publish) into one automatically-scheduled, end-to-end pipeline. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §31 — this section only summarizes. **This phase has NOT yet made a real Anthropic call or a real Vercel Preview invocation** — that is the one deliberately-deferred next step, per this phase's own brief (see "NEXT STEP" below).
+
+### CORRECTION (same day, before any live invocation): the safety buffer was re-anchored to a NEW pre-freeze ledger, not `snapshot.createdAt`
+
+Review caught a real semantics bug before the first live Preview call: the original implementation anchored the 1-hour safety buffer to `weekly_report_snapshots.created_at` and checked it **after** `runWeeklySnapshotBuild()` had already collected every subsystem's evidence and frozen the payload. That's wrong -- `created_at` is set by *our own* build attempt, not by the underlying EIA data event, and since freezing happened before the buffer check, the buffer always read "just built" on the very run that first detected a new week. On a once-daily Hobby cron, that guaranteed a needless extra day's delay even when the real EIA data was already safely more than an hour old by the time the cron ran.
+
+Investigated whether any existing persisted timestamp could serve as the correct anchor instead: Macro's storage/production/demand metrics are deliberately entirely live-fetched with **no Neon cache** (`lib/market/persistence/schema.sql`'s own header comment confirms this), so no existing table records "when this specific storage observation became available." `NormalizedMarketMetric.fetchedAt` was considered and rejected -- it's stamped at live-fetch time, which for a fully live-fetched pipeline is always ~now, making it useless as a freshness anchor. No EIA release timestamp is invented anywhere.
+
+**Fix**: a new, tiny, dedicated ledger table, `weekly_report_storage_observations` (`storage_week_ending TEXT PRIMARY KEY, first_observed_at TIMESTAMPTZ NOT NULL DEFAULT now()`), plus `lib/reports/persistence/storage-observation-repo.ts`'s `recordStorageObservationFirstSeen()` (an insert-if-absent, always-return-the-canonical-row upsert). The orchestrator now does a cheap live-EIA peek (`detectStorageCandidate`, reusing the exact same `collectMacroEvidence()`/`isValidStorageWeekEnding()` logic `runWeeklySnapshotBuild()` itself uses) **before** calling `buildSnapshot()` at all: detect the candidate week → check it isn't already published → record/read its ledger `first_observed_at` → only once the buffer has elapsed does `buildSnapshot()` (and therefore any freeze/AI/render/publish work) run. A week still inside its buffer never reaches `runWeeklySnapshotBuild()`, so no draft/pending/building/frozen row is created prematurely for it.
+
+Practical effect: a storage week whose data has already been live for over an hour by the time a given day's 17:00 UTC cron run fires (the common case, since EIA's typical Thursday release is hours earlier) can now build and publish on that **same** run, not merely "the day after" -- closing exactly the gap the review flagged, without weakening the buffer guarantee itself.
+
+### WHAT WAS BUILT (current, corrected state)
+
+- **`lib/reports/orchestrate-weekly.ts`**: `orchestrateWeeklyReport()` — the one new orchestration entry point. Acquires a Postgres advisory lock (`rrc_weekly_report_orchestration`), then in order: runs schema migrations, detects the current EIA storage candidate via a live peek, checks it isn't already published, checks the new one-hour **data-driven safety buffer** against that candidate's own `first_observed_at` ledger entry (**before** any snapshot is built), calls the existing `runWeeklySnapshotBuild()`, calls the existing `generateWeeklyAnalysisIfNeeded()` (bounded-retry, cached, exactly one semantic Anthropic call per report), calls the existing `publishWeeklyReportIfReady()` (render → Blob upload → atomic `ready → published`). Every dependency (`pool`, `runMigrations`, `detectStorageCandidate`, `buildSnapshot`, `buildAnalystInput`, `provider`, `pdfRenderer`, `artifactStorage`, `now`) is injectable, defaulting to the real implementation — the same pattern `runMacroDailyOrchestration()` already established — so the full pipeline is unit-testable without ever touching live EIA, Anthropic, Chromium, Blob, or Postgres.
+- **`lib/reports/persistence/storage-observation-repo.ts`** (new) + a `weekly_report_storage_observations` table in `lib/reports/persistence/schema.sql` (new): the durable "first observed live from EIA" ledger the safety buffer is now anchored to.
+- **`app/api/cron/reports/route.ts`**: a thin, `CRON_SECRET`-protected `GET` route (identical `Authorization: Bearer` pattern to `/api/cron/macro` and `/api/cron/news`) that calls `orchestrateWeeklyReport()` and returns its concise, machine-readable stage/status result. No internal detail (Anthropic key, Blob token, DB credentials, stack traces) ever reaches the response body. No user-facing manual-generation endpoint was added, per the brief.
+- **`vercel.json`**: added exactly one new cron, `{"path": "/api/cron/reports", "schedule": "0 17 * * *"}` (17:00 UTC daily) — a third, Hobby-compliant (≤1 run/day) entry alongside the pre-existing News (11:15 UTC) and Macro (12:15 UTC) crons, both left untouched.
+- **`next.config.js`**: the mandatory `@sparticuz/chromium` packaging fix (proven live in Phase 7D.2) now points at the real permanent route — `outputFileTracingIncludes: {"/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"]}`, alongside the pre-existing `serverComponentsExternalPackages: ["@sparticuz/chromium"]`. Verified by direct inspection of the built `.next/server/app/api/cron/reports/route.js.nft.json`: all 4 required chromium bin files (`al2023.tar.br`, `chromium.br`, `fonts.tar.br`, `swiftshader.tar.br`) are traced into this route's bundle.
+
+### WHY 17:00 UTC, AND WHY THE SAFETY BUFFER ISN'T A WALL-CLOCK OFFSET
+
+A dedicated research pass (read-only, no code changes) confirmed Phase 7's Macro-adapter evidence collection (`lib/reports/adapters/macro-adapter.ts`) is **entirely live-fetched from EIA's own API on every call** — it has zero dependency on the Macro cron having run that day; `refreshSteoSnapshots()`'s upsert is safely idempotent by calendar month regardless of call order. The **only** genuine same-day cron-ordering dependency in the whole Phase 7 pipeline is optional News evidence, which needs `/api/cron/news` (11:15 UTC) to have already completed its AI-analysis step that day. 17:00 UTC is therefore chosen simply to run comfortably after both News and Macro's own crons and comfortably after EIA's typical Thursday storage-release window (~14:30–15:30 UTC across EDT/EST) — **not** as the mechanism that enforces freshness. The actual one-hour safety buffer is enforced **data-drivenly**, via the storage-observation ledger's `first_observed_at` (see the correction above): a candidate week must be at least one hour past its own first live observation (checked against the *injectable* `now`) before any snapshot is built, let alone AI/render/publish. Because this ledger entry is written the moment the candidate is first detected — independent of whether a snapshot build is ever attempted that run — a Thursday EIA release detected well before the day's single cron run can now publish that **same day**, not merely "the day after," whenever the buffer has already elapsed by the time the cron fires.
+
+### READINESS, LOCKING, IDEMPOTENCY, FAILURE SEMANTICS
+
+- **Readiness** is fully reused, unmodified, from `runWeeklySnapshotBuild()`/`readiness.ts`: valid EIA storage observation, storage week newer than latest published, required inputs available, source/freshness requirements met. Orchestration adds exactly one new check on top: the safety buffer above, now checked *before* any of `runWeeklySnapshotBuild()`'s own work runs. Any of these unmet → `stage: "not_ready"`, clean exit, no AI/render/upload call, never recorded as failed.
+- **Locking**: a single Postgres advisory lock (`pg_try_advisory_lock`) wraps the *entire* orchestration body, not just the final publish step — this is the primary defense against duplicate Anthropic calls, PDF renders, Blob uploads, or publish races between concurrent/retried invocations. Lock-acquisition failure → `stage: "locked"`, clean exit (not a pipeline failure). The pre-existing DB-level uniqueness constraints (one active row per week, one published row per week) remain the second line of defense, unchanged.
+- **Idempotency**: an already-published week → `stage: "already_published"`, no new work (checked both before `buildSnapshot()` in the pre-check, and defensively inside `runWeeklySnapshotBuild()` itself). A cached ready analyst assessment (matching schema/prompt/model/input fingerprint) is reused via `generateWeeklyAnalysisIfNeeded()`'s existing cache-hit path — confirmed in tests that this skips the Anthropic call entirely while still proceeding to render/publish from the cached assessment. The ledger's own upsert is likewise idempotent: a second orchestration run for a still-buffering week returns the SAME `first_observed_at` an earlier run recorded, never a fresh one.
+- **Failure semantics** are fully differentiated: `not_ready` (readiness/buffer unmet, or `ANTHROPIC_API_KEY`/`BLOB_READ_WRITE_TOKEN` not configured) vs. `locked` (concurrent run, or a lost build/publish race) vs. `already_published` vs. `failed` (a real AI, render, or storage failure, or an unexpected error) vs. `published`. **The previous valid published report is never touched by any failure path** — `publishWeeklyReportIfReady()` never writes to any row but the one being published, so a failed new-week attempt can never hide or replace an older published report.
+- **Cost/duplicate-call guard**: `generateWeeklyAnalysisIfNeeded()` is called exactly once per `orchestrateWeeklyReport()` invocation (confirmed by a source-inspection test counting call sites), wrapped entirely inside the advisory lock, so no concurrent invocation can also call it. Provider-level bounded retry (unchanged from Phase 7C) handles transient failures — this is not a second semantic call.
+
+### RESIDUAL BLOB ORPHAN RISK (documented, not solved this phase)
+
+`publishWeeklyReportIfReady()` (Phase 7E, unchanged) uploads to Blob *before* the atomic `ready → published` DB transition. The Phase 7F advisory lock eliminates the *concurrent-caller* version of this race (two processes both trying to publish the same snapshot). It does **not** eliminate a *single-process-crash-mid-flight* scenario: if the process is killed after a successful Blob upload but before `publishSnapshot()`'s `UPDATE` commits, the uploaded PDF becomes an orphan with no DB row referencing it. Per the brief, no garbage collector was built for this — the residual risk is small (a narrow window, Hobby's `maxDuration` ceiling, no evidence of unreliable termination in prior phases) and is documented here rather than engineered around.
+
+### TESTS / VALIDATION
+
+- Test file `weekly-report-orchestrate-weekly` (33 tests, all pass, none DB-gated): covers full happy-path publish, already-published no-op (both via the pre-check's own lookup and defensively via `buildSnapshot`'s own result), not-ready for missing candidate/unmet readiness/unmet buffer (including an exact-boundary case one second short of the full hour, and a case proving data older than the buffer lets `buildSnapshot` proceed), a repeat-run-returns-the-same-ledger-timestamp case, lock-unavailable no-op, active-attempt-exists reuse vs. lock, missing-env-var not-ready (both `ANTHROPIC_API_KEY` and `BLOB_READ_WRITE_TOKEN`), cached-analysis reuse with zero provider calls, AI/render/storage failure isolation (each confirmed to leave the previous published report's row untouched), publish-race-lost → locked, duplicate/retry-after-publish no-op, cron-route auth rejection (missing header, wrong secret, unconfigured secret), no-internal-detail-leaked, and source-inspection checks confirming the buffer check runs before `buildSnapshot()` textually, that the buffer is never anchored to a snapshot's own `createdAt`, the Chromium tracing config, the single `generateWeeklyAnalysisIfNeeded` call site, and the `vercel.json` cron shape. New file `weekly-report-storage-observation-repo` (4 tests) covers the ledger's own upsert-and-return-existing-value semantics directly against a fake pool. Uses the established "fake Pool" technique plus full dependency injection — no live EIA/Anthropic/Chromium/Blob/Postgres access anywhere in the suite.
+- Two pre-existing Phase 7D/7E guard tests asserting `vercel.json` had "exactly the two pre-existing crons" were updated (not broken by accident) — they now assert the known three-cron set, since Phase 7F legitimately added its own.
+- Full JS suite: 1422 tests, 1341 pass, 0 fail, 81 skipped (all DB-gated, unchanged standing limitation). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean; route table gained exactly `/api/cron/reports`. Chromium bin-file tracing directly verified against the built output (see above).
+
+### SCHEMA / MIGRATIONS
+
+One new table: `weekly_report_storage_observations` (`storage_week_ending TEXT PRIMARY KEY, first_observed_at TIMESTAMPTZ NOT NULL DEFAULT now()`), added to `lib/reports/persistence/schema.sql`, applied by the existing `runWeeklyReportMigrations()` (Phase 7A) — called at the top of every orchestration run, same as it's always been safe to call redundantly. No changes to any existing table.
+
+### NEW DEPENDENCIES / ENV VARS
+
+None new. Reuses `ANTHROPIC_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET`, `DATABASE_URL`/`POSTGRES_URL` — all already documented from prior Phase 7 sub-phases.
+
+### CONFIRMATION
+
+No live Anthropic call has been made. No live Vercel Preview invocation has been made yet. No Production action, no merge to `main`. Phase 7G has not begun.
+
+### NEXT STEP — ONE CONTROLLED LIVE PREVIEW INVOCATION (not yet performed)
+
+Per the brief, this session will not invoke the cron route itself (that would trigger a real, billed Anthropic call). Once this branch's changes are pushed and a fresh Preview deployment is confirmed, the user will run **one** controlled, authenticated invocation of `/api/cron/reports` on that Preview URL themselves, using a local hidden-input shell command (never pasting secrets into chat) requiring both the Vercel Protection Bypass secret (`x-vercel-protection-bypass` header) and `CRON_SECRET` (`Authorization: Bearer` header). Only the resulting sanitized JSON result will be shared back. Repeated live invocations will not be performed.
+
+---
+
+## PHASE 7E CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7F
+
+Publication + delivery layer for the Weekly Range Resources AI Intelligence Report. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §30 — this section only summarizes.
+
+### WHAT WAS BUILT
+
+- **`lib/reports/publish-service.ts`**: `publishWeeklyReportIfReady()` -- render (Phase 7D's `renderWeeklyReportPdf()`) -> upload to artifact storage -> atomic `ready -> published` transition, gated on four hard preconditions (ready snapshot, ready assessment, successful render within 5 pages, successful upload). Idempotent: a second call for an already-published snapshot is a no-op that never re-renders or re-uploads. **Not called from anywhere yet** -- deciding when to publish is explicitly Phase 7F's job; this is the same "mechanism now, schedule later" pattern every prior Phase 7 phase used.
+- **Atomic "latest" semantics**: no new code was needed for this. `getLatestPublishedSnapshot()` has computed "latest" as `MAX(storage_week_ending) WHERE status='published'` at query time since Phase 7A/7B, and the schema's own unique index already guarantees at most one published row per week. There is no "unpublish old, publish new" step anywhere in this subsystem to race.
+- **Artifact storage extended with a read path**: `ArtifactStorageProvider.get(key)`. For `VercelBlobArtifactStore`, `put()` now returns the blob's own real public URL as the "key" (Vercel Blob has no separate lookup API), so `get()` is a plain `fetch()`. No schema migration needed -- `artifact_key` was always documented as a provider-agnostic opaque string.
+- **`lib/reports/latest-report-service.ts` + two routes**: `GET /api/reports/latest` (cheap JSON status) and `GET /api/reports/latest/download` (the actual PDF, correct `Content-Type`/`Content-Disposition`/filename). Both are pure reads -- no snapshot building, no AI, no Chromium, no live dashboard reconstruction, ever. Every failure mode (nothing published, DB down, no storage provider, artifact missing, store throws) degrades to the same generic `{available: false}` -- no internal detail ever leaked.
+- **Overview UI**: `WeeklyReportDownloadButton` (checks `/api/reports/latest` on mount; renders a real `<a download>` link when available, a calm unavailable state otherwise) + `InfoTip` (a new shared hover/keyboard-focus tooltip component, copied from -- not refactored out of -- Forecast's own private one, to avoid touching a working unrelated file). Rendered between the company hero and the metric strip, near the top of Overview. Tooltip copy is the exact required management-facing text. **Visually verified in a real browser this session**: unavailable state renders correctly in position; tooltip shows on hover with full copy legible; tooltip stays visible via keyboard focus alone (not just hover). The "available" (real download) state was not visually exercised -- no published report exists yet, by design (no generation trigger was built in this phase).
+
+### TESTS / VALIDATION
+
+- New tests: `weekly-report-publish-service` (13), `weekly-report-latest-report-service` (10), `weekly-report-overview-ui` (11) -- all pass, **none DB-gated/skipped**: the publish-service and latest-report-service suites use a fake `Pool` double (matching pg's own `.query()` shape) rather than a real Postgres connection, so the actual publication-safety branching gets real, always-running coverage in this sandbox instead of relying on a real DB this project has never had available. The UI suite is source-inspection-based (no JSX-capable test harness/React Testing Library exists in this project; judged out of scope to add for two small components).
+- Two pre-existing guard tests were updated (not broken by accident): "no app/api/reports directory exists" (Phase 7C-era, obsolete now that Phase 7E legitimately created one) now asserts the directory contains only the two expected read-only routes; "no app/api route imports the render/PDF layer" (Phase 7D-era) is narrowed to permit only `artifact-store` (a storage abstraction, not a generator) from any route.
+- Full JS suite: 1385 tests, 1304 pass, 0 fail, 81 skipped (all DB-gated, unchanged standing limitation). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean; route table gained exactly `/api/reports/latest` and `/api/reports/latest/download`.
+
+### SCHEMA / MIGRATIONS
+
+None. `artifact_key`/`artifact_checksum`/`artifact_size_bytes`/`artifact_content_type` already existed on `weekly_report_snapshots` since Phase 7A, always documented as provider-agnostic.
+
+### NEW DEPENDENCIES / ENV VARS
+
+None new. `BLOB_READ_WRITE_TOKEN` (already documented since Phase 7D) is what gates the real `VercelBlobArtifactStore` in the download route; unset, the route degrades to unavailable rather than erroring.
+
+### CONFIRMATION
+
+No live Anthropic call. No cron/orchestration route added (`vercel.json` unchanged, still exactly the two pre-existing crons). No Production action, no PR #13 merge, no merge to `main`. No Previous Reports UI or historical-archive browsing was added -- latest-only, per this phase's own brief.
+
+---
+
+## PHASE 7D.2 CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7E
+
+Closes the one gap Phase 7D.1 left open: **a real, live Vercel Preview invocation confirmed the actual `@sparticuz/chromium` serverless binary launches and renders a valid PDF.** Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.10 — this section only summarizes.
+
+### WHAT HAPPENED
+
+1. Re-added a temporary, gated, fixture-only diagnostic route (fresh token — Phase 7D.1's own token is already visible in git history), pushed it, and located the Preview URL via the public GitHub API (same approach as 7D.1, no `gh`/`vercel` CLI touched).
+2. First live invocation (user-run, via the documented `x-vercel-protection-bypass` header, hidden-input secret never seen by this session) still redirected to Vercel SSO. **Root cause (confirmed via Vercel's own docs, not guessed):** the bypass secret is snapshotted into a deployment's environment **at build time** — a secret rotated after a deployment's build won't match until a fresh build picks it up. Pushed a trivial redeploy; the next invocation reached the real route handler.
+3. That invocation returned a real, concrete failure: `"The input directory \"/vercel/path0/node_modules/@sparticuz/chromium/bin\" does not exist. ... you must externalize @sparticuz/chromium so it is not relocated."` — a genuine Next.js/Vercel packaging bug, not a code logic bug. Root-caused via Next.js 14.2's own docs: Next's default Route Handler bundling relocates the package, and even after externalizing it (`experimental.serverComponentsExternalPackages`), Next's static file tracer (`@vercel/nft`) still couldn't see `@sparticuz/chromium`'s `bin/*.br` binary assets (loaded via a dynamically-built internal path, not a literal string it can follow) — confirmed locally by inspecting the emitted `.next/.../route.js.nft.json`, which listed the package's `.js` files but none of its `bin/` contents. Fixed with `experimental.outputFileTracingIncludes`, force-including `node_modules/@sparticuz/chromium/bin/**` for the diagnostic route's own path; re-verified locally (all 4 `bin/*.br` files now present in the rebuilt trace manifest) before pushing again.
+4. **The next live invocation passed completely**, real result:
+   ```json
+   {
+     "ok": true, "status": "rendered", "chromiumLaunched": true, "pdfProduced": true,
+     "pdfByteLength": 49301, "pdfMagicBytes": "%PDF-", "pageCount": 2, "maxPdfPages": 5,
+     "withinPageLimit": true, "reducedContent": false, "elapsedMs": 3073,
+     "runtimeInfo": { "nodeVersion": "v24.18.0", "platform": "linux", "arch": "x64", "vercelEnv": "preview", "vercelRegion": "iad1" }
+   }
+   ```
+   Confirms: the real `@sparticuz/chromium` binary launches on Vercel; `renderWeeklyReportPdf()` produces real, valid PDF bytes (`%PDF-` magic bytes); `countPdfPages()` measures a real page count from real Chromium output; the ≤5-page enforcement path executes correctly (2 ≤ 5, no reduced-content retry needed); Vercel is actually running Node v24.18.0 on Linux x64 — confirming Phase 7D.1's `engines.node` fix took effect. No AI call, no DB mutation, no publication, no Blob upload occurred (the route never touches any of those).
+5. Removed the diagnostic route entirely. Cleaned up `next.config.js`'s now-dead `outputFileTracingIncludes` entry (it was keyed to the deleted diagnostic route's path) while keeping `serverComponentsExternalPackages: ["@sparticuz/chromium"]` and a clear comment for whoever builds Phase 7F's real route: it **must** add its own `outputFileTracingIncludes` entry (keyed to its own path) or this exact failure recurs.
+
+### TESTS / VALIDATION
+
+- Full JS suite: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated, unchanged). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean, route table confirmed identical to the pre-Phase-7D-1 baseline (no diagnostic route, no new production route).
+- Both Phase 7D source-inspection guard tests ("no app/api route imports the render/PDF layer" / "...the Weekly Analyst AI layer") correctly failed while the diagnostic route existed and pass again after its removal.
+
+### CONFIRMATION
+
+No live Anthropic call. No publication, no Blob upload, no download UI, no cron/orchestration route in the final state. No PR #13 merge, no merge to `main`, no Production action. No secret (Vercel bypass or otherwise) was ever pasted into, logged by, or committed by this session — the user ran the authenticated step themselves via hidden shell input each time and only ever shared the resulting JSON. The diagnostic route existed on `origin` for a bounded window across three iterations (deploy → blocked → redeploy → packaging fix → passed) and is confirmed absent from the current `HEAD`.
+
+### PHASE 7D.2 IS NOW FULLY CLOSED — Phase 7E may begin whenever desired; the PDF renderer's live-Vercel behavior is no longer an open question.
+
+---
+
+## PHASE 7D.1 CLOSEOUT (2026-09-02) — historical; superseded above by Phase 7D.2
+
+Small follow-up to Phase 7D: visual polish informed by a real (local-only, never-committed) look at the July 2026 reference outlook, plus the two required technical checks -- serverless-Chromium/puppeteer-core compatibility, and a real attempt at live-Vercel Chromium validation. Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §29.9 — this section only summarizes.
+
+### WHAT CHANGED
+
+- **Visual**: bolder accent-blue rule under section headings, an accent-blue left border on at-a-glance stat tiles, a stronger table-stripe tint. Re-rendered and re-inspected the fixture PDF after each change; page count unchanged (4 pages).
+- **Real bug fixed**: `ChromiumPdfRenderer` was launching with `args: chromium.args, headless: true` directly; `@sparticuz/chromium`'s own documented usage wraps this as `puppeteer.defaultArgs({ args: chromium.args, headless: "shell" })` with `headless: "shell"`. Fixed to match exactly.
+- **Version-compatibility finding (checked, not guessed)**: `puppeteer-core@25.9.0`'s own GitHub release notes confirm it's tested against Chrome 152.0.7977.54; `@sparticuz/chromium@149.0.0` (its latest published version — confirmed via `npm view`, no newer release exists) bundles Chromium 149. A real, documented, bounded ~3-version gap — not fixed (downgrading puppeteer-core would trade a current release for a worse one over a protocol-stable operation set), but now precisely characterized instead of assumed fine.
+- **Node runtime fixed**: added `package.json`'s `engines.node = "^22.17.0 || >=24.0.0"` (copied verbatim from `@sparticuz/chromium`'s own constraint — Vercel's docs confirm `engines.node` overrides the project's dashboard-level Node.js Version setting). Vercel currently offers 24.x (default)/22.x/20.x; this pins the deployment to a version that actually satisfies the chromium package's requirement regardless of what the dashboard was previously set to. Also exact-pinned both `puppeteer-core` and `@sparticuz/chromium` (were caret-ranged).
+- **A real, bounded live-Vercel attempt**: added a temporary, gated, fixture-only diagnostic route, pushed it (triggering Vercel's normal automatic Preview — explicitly authorized), located the resulting Preview URL entirely via the **public, unauthenticated GitHub REST API** (no `gh`/`vercel` CLI touched), and attempted to invoke it. The build succeeded. The HTTP request itself was blocked with a 302 to a Vercel authentication page — **this project's Preview deployments have Vercel Deployment Protection (SSO) enabled**, intercepting the request before it ever reached the route handler. Bypassing it requires a "Protection Bypass for Automation" secret — the same category of secret this project's own incident history records as previously exposed by an unauthorized session; this session deliberately did not attempt to obtain or use it. The diagnostic route was removed immediately in a follow-up commit once this was discovered.
+
+### WHAT THIS MEANS — STILL UNVERIFIED
+
+**Whether the real `@sparticuz/chromium` Linux binary + `chromium.args` actually launch and complete a `page.pdf()` call inside a real Vercel serverless function has NOT been confirmed.** Everything checkable without that one live call has been checked and, where wrong, fixed: the launch code now matches the documented API exactly; a local isolation test confirmed `chromium.args` (specifically `--single-process`) is what hangs against a desktop Chrome binary — expected, since those flags pair with `@sparticuz/chromium`'s own Linux binary specifically, not any local dev Chrome; Vercel's build pipeline accepted and deployed the code without error. The one remaining unknown requires a controlled invocation authenticated past Deployment Protection — only the project owner (via their own Vercel dashboard "Protection Bypass" value, or by temporarily disabling protection for a single test) can safely do this. **Recommended before Phase 7F schedules anything real**, using the same pattern Phase 6 already established for its own first live Anthropic call (user-run, hidden-input secret, never pasted into a session transcript).
+
+### TESTS / VALIDATION
+
+- Full JS suite: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated, unchanged — no local Postgres in this sandbox). No regression.
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged from Phase 7D's own closeout (confirmed the temporary diagnostic route is absent from the final build).
+- The existing Phase 7D source-inspection guard test ("no app/api route imports the render/PDF layer") correctly failed while the diagnostic route existed, and passes again after its removal — confirming the guard itself works as intended.
+
+### CONFIRMATION
+
+No live Anthropic call. No publication, no Blob upload, no download UI, no cron/orchestration route added to the final state. No PR #13 merge, no merge to `main`, no Production action. The reference DOCX and every generated QA PDF/screenshot stayed local-only (scratch files, never committed, never pushed). The temporary diagnostic route existed on `origin` for a bounded window (one push-test-remove cycle within this session) and is confirmed absent from the current `HEAD`.
+
+---
+
+## PHASE 7C.1 + PHASE 7D CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7D.1
+
+Weekly report executive-summary adjustment (7C.1) + deterministic chart/table/report/PDF rendering layer (7D), on `feat/daily-energy-intelligence`, on top of Phase 7C's AI analyst layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26.12 (7C.1) and §28-§29 (7D, new) — this section only summarizes.
+
+### STARTING STATE (verified before any work)
+
+Local HEAD, origin, and `main` all confirmed exactly as the prior session's closeout recorded: branch `feat/daily-energy-intelligence` at `8ffb5ce` == `origin/feat/daily-energy-intelligence`, working tree clean, PR #13 still open/draft/unmerged, `main` untouched. Phase 7A/7B/7B.1/7C all confirmed complete per the sections below; Phase 7D had not started.
+
+### PHASE 7C.1 — WHAT CHANGED
+
+Smallest reasonable modification to Phase 7C: `executiveAssessment`'s target shortened from ~450-550 words down to **~150-250 words across 2-3 concise paragraphs**, now that Phase 7D's evidence sections carry the report's detailed analysis instead of the executive assessment trying to. `ai-contract.ts`'s word bounds narrowed 350-700 → 120-320 (same proportional buffer around the new target); `ai/prompt.ts`'s `SYSTEM_PROMPT` rewritten to instruct the 2-3 paragraph structure and a blank-line paragraph separator (so the renderer can split paragraphs deterministically); `ai/model-config.ts`'s max output tokens reduced 3000 → 2200; `WEEKLY_ANALYST_SCHEMA_VERSION` and `WEEKLY_ANALYST_PROMPT_VERSION` both bumped to `1.1.0`. Output *shape*, all grounding/allowlist rules, and the one-call-per-report architecture are unchanged. See architecture doc §26.12 for the full diff.
+
+### PHASE 7D — WHAT WAS BUILT
+
+Turns a `ready`/`published` snapshot's frozen payload + its persisted Phase 7C assessment into real PDF bytes in memory — no publish, no download route, no cron, no UI entry point.
+
+- **Design latitude**: the phase brief's page-by-page outline was explicitly reframed mid-session as product intent/examples, not a rigid template, with ownership of the final information architecture, chart choice, and typography handed to this session. See architecture doc §28 for the actual information architecture built (materiality-ranked, dynamically-selected evidence sections; a 2-column chart+commentary layout for chart-only sections; full-width for table-bearing ones; a serif/sans typographic pairing) and the concrete fixes made from a real visual-QA pass.
+- **Visual QA performed live**: a realistic, fully deterministic, hand-authored fixture (`tests/fixtures/weekly-report-fixture.ts` — committed, reused by the automated test suite) was rendered through the complete real pipeline to actual PDF files using the local machine's own installed Google Chrome (not `@sparticuz/chromium`'s Lambda-only binary, and not committed to the repo). Two variants were inspected — a 4-page "quiet week" and a 5-page "busy week" exercising every chart kind. Concrete design bugs found and fixed this way: a bar-chart zero-baseline that flattened tightly-clustered series into near-identical bar heights; a Rig Activity chart that dwarfed two small Appalachian basin bars next to the (unrelated-scale) national U.S. count; an ambiguous "for this item" News Range Implication; a redundant STEO table title/source line; a Sources table that split across a page boundary leaving a following page nearly blank. All fixed — see §28's full list.
+- **Render model + selection**: a typed `WeeklyReportRenderModel` (`render-model.ts`); `buildWeeklyReportRenderModel()` (`render-model-builder.ts`) is the one place it's constructed, from exactly the two frozen/persisted inputs, with zero DB/live-fetch/AI calls anywhere downstream. `evidence-sections.ts` builds one candidate per plausible subject and keeps only the top `budget.maxEvidenceSections` by materiality (reusing Phase 7B's `rankEvidenceByMateriality()` twice — once per multi-item candidate, once across candidates).
+- **Deterministic charts/tables**: 4 chart kinds (`comparisonBar`, `multiItemBar`, `peerBar`, `actualVsForecastBar`, `chart-selection.ts`), every bar value traced directly to frozen evidence, rendered as dependency-free inline SVG (`svg-charts.ts`). 5 table builders (`table-builder.ts`), every cap deterministic and every truncation reported, never silent.
+- **Content budget / 5-page hard limit**: two fixed tiers (`content-budget.ts`); `weekly-report-pdf-service.ts`'s `renderWeeklyReportPdf()` implements the exact policy: standard render → if the REAL PDF page count fits, done; else exactly one reduced-content retry → if that fits, done; else fail safely. No AI retry, no third tier.
+- **Commentary**: deterministic, template-based (`commentary.ts`) — zero new AI calls anywhere in Phase 7D; the report stays at ONE AI invocation per week (Phase 7C/7C.1's analyst assessment).
+- **PDF rendering**: `puppeteer-core` + `@sparticuz/chromium` behind a swappable `PdfRenderer` interface (`pdf-renderer.ts`) — the standard serverless-Chromium pairing, chosen over bundling full `puppeteer` (too large for a serverless function) or a paid rendering service. Real headless Chromium was never launched against the actual `@sparticuz/chromium` binary this session (it's Lambda/Linux-only); local visual QA used the renderer's own `executablePath` override pointed at this Mac's installed Chrome instead.
+- **Branding**: reuses the existing approved `assets/logos/RRC.png` (same asset `config/company-logos.json` already uses), base64-embedded — never touched or copied the proprietary reference DOCX.
+- **Artifact storage**: `ArtifactStorageProvider` abstraction (`artifact-store.ts`) with an `InMemoryArtifactStore` (tests) and a real `VercelBlobArtifactStore` (token-gated, mirrors the AI provider's own gating pattern) — nothing calls `.put()` anywhere yet; wiring it to a real publish flow is Phase 7E's job.
+
+### TESTS / VALIDATION
+
+- **New tests**: 4 new files — `weekly-report-render-model` (render model/chart/table/commentary/evidence-selection + source-inspection guardrails), `weekly-report-content-budget`, `weekly-report-pdf-service` (countPdfPages, retry/fail-safe policy against fakes, artifact-store), `weekly-report-html-render` (HTML/SVG rendering + XSS-escaping regression tests) — 62 tests, all passing, no DB/live-Chromium/live-Anthropic required. Existing `weekly-report-ai-contract`/`weekly-report-analyst-prompt`/`weekly-report-analyst-service` tests updated for Phase 7C.1's new word bounds.
+- **Full JS suite**: 1347 tests, 1266 pass, 0 fail, 81 skipped (all DB-gated — no local Postgres in this sandbox, same standing limitation as every prior Phase 7 session). No regression to any pre-existing test.
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes — Phase 7D added no `app/api/reports` and nothing under `app/` imports the new render layer, confirmed by a source-inspection test).
+- **DB-gated tests** (all of 7A/7B/7C's): still never run against a real Postgres in any session — standing risk, unchanged.
+
+### CONFIRMATION
+
+No live Anthropic call occurred. No live headless-Chromium render occurred against the real serverless (`@sparticuz/chromium`) binary — only against a local development Chrome install, for this session's own visual QA, output not committed. No PDF was published, no artifact was uploaded to a real Vercel Blob store. No download route/UI, no cron/orchestration route, no publish-transition caller, no Production action, no PR merge, no merge to `main`. Phase 7E **not started**.
+
+---
+
+## PHASE 7C CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7C.1 + 7D
+
+Weekly AI Analyst layer, on `feat/daily-energy-intelligence`, on top of Phase 7B/7B.1's deterministic snapshot layer. Full design in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §26 (new) — this section only summarizes.
+
+### WHAT WAS BUILT
+
+Turns a `ready` frozen snapshot into ONE validated, structured, Range-focused analyst assessment, then stops — no chart/PDF rendering, no publish, no download route, no cron.
+
+- **Evidence selection** (`analyst-evidence-selection.ts`): deterministic, bounded, reuses Phase 7B's materiality ranking. Hard caps: marketBackdrop 10, range 8, peers 6, news 5, outlook 6, whatChanged candidates 8, risk+opportunity candidates 5 total (inherited from the existing risk engine cap).
+- **AI input/output contract** (`ai-contract.ts`, rewritten from Phase 7A's placeholder): `WeeklyAnalystInput` → `WeeklyAnalystAssessment` (executiveAssessment 350-700 words targeting ~450-550; biggestRisk/biggestOpportunity; ≤5 whatChanged items; 1-6 managementWatchItems; bottomLine; selectedEvidenceIds).
+- **Grounding validation**: every cited evidence id must exist in the supplied allowlist; biggestRisk/biggestOpportunity must each cite a real deterministic risk-engine candidate (and not swap the two); whatChanged items must cite real supplied change evidence; watch items must cite supporting evidence (never a fabricated forecast); a small generic-filler denylist and a guaranteed-outcome-language denylist both reject boilerplate/hype outright.
+- **One Anthropic call per report**: `AnthropicWeeklyAnalystProvider`, Claude Haiku 4.5 (unchanged project-standard model), forced tool-use, `withBoundedRetry` (3 attempts, existing project policy, not a new one).
+- **Fingerprinted cache**: `computeWeeklyAnalystFingerprint()` = sha256(snapshot's own input_fingerprint + AI schema version + prompt version + model). Same four inputs → same fingerprint → cached `ready` row returned, zero provider calls.
+- **Persistence**: new `weekly_report_analyses` table (added to the existing `schema.sql`, same `npm run report:migrate` path), one row per attempt, mirroring `weekly_report_snapshots`' own two-partial-unique-index pattern (`pending`/`ready` fingerprint-uniqueness) so a failed attempt can never block or overwrite a successful one, and a retry after failure is always a new row.
+- **No live Anthropic call was made** — every test uses an in-process fake provider (mirrors the existing `tests/macro-summary-service.test.cjs` pattern).
+- **Management tooltip copy locked** for Phase 7F's future Overview button (§26.11 of the architecture doc) — not implemented, copy only.
+
+### TESTS / VALIDATION
+
+- 4 new test files (`weekly-report-ai-contract` rewritten, `weekly-report-analyst-evidence-selection`, `weekly-report-analyst-prompt`, `weekly-report-analyst-service`) — pure-function tests (validation/grounding/selection/prompt-formatting/fingerprint) all passing; a source-inspection test confirms no `app/api/` file imports the AI layer and no `app/api/reports` directory exists; DB-gated cache/generate/persist/failure-lifecycle tests (fake provider, no real Anthropic) skip in this sandbox (no local Postgres — same standing limitation as every prior Phase 7 session).
+- Full JS suite: 1282 tests, 1201 pass, 0 fail, 81 skipped (all DB-gated).
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes).
+
+### KNOWN REMAINING ITEMS FOR PHASE 7D+
+
+1. DB-gated tests across all of Phase 7 (7A/7B/7C) have still never run against a real Postgres in any session — standing risk, unchanged.
+2. No blob/object storage provider configured yet (Phase 7D, unchanged from 7A).
+3. The two Phase 7B data gaps (no forecast-revision history, no separate peer-relative comparison) remain open (unchanged from 7B).
+4. No scheduled caller exists yet for `generateWeeklyAnalysisIfNeeded()` — that, plus the actual first real (paid) Anthropic call, belongs to Phase 7F's orchestration work under the same controlled-Preview-validation pattern Phase 6 established.
+
+### CONFIRMATION
+
+No live Anthropic call occurred. No chart/HTML/PDF renderer, no publish, no download route/UI, no cron, no Production action. Phase 7D **not started**.
+
+---
+
+## PHASE 7B.1 CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7C
+
+Small corrective pass on Phase 7B, found during control-hub review, on `feat/daily-energy-intelligence`. Two real correctness bugs fixed; no new subsystem, no scope expansion. Full design detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §8/§20/§21/§22/§23/§24 (updated in place) — this section only summarizes.
+
+### WHAT CHANGED
+
+1. **News window re-anchored from `storageWeekEnding` to the report's own `dataCutoffAt`.** The original Phase 7B window (`[storageWeekEnding - 6 days, storageWeekEnding]`) silently dropped News published between the storage-week Friday and the report's actual (later, post-EIA-release) generation date. New window: `(previousDataCutoffAt, currentDataCutoffAt]` — start exclusive, end inclusive, so consecutive reports partition real time with no gap and no double-count. First report (no previous published snapshot) falls back to a documented `NEWS_WINDOW_FALLBACK_DAYS = 7` before the current cutoff. **Report identity (`storageWeekEnding`) is completely unchanged** — this was windowing-only.
+2. **One explicit `dataCutoffAt` established once per run**, in `snapshot-builder.ts`, immediately after the previous published snapshot is looked up — never independently recomputed by an adapter. Passed explicitly to the News adapter alongside the previous report's own frozen cutoff. Evidence items' own `period`/`asOfDate` are never overwritten by it.
+3. **Change/materiality/fingerprint comparison switched from `displayValue` text to a semantic rule.** The original comparison (`prior.displayValue !== item.displayValue`) made truth detection dependent on formatting/rounding — a real change that happened to round to the same display string (e.g. `3.326 → 3.334`, both `"$3.33"`) would go undetected. New exported `isEvidenceItemChanged()` in `changes.ts` compares `currentValue`/`period` directly for numeric evidence (falling back to `displayValue` only for genuinely non-numeric/qualitative evidence), and is now the **single** definition of "changed" shared by `computeWeeklyChanges()` and `annotateMateriality()`. `fingerprint.ts` got the matching fix: `displayValue` is no longer unconditionally fingerprinted (`qualitativeFact` replaces it, null whenever a real `currentValue` exists).
+
+### TESTS / VALIDATION (this session)
+
+- Rewrote `tests/weekly-report-news-window.test.cjs` for the new cutoff/contiguity/fallback semantics (18 tests, including an explicit "an article at a shared boundary lands in exactly one of two consecutive reports" test).
+- Extended `tests/weekly-report-changes.test.cjs` (+11 tests) and `tests/weekly-report-fingerprint.test.cjs` (+4 tests) with the brief's required numeric-vs-display, new-period-same-value, and risk-item-unaffected cases.
+- Full JS suite: 1237 tests, 1163 pass, 0 fail, 74 skipped (all DB-gated, unchanged skip set — no local Postgres in this sandbox, same standing limitation as every prior Phase 7 session).
+- `npm run typecheck`: clean. `npm run build`: clean, route table unchanged (zero new routes, by design).
+- DB-gated tests (`weekly-report-repo`, `weekly-report-snapshot-builder`) still could not run against a real Postgres in this sandbox — unchanged, standing risk already flagged in the Phase 7B closeout below.
+
+### CONFIRMATION
+
+No AI call, no PDF/chart renderer, no artifact publication, no Production action, no cron/route added. Report identity (`storageWeekEnding`) unchanged. Phase 7C **not started**.
+
+---
+
+## PHASE 7B CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7B.1
+
+Phase 7B (Weekly Range Resources AI Intelligence Report — **frozen weekly intelligence snapshot + deterministic comparison engine**) is complete on `feat/daily-energy-intelligence`, on top of Phase 7A's persistence spine. This section is a self-contained resume point for Phase 7C; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full, especially its new §19–§26, before starting Phase 7C — this section only summarizes it).
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Branch tip before this session**: `3657977` ("Phase 7A: Weekly Report architecture + data contracts + persistence foundation") — confirmed via `git fetch origin` to exactly match `origin/feat/daily-energy-intelligence` before any Phase 7B work began; working tree was clean; branch/commit already on `feat/daily-energy-intelligence` at session start (no branch switch needed this time).
+- **Latest commit after this phase**: see `git log -1` on this branch — not hardcoded here for the same reason Phase 7A's closeout gives (the SHA is only known once the commit containing this text already exists). Titled "Phase 7B: Frozen weekly intelligence snapshot + deterministic comparison engine" (or equivalent) on top of `3657977`.
+- **PR #13**: still open, draft, not merged — untouched this phase.
+- **Production**: untouched this phase — Phase 7B shipped no new route, no new UI, nothing reachable from a running deployment (confirmed by the build's route table being unchanged from Phase 7A).
+
+### WHAT PHASE 7B BUILT
+
+Turned Phase 7A's contracts/persistence spine into a real, working deterministic snapshot layer — **no AI call, no chart renderer, no PDF renderer, no publish, no cron/orchestration route.** Full detail in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §19–§26; summary:
+
+- **Real typed evidence** (`WeeklyEvidenceItem`/`WeeklyReportModules`, §19) replaced Phase 7A's `Record<string, unknown>` placeholder. Stable evidence IDs (period-excluded for recurring series, article-id-embedded for News) are what make change detection meaningful rather than noisy.
+- **Six subsystem adapters** (`lib/reports/adapters/`): Macro (re-derives the same live EIA fetch pattern `buildMacroRiskSnapshot()` uses, plus real evidence + STEO vintage persistence/comparison), Rigs (Baker Hughes, national + Marcellus + Utica), Range's own company data (quarterly financials + guidance), Peers (6 tickers × 6 headline metrics), Forecast (RRC's parameterless default scenario only — see the documented gap below), News (7-day window anchored to the report's own storage-week identity, `"analyzed"`-only, never re-runs News's AI).
+- **Deterministic comparison engine** (`lib/reports/comparisons.ts`): WoW/YoY/vs5yrAvg for weekly storage, WoW-only (calendar-anchored) for daily Henry Hub, MoM/YoY for monthly EIA series, QoQ/priorQuarterActuals for quarterly Range/peer financials, WoW/YoY reusing the rig-import pipeline's own precomputed deltas, steoVintage only when a real second persisted vintage exists. Comparison periods always follow the underlying data's own cadence, never the weekly report-generation cadence.
+- **Deterministic change detection** (`lib/reports/changes.ts`): diffs the current snapshot against the previous *published* one; the core rule it enforces is that an unchanged monthly/quarterly figure appearing in two consecutive weekly snapshots produces zero change entries — proven by a dedicated test.
+- **Materiality foundation** (`lib/reports/materiality.ts`): structured signals (`MaterialityInputs`) plus a simple documented high/routine classifier and a plain comparator-based ranker — deliberately not a blended numeric score.
+- **Real fingerprinting** (`lib/reports/fingerprint.ts`): SHA-256 over a canonicalized, curated subset of evidence fields — proven stable/sensitive/insensitive-to-volatile-metadata by a dedicated test suite.
+- **Snapshot builder orchestration** (`lib/reports/snapshot-builder.ts`, `runWeeklySnapshotBuild()`): the full `pending → building → ready` pipeline, stopping there — never calls `publishSnapshot()`. No `app/api/...` route imports this module.
+
+### DEVIATIONS FROM PHASE 7A (both additive, not reversals — see architecture doc §24 for full reasoning)
+
+1. `EvidenceModuleKey` gained `range_company` and `deterministic_risk_opportunity` — Phase 7A's category list had no place for Range's own company results (distinct from peer positioning) or the risk engine's ranked output as first-class evidence.
+2. `comparisons.ts`'s `compareQuarterly` takes `{ value: number | null }` rather than the narrower `SourcedValue`, so one function serves all three quarterly fixture shapes in `lib/dashboard/` (`SourcedValue`, `MarketCapValue`, `EpsValue`) instead of three near-duplicates.
+
+### KNOWN DATA GAPS (documented, not papered over — architecture doc §24)
+
+1. **No `forecastRevision` comparison for Range's forecast** — `lib/forecast/` has no persisted scenario-run history (unlike STEO), and the only parameterless canonical output is the "default scenario." Closing this needs a future phase to add real scenario-state persistence.
+2. **`peerChange` is not a separately-computed comparison period** — peers get the same QoQ/YoY comparisons Range's own data gets; a bespoke Range-vs-peer relative-positioning delta was judged closer to a synthesis decision, better suited to Phase 7C/7D.
+
+### TESTS / VALIDATION (this session)
+
+- **New tests**: 8 files, ~80 new test cases — `weekly-report-comparisons` (23), `weekly-report-changes` (11), `weekly-report-materiality` (11), `weekly-report-fingerprint` (10), `weekly-report-news-window` (8), `weekly-report-macro-adapter` (8, EIA-fetch-mocked, no DB needed), `weekly-report-static-adapters` (7, real static fixtures, no DB/network), all **passing**. `weekly-report-snapshot-builder` (5, DB-gated + EIA-fetch-mocked, full `runWeeklySnapshotBuild` lifecycle incl. duplicate-attempt/already-published/required-input-failure/materiality-across-two-published-weeks) — **could not run in this sandbox**, no local `DATABASE_URL`/`POSTGRES_URL` (same limitation as Phase 7A's `weekly-report-repo.test.cjs`, still unresolved — see below). Two real test-authoring bugs were caught and fixed during this session (a wrong "no previous snapshot" expectation in the changes test, and a span-length miscalculation in the news-window test) — both were test bugs, not implementation bugs; the implementation behavior in both cases was correct on inspection.
+- **Full JS suite**: 1216 tests, 1142 pass, 0 fail, 74 skipped (56 pre-existing + 13 from Phase 7A + 5 new from Phase 7B, all DB-gated) — no regression to any pre-existing test.
+- **Python suite**: **could not run in this sandbox** — same `python`/`python3` App-execution-alias gap noted in Phase 7A's closeout (a Windows Store stub is on PATH but no real interpreter is installed behind it); zero Python files touched this phase.
+- **`npm run typecheck`**: clean.
+- **`npm run build`**: clean; route table unchanged from Phase 7A (Phase 7B added zero new routes, by design — no browser/cron entry point exists yet).
+
+### KNOWN REMAINING ITEMS / RISKS FOR PHASE 7C
+
+1. **All DB-gated Phase 7 tests (7A's `weekly-report-repo.test.cjs` + 7B's `weekly-report-snapshot-builder.test.cjs`) have never run against a real Postgres in any session so far.** This is now a standing item across two phases — strongly recommended before Phase 7C/7D build further on top of `runWeeklySnapshotBuild()`'s untested-against-real-DB lifecycle.
+2. **No blob/object storage provider is chosen or configured** (unchanged from Phase 7A) — still needed before Phase 7D can write artifact upload/download logic.
+3. **The two documented data gaps above** (forecast revision history, peer-relative comparisons) are open product/architecture questions for whoever scopes Phase 7C/7D's "what changed" narrative — they may or may not need closing before a v1 report is acceptable.
+4. **This branch's Production-promotion decision (Phase 6 closeout, below) remains unresolved** and is unaffected by Phase 7 — still a prerequisite for any of Phase 7's later phases ever reaching Production.
+
+### CONFIRMATION
+
+No AI call was implemented. No PDF/chart renderer was implemented. No artifact publication was implemented (nothing calls `publishSnapshot()`). No Production action occurred. Phase 7C was **not started** this session.
+
+---
+
+## PHASE 7A CLOSEOUT (2026-09-01) — historical; superseded above by Phase 7B
+
+Phase 7A (Weekly Range Resources AI Intelligence Report — **architecture + data contracts + persistence foundation only**) is complete on `feat/daily-energy-intelligence`. This section is a self-contained resume point for Phase 7B; the full architecture record lives in **`docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`** (read that document in full before starting Phase 7B — this section only summarizes it).
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Branch tip before this session**: `0c5f53f` ("docs: close out phase 6 macro intelligence") — confirmed via `git fetch origin` to exactly match `origin/feat/daily-energy-intelligence` before any Phase 7A work began; working tree was clean.
+- **This session's local checkout was on a different branch** (`forecast/rrc-ux-pass`) when the session started — switched to `feat/daily-energy-intelligence` (tracking `origin/feat/daily-energy-intelligence` at `0c5f53f`) before doing anything else, per this phase's startup-verification instructions.
+- **Latest commit after this phase**: see `git log -1` on this branch — this closeout intentionally does not hardcode that commit's own SHA (the SHA is only known once the commit including this text already exists). It is the one commit titled "Phase 7A: Weekly Report architecture + data contracts + persistence foundation" (or equivalent) on top of `0c5f53f`.
+- **PR #13**: still open, draft, not merged — untouched this phase, per this phase's explicit instruction not to merge it.
+- **Production**: untouched this phase — still the pre-Phase-6 state described in the Phase 6 closeout section below; Phase 7A shipped no new route, no new UI, nothing reachable from a running deployment.
+
+### WHAT PHASE 7A BUILT
+
+Persistence spine + type contracts only — **no snapshot builder, no AI call, no chart renderer, no PDF renderer, no cron/orchestration, no Overview download button, no "latest report" endpoint.** Full reasoning and file-by-file detail is in `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`; summary:
+
+- **Report identity**: the EIA Weekly Natural Gas Storage report's "week ending" date (`StorageWeekEnding`, always a Friday) — not a calendar week, not a timestamp. `isValidStorageWeekEnding()` in `lib/reports/weekly-report-types.ts`.
+- **DB schema** (`lib/reports/persistence/schema.sql`, new table `weekly_report_snapshots`, applied via `npm run report:migrate`): one row per generation *attempt* (not per week), with two partial unique indexes doing the real idempotency/safety work — at most one active (`pending`/`building`/`ready`) attempt per week, and at most one `published` row per week, ever, enforced by Postgres itself, not just application code. A `CHECK` constraint additionally forbids a row from ever being `published` while incomplete (missing payload/fingerprint/artifact fields).
+- **Lifecycle**: `pending → building → ready → published`, or `→ failed` from any non-terminal state; `published`/`failed` are both terminal per-row; a retry after failure is a new row. Atomic CAS-style transitions in `lib/reports/persistence/report-repo.ts` (`transitionToBuilding`, `freezeSnapshot`, `publishSnapshot`, `markSnapshotFailed`), each returning `null` (never throwing) when the row wasn't in the expected prior state.
+- **Frozen payload envelope, comparison contract, report content contract, AI input/output contract, readiness contract** — all defined as types (`lib/reports/weekly-report-types.ts`, `lib/reports/readiness.ts`, `lib/reports/ai-contract.ts`); nothing computes a real comparison, calls a real AI provider, or fetches real readiness data yet.
+- **Artifact storage**: DB columns (`artifact_key`/`artifact_checksum`/`artifact_size_bytes`/`artifact_content_type`) are provider-agnostic; no blob/object storage provider is wired up yet (none was already present in this project, and adding one wasn't low-risk/already-available per this phase's scope). Vercel Blob is the architecture doc's recommendation for Phase 7D.
+
+### TESTS / VALIDATION (this session, against this phase's changes)
+
+- **New tests**: `tests/weekly-report-identity.test.cjs` (8), `tests/weekly-report-readiness.test.cjs` (5), `tests/weekly-report-ai-contract.test.cjs` (9) — all pure, no DB, all passing. `tests/weekly-report-repo.test.cjs` (13, DB-gated — lifecycle transitions, both partial-unique-index constraints exercised directly, idempotent create, previous/latest-published lookups) — **could not run in this sandbox** (no local `DATABASE_URL`/`POSTGRES_URL` configured; skips loudly with an explicit message, same established pattern as every other DB-gated test in this repo, e.g. `tests/macro-steo-persistence.test.cjs`). Needs a real local/staging Postgres run before being treated as verified end-to-end — same caveat this project has carried for every DB-gated Macro test since Phase 6B.
+- **Full JS suite**: 1141 tests, 1072 pass, 0 fail, 69 skipped (56 pre-existing DB-gated + 13 new DB-gated) — no regression to any pre-existing test.
+- **Python suite**: **could not run in this sandbox** — `python3`/`python` are not on PATH in this session's environment (unrelated to Phase 7A; zero Python files were touched this phase, so there is no plausible regression risk, but this was not independently re-verified this session the way the JS suite was).
+- **`npm run typecheck`**: clean, after running `npm install` to restore `node_modules` (this session's checkout had an incomplete `node_modules` missing `pg`/`@anthropic-ai/sdk`/`fast-xml-parser` — an environment gap, not a code issue; installing from the existing `package-lock.json` resolved it with no dependency version changes).
+- **`npm run build`**: clean; route table unchanged from Phase 6E (Phase 7A added zero new routes, by design).
+
+### KNOWN REMAINING ITEMS / RISKS FOR PHASE 7B
+
+1. **DB-gated Phase 7A tests (`tests/weekly-report-repo.test.cjs`) have never run against a real Postgres.** Run them (`DATABASE_URL=... node --test tests/weekly-report-repo.test.cjs`, or as part of the full suite) against a real database before trusting the schema's constraints end-to-end — the SQL was written to mirror already-proven Macro patterns closely, but the two partial unique indexes and the published-completeness `CHECK` are new and deserve a real run.
+2. **No blob/object storage provider is chosen or configured** — Phase 7D needs to either confirm Vercel Blob (this doc's recommendation) or pick an alternative before artifact upload/download logic can be written; the DB schema does not need to change either way.
+3. **Phase 7B must re-inspect Peers/News/Forecast-scenario current shapes before consuming them** — Phase 7A's inspection scope (per its own instructions) covered Macro/News/DB conventions closely but did not audit peer-comparison or scenario-forecast code in file-level detail; §4 of the architecture doc flags this explicitly.
+4. **Fingerprinting is not implemented** — only the column and the precedent (`computeMacroSummaryFingerprint`) to follow; Phase 7B must actually write the canonicalization + hashing for the real payload shape once one exists.
+5. **This branch's Production-promotion decision (Phase 6 closeout, below) remains unresolved** and is unaffected by Phase 7A — still a prerequisite for any of Phase 7's later phases ever reaching Production, independent of Phase 7's own readiness.
+
+### CONFIRMATION
+
+Phase 7B (snapshot builder), 7C (AI call), 7D (charts/PDF), 7E (delivery), 7F (orchestration), and 7G (end-to-end validation) were **not started** this session (Phase 7B has since been completed — see the "PHASE 7B CLOSEOUT" section at the top of this document; the architecture doc's section numbers shifted when 7B's own sections were added, so this pointer is kept accurate rather than left dangling: see `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md` §25 for what 7C-7G each still involve).
+
+---
+
+## PHASE 6 CLOSEOUT (2026-08-31) — historical; superseded above by Phase 7A
+
+Phase 6 (EIA Macro Intelligence System) is **code-complete**. This section is a
+self-contained resume point — a future session should be able to pick up work
+correctly from this section alone, without relying on prior chat history.
+
+### PROJECT STATE
+
+- **Repository**: `christian-04-code/rrc-peer-dashboard`
+- **Active branch**: `feat/daily-energy-intelligence`
+- **Latest commit**: `a05331d` — "Phase 6E: Macro date/freshness closeout + fix Last-Updated timestamp bug"
+- **Remote verification**: `git fetch origin` confirmed `origin/feat/daily-energy-intelligence` == local `HEAD` == `a05331d`. Working tree clean, no untracked files, at the time of this closeout.
+- **PR #13**: open, **draft**, base `main`, head `feat/daily-energy-intelligence` at `a05331d` (confirmed live via the GitHub API — the PR's head SHA exactly matches the branch tip, so no completed work exists only locally). **Not merged.** Its title/body ("Daily Energy Intelligence: automated news pipeline, AI analysis, and simplified News feed (Phases 2–5.1)") predates Phase 6 and undersells current scope — cosmetic only, does not affect safety; update it whenever `gh` write access is available.
+- **Production status**: see "PRODUCTION / BRANCH RISK" below — Production does **not** currently contain any Phase 6 (Macro) work.
+- **Latest Preview URL reflecting `a05331d`**: `https://rrc-peer-dashboard-842nyfbxj-christian-04-codes-projects.vercel.app` (deployed seconds after the Phase 6E commit; content-identical to HEAD). An earlier same-day Preview, `https://rrc-peer-dashboard-l5uinm1lt-christian-04-codes-projects.vercel.app`, was the one visually QA'd during Phase 6E and is also content-identical to `a05331d` (deployed from the same, already-complete, then-uncommitted working tree).
+
+### PHASE 6 STATUS
+
+| Phase | Status | Commit |
+|---|---|---|
+| 6A — Macro/EIA audit + shared-taxonomy relocation | Complete | `6d30e43` |
+| 6B — EIA Macro Intelligence: ingestion foundation | Complete | `12c38ae` |
+| 6C — Macro UI modules + Permian chart fix | Complete | `66b05ce` |
+| 6D — Dynamic Range Macro Risk Engine + AI Summary | Complete | `8adc856` |
+| 6E — Date/freshness closeout | Complete | `a05331d` |
+
+**Phase 6 overall: code-complete, pending only one user-run live AI validation** (see below). No further code changes are required to consider Phase 6 done.
+
+### IMPORTANT COMMITS
+
+- `6d30e43` — Shared Range impact taxonomy relocation (`lib/range-impact-framework.ts`); Macro/EIA architecture audit.
+- `12c38ae` — Phase 6B: EIA STEO ingestion (API v2), `macro_steo_snapshots`/`macro_risk_summaries` schema, source registry.
+- `66b05ce` — Phase 6C: Macro topic-tab UI (Gas Balance/Storage/Supply/Appalachia/LNG/Demand/EIA Outlook/Rigs), EIA Outlook module, Permian rig chart layout fix.
+- `8adc856` — Phase 6D: deterministic Range Macro risk engine (7 signals, ranked), cached AI Macro Summary (Claude Haiku 4.5), `/api/cron/macro`.
+- `a05331d` — Phase 6E: Last-Updated box + per-module date/freshness UI, fixed a real bug where "Last Updated" reflected page views instead of cron runs.
+
+Relevant Phase 5 context (News, a separate subsystem sharing only the driver taxonomy): `efef514` (Phase 5, full daily automation), `28f957b`/`e88c28f` (Phase 5.1/5.2, News UI). Production currently runs `e88c28f` — see below.
+
+### CURRENT ARCHITECTURE
+
+**Macro data flow:**
+```
+EIA API v2 (+ OilPriceAPI) sources
+  → normalized Macro metrics (lib/market/macro-analytics.ts, macro-fundamentals.ts)
+  → Macro UI (components/dashboard/MacroPanel.tsx and topic modules)
+```
+
+**Risk/AI flow:**
+```
+validated Macro metrics
+  → deterministic risk engine (lib/market/macro-risk-engine.ts — classify + rank)
+  → ranked Range risks/opportunities
+  → structured payload (MacroRiskPayload, signals + supportingMetrics + snapshotAsOf)
+  → fingerprint/cache (macro_risk_summaries, keyed on input_fingerprint)
+  → AI Macro Summary (Claude Haiku 4.5, cron-only, commentary on the payload only)
+```
+
+### IMPORTANT DATA SAFEGUARDS
+
+- EIA API v2 is the sole ingestion method — no XLS/XLSX parsing was built (deliberate, documented omission; revisit only if a future dataset genuinely requires it).
+- No unverified EIA series ID ships — every series in `lib/eia/series.ts`/`lib/eia/macro-registry.ts` was independently confirmed live against the real `EIA_API_KEY` before being added (several initial guesses, e.g. `NGLXPUS`/`NGICPUS`, were wrong and replaced with verified IDs).
+- No zero-filling missing state data — `buildAppalachiaProduction()` excludes a period entirely if any of PA/WV/OH is missing it, never substitutes zero.
+- PA + WV + OH is always labeled "PA + WV + OH marketed production," never "Marcellus production" (EIA does not publish an official Marcellus series) — enforced in code comments, UI copy, and tests.
+- No fabricated STEO forecast-revision history — `computeForecastRevisions()` only ever diffs two real, persisted snapshots; a single-snapshot state renders an honest "more history is needed" empty state.
+- Incompatible units are never force-converted onto one chart axis — Henry Hub ($/MMBtu vs. STEO's $/Mcf) and electric-power consumption (ambiguous daily-rate convention) are deliberately left forecast-only rather than overlaid with an unverified conversion.
+- The AI provider cannot rank, reclassify, or invent a signal — its input type (`MacroRiskPayload`) contains only already-classified output from the deterministic engine; `lib/market/ai/` has no ranking logic.
+- The browser can never trigger AI generation — `/api/macro/risk` only ever reads a cached summary; AI generation happens exclusively inside `runMacroDailyOrchestration()`, reachable only via the `CRON_SECRET`-gated `/api/cron/macro`. Source-inspection tests assert neither browser-facing route imports the AI provider.
+- Stale data stays visibly stale — a metric whose `MarketFreshness` is `"stale"` renders with an explicit "· Stale" suffix rather than looking identical to current data; the AI summary state machine (`pending`/`ready`/`stale`/`unavailable`) prevents an old cached summary from being presented as current.
+
+### CURRENT CRON SCHEDULES
+
+From `vercel.json` (verified this session, not assumed):
+```json
+{ "path": "/api/cron/news",  "schedule": "15 11 * * *" }
+{ "path": "/api/cron/macro", "schedule": "15 12 * * *" }
+```
+Both UTC, both once/day (Vercel Hobby limit), Macro offset one hour after News. Actual firing time can lag up to 59 minutes past the scheduled minute (Vercel Hobby's documented imprecision) — local-time equivalents drift with US Central DST and are not restated here to avoid going stale; convert from UTC at the time you need it.
+
+### ENVIRONMENT VARIABLES (names only — no values recorded here or anywhere in this repo)
+
+`ANTHROPIC_API_KEY`, `CRON_SECRET`, `DATABASE_URL`, `POSTGRES_URL`, `NEWS_DB_SSL`, `EIA_API_KEY`, `FINNHUB_API_KEY`, `FMP_KEY`, `OIL_PRICE_API`, `SEC_USER_AGENT` (optional — gates the SEC EDGAR News source; unset in this project as of Phase 5.2).
+
+### TEST STATUS (this closeout, 2026-08-31, against HEAD `a05331d`)
+
+- **1106 JS tests**: 1050 pass, 0 fail, 56 skipped (DB-gated tests skip without a local `DATABASE_URL`/`POSTGRES_URL`; all DB-gated tests, including Phase 6E's new ones, were separately verified passing against a real local Postgres during Phase 6E and are unchanged since).
+- **14 Python tests**: all pass.
+- **`npm run typecheck`**: clean.
+- **`npm run build`**: clean, all routes build including `/api/cron/macro` and `/api/macro/risk`.
+
+These figures are unchanged from the Phase 6E report — this closeout made documentation-only changes, no source/test edits, so re-running produced identical counts.
+
+### KNOWN REMAINING ITEMS
+
+**A. Required before Production:**
+1. **PENDING — USER-RUN LIVE MACRO AI VALIDATION.** The user runs the hidden-input `CRON_SECRET` command below against the latest Preview to confirm: (1) `/api/cron/macro` succeeds; (2) the first call generates or correctly reuses a summary; (3) a second identical call is a fingerprint cache hit; (4) the second call does not regenerate/recharge AI; (5) `/api/macro/risk` then returns `aiSummaryStatus: "ready"`; (6) the persisted summary's `snapshotAsOf` is correct; (7) `generatedAt` is present and real; (8) deterministic rankings are unchanged by the AI call (the engine output is independent of AI regardless, but worth eyeballing). Do not weaken authentication, expose `CRON_SECRET`, or trigger this against Production to avoid running this command.
+
+   ```bash
+   read -s -p "CRON_SECRET: " CRON_SECRET && echo && \
+   vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-1.json && echo && \
+   echo "--- second identical call (idempotency check) ---" && \
+   vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-2.json && echo && \
+   unset CRON_SECRET && \
+   echo "--- /api/macro/risk aiSummary state ---" && \
+   vercel curl "<PREVIEW_URL>/api/macro/risk" -- -s | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify({aiSummaryStatus:d.aiSummaryStatus,generatedAt:d.aiSummary?.generatedAt,snapshotAsOf:d.aiSummary?.snapshotAsOf,lastOrchestrationAt:d.lastOrchestrationAt},null,2))"
+   ```
+   Use `<PREVIEW_URL>` = `https://rrc-peer-dashboard-842nyfbxj-christian-04-codes-projects.vercel.app` (or re-deploy a fresh Preview from this branch tip first if it has expired).
+2. Review the Preview visually one more time if meaningful time has passed since Phase 6E's QA.
+3. Explicit user approval before any merge or Production promotion.
+4. Decide the PR #13 merge/promotion strategy — see "PRODUCTION / BRANCH RISK" below; merging is not merely a formality here, since Production currently has *neither* the rest of Phase 5 *nor* any of Phase 6.
+
+**B. Future feature work (not started, not authorized to start without separate approval):**
+- Phase 7 — Weekly Range Resources Intelligence Report (see below).
+
+### PRODUCTION / BRANCH RISK
+
+Verified directly this session, not assumed:
+
+- **`main` does NOT contain Phase 5 or Phase 6.** `origin/main` is at `7a2e8ff` ("Merge PR #12: Fix Macro basin layout..."), 26 commits behind `feat/daily-energy-intelligence`'s tip. `git merge-base --is-ancestor a05331d origin/main` returns false.
+- **Production currently matches neither `main` nor the current branch tip — it's an older point on this branch, from before Phase 6 existed.** The live Production deployment (`dpl_CDmzBaMkP8oh8RpccALkds4LoVM5`, aliased to `rrc-peer-dashboard.vercel.app`) was created 2026-08-26 12:17:34 CDT via a manual `vercel deploy --prod` (not a git-triggered deploy — no GitHub↔Vercel auto-deploy integration was found evidence of in this project). That timestamp is 23 seconds after commit `e88c28f` (Phase 5.2) and *before* any Phase 6 commit (`6d30e43`, Phase 6A, was committed roughly an hour later the same day). **Conclusion: Production currently serves News through Phase 5.2, and contains zero Macro/EIA Intelligence (Phase 6) code.**
+- **Merging PR #13 is necessary before Phase 6 can ever reach Production** — there is no other path; Production was never git-connected to this branch, so nothing after the Aug 26 12:17 deploy (including all of Phase 6) will reach Production until either (a) PR #13 is merged to `main` and `main` is deployed to Production, or (b) another manual `vercel deploy --prod` is run directly from this branch (the same mechanism used for Phase 5, and NOT to be done in this closeout task).
+- **Risk to flag for a future session**: because Production was never connected to `main` via git, an ordinary `git push` to `main` by itself changes nothing in Production. The actual risk is the reverse of what earlier phase notes assumed — the danger is not "an ordinary main deploy silently overwrites this branch's work," it's that **Production is already stale relative to both `main`'s later commits (`7a2e8ff` etc.) and this branch's Phase 6 work**, and nobody has yet made a deliberate decision about which source of truth Production should follow going forward. Resolve this deliberately (merge PR #13, or continue direct-from-branch deploys) rather than letting whichever deploy happens next decide it by accident.
+
+### FUTURE WORK — Phase 7 — Weekly Range Resources Intelligence Report
+
+**Superseded by Phase 7A** (see the "PHASE 7A CLOSEOUT" section at the top of this document and `docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md`) — Phase 7A turned the direction below into concrete identity/lifecycle/schema/type decisions. Kept below only as the original historical product brief; the architecture doc is now authoritative for anything that conflicts (e.g. the architecture doc's title is "Weekly Range Resources AI Intelligence Report", refined from the working title below). Phase 7B (snapshot builder) onward is still not implemented and still not authorized to begin without separate approval.
+
+Original approved direction (pre-Phase-7A):
+- One universal report, generated once per week, identical for all users (not personalized).
+- Built from a frozen, validated weekly dataset — generated once, then cached/stored, not regenerated per view.
+- Historical report archive retained.
+- Overview page gets a "Download Weekly Report" button.
+- Output is a professional PDF: Range Resources branding/logo, page numbers, a report timestamp / data-cutoff date, sources/freshness disclosure, and charts/tables drawn only from already-validated dashboard data.
+- Top section, titled **"Weekly Range Resources Intelligence Assessment"**, target ~500–800 words, synthesizing: overall Range assessment; biggest opportunity; biggest risk; what changed this week; Range-specific implications; what IR should watch next; operating/financial positioning; gas pricing; Appalachia; U.S. supply; storage; LNG; power/industrial demand; EIA/STEO; rigs; peers; material News; Forecast/scenarios; deterministic Macro risks/opportunities; and meaningful change versus the previous week's frozen report.
+
+Architecture direction:
+```
+validated dashboard data
+  → freeze weekly snapshot
+  → deterministic calculations/charts
+  → structured report payload
+  → AI assessment (synthesis/writing only)
+  → PDF renderer
+  → stored weekly report
+  → same download served to all users
+```
+The AI must never manufacture charts, metrics, rankings, or source data — same "deterministic engine computes, AI only narrates" boundary already enforced in the Phase 6D/6E risk engine and AI summary.
+
+### WHEN RESUMING THIS PROJECT
+
+1. `git fetch origin`
+2. `git checkout feat/daily-energy-intelligence`
+3. Verify `HEAD` == `a05331d` (or whatever this doc's "Latest commit" says, if updated since) and matches `origin/feat/daily-energy-intelligence`.
+4. `git status` — confirm clean, no untracked files.
+5. Read this "PHASE 6 CLOSEOUT" section in full before doing anything else.
+6. If the live Macro AI validation (above) hasn't been run yet, run it before treating Phase 6 as fully verified end-to-end.
+7. Deploy/verify a fresh Preview if the one linked above has expired.
+8. Do not merge PR #13 without explicit user approval in that session.
+9. Only start Phase 7 after a deliberate Phase 6 validation/Production-promotion decision has been made.
+
+---
+
 - **Repository**: christian-04-code/rrc-peer-dashboard
 - **Active branch**: main (production-connected; SEC ingestion + full dashboard/model/UI/API work merged here as of `94a8c6a`)
 - **Latest commit**: "Show commodity price assumptions (current market / EIA / modeled) in the Scenario Workbench"
 - **Pushed to origin**: yes, `origin/main` == local HEAD
+
+## Feature branch in progress: `feat/daily-energy-intelligence` (News / Daily Energy Intelligence) — Phase 6E complete, NOT merged to main via git (2026-08-28)
+
+Not part of `main`'s git history. All work below lives only on this branch. Per explicit user direction during Phase 5, this branch's build was deployed directly to the Vercel **Production** environment (`vercel deploy --prod`) ahead of any git merge — see "Production activation" below. `main` itself still has zero News code.
+
+- **Branch**: `feat/daily-energy-intelligence`
+- **Open PR**: [#13](https://github.com/christian-04-code/rrc-peer-dashboard/pull/13), base `main`, **DRAFT**, not merged. As of the Phase 6E closeout (2026-08-31), confirmed live via the GitHub API to be titled "Daily Energy Intelligence: automated news pipeline, AI analysis, and simplified News feed (Phases 2–5.1)" with head SHA `a05331d` (exactly this branch's tip) -- the title still undersells scope (predates Phase 6 entirely) but is no longer the stale "Phase 3" title this note used to describe. The agent still has no GitHub write credential in this sandbox (`gh auth login` not configured, no `GH_TOKEN`); whoever has `gh`/web access should update the title/body when convenient -- this is cosmetic only and does not affect safety.
+
+**Phases completed, in order**: Phase 1 (architecture-only report) → Phase 2 (deterministic collection/normalize/dedupe/relevance/persistence pipeline) → Phase 2.5 (relevance-engine hardening) → Phase 3 (Anthropic-backed Range-impact analysis, manual validation) → Phase 4 (News tab UI, read-only) → Phase 5 (full daily automation) → Phase 5.1 (News tab UI simplification) → Phase 5.2 (progressive disclosure + "how this feed works" explainer) → Phase 6A (Macro/EIA audit + shared-taxonomy relocation) → Phase 6B (EIA Macro Intelligence: ingestion foundation) → Phase 6C (Macro UI: high-value modules + Permian chart fix) → Phase 6D (Dynamic Range Macro Risk Engine + AI Macro Summary) → **Phase 6E (Macro date/freshness closeout — functionally complete, pending only user-run live cron validation)**.
+
+## Phase 6 — EIA Macro Intelligence System (functionally complete as of Phase 6E, 2026-08-28)
+
+A new, separate subsystem from News. Only one thing is shared between them: the Range driver taxonomy (`lib/range-impact-framework.ts`, relocated from `lib/news/impact-framework.ts` in Phase 6A). Macro has its own EIA ingestion, its own deterministic signal calculations, its own persistence, and (Phase 6D) its own AI provider -- it does not import from `lib/news/`, and News does not import from Macro.
+
+### Phase 6A — Audit + shared-taxonomy relocation
+
+- Audited the existing Macro architecture (it was already substantial, not a blank slate): `lib/eia/client.ts`/`series.ts`/`macro-fundamentals.ts` (EIA API v2 fetchers), `lib/market/macro-analytics.ts`/`macro-fundamentals.ts`/`macro-types.ts` (deterministic calc + normalization), `components/dashboard/MacroPanel.tsx`/`MacroVisuals.tsx`/`MacroEnergyMap.tsx` (UI), 13 existing tests. Already fetching Henry Hub, national + 5 regional storage, all-state marketed production (including PA/WV/OH), LNG exports, dry gas production, demand-by-sector, and propane stocks -- all via EIA API v2, no XLS/XLSX.
+- The existing "Biggest Risks to Range Resources" widget is `buildRrcMacroRisk()` in `lib/market/macro-analytics.ts`, rendered in `MacroPanel.tsx`'s "Appalachia / Range" section: already deterministic (4 candidate signals, severity-scored), but shows only the single highest-severity risk, tone is negative/neutral only (no "supportive" framing), and has no AI summary layer yet -- Phase 6D's job.
+- Live-verified against the real EIA API this session (not assumed from docs): API v2 covers every top-priority Phase 6 dataset found, including STEO (Short-Term Energy Outlook) forecasts -- confirmed working series `NGHHMCF` (Henry Hub forecast), `NGPRPUS` (dry gas production forecast), `NGEPCNS_US` (power-sector consumption forecast), `NGWGPUS` (storage forecast). One candidate, `NGICPUS` (industrial consumption forecast), returned zero data rows despite appearing in EIA's own STEO facet browser -- excluded rather than guessed at. LNG export forecast (`NGLXPUS`) and total/commercial/residential consumption forecasts were found in EIA's facet listing but could not be independently confirmed to return data before hitting `OVER_RATE_LIMIT` on the public DEMO_KEY tier -- also excluded from this phase pending verification with the real project key. EIA does **not** publish Appalachian basis/hub pricing (Dominion South, Eastern Gas South, etc.) -- only Henry Hub nationally; not fabricated. EIA's STEO API only ever returns the *current* forecast vintage -- there is no API parameter for "last month's forecast," so forecast-revision tracking requires our own point-in-time snapshots (see Phase 6B below), not an EIA-side vintage query.
+- **Relocated** `lib/news/impact-framework.ts` → `lib/range-impact-framework.ts` (shared, domain-neutral), adding 4 Macro-only driver keys (`us_gas_supply`, `appalachia_supply`, `industrial_demand`, `weather`) without touching or renaming any of News's original 8. Caught and fixed a real risk during the move: News's AI-prompt driver selection and AI-response validation both used to derive from `Object.keys(IMPACT_DRIVERS)` -- naively sharing the object would have silently let News's AI provider both receive and accept the new Macro-only keys. Fixed by scoping both to an explicit `NEWS_DRIVER_KEYS` constant (`lib/news/ai/relevant-drivers.ts`), with a regression test proving a real Macro key is rejected by News's validator.
+- Also relocated `lib/news/persistence/db.ts` → `lib/persistence/db.ts` (same reasoning -- Macro's own new persistence needs the same one Postgres pool without creating a Macro→News dependency). Mechanical update across all 10 News files that imported it (plus `scripts/news/migrate.mjs`, initially missed by a `.ts`/`.tsx`/`.cjs`-only grep and caught on a manual read).
+
+### Phase 6B — EIA Macro Intelligence: ingestion foundation
+
+Ingestion foundation only -- no new Macro UI, no risk-monitor upgrade, no production AI summary generation. Those are Phases 6C/6D.
+
+**EIA datasets integrated this phase (new)**:
+- STEO Henry Hub price forecast, dry gas production forecast, electric-power consumption forecast, working-gas-storage forecast -- all **API v2** (`route: steo/data`, facet key `seriesId`, confirmed different from every other EIA route's `series` facet key), all four independently verified live this session.
+
+**API vs. XLS/XLSX/CSV**: 100% API v2, for every dataset in this phase and, per Phase 6A's research, every current Range-priority dataset identified so far. No XLS/XLSX downloader/parser was built -- there is currently no verified Range-relevant dataset that needs one (the classic Drilling Productivity Report, the one plausible future XLS case, was folded into STEO's own data tables in June 2024 per EIA's own site). Documented as a deliberate omission, not an oversight: building unused download/parse infrastructure (plus a new npm dependency to actually parse a workbook) with zero real caller would be speculative code. Revisit only if a future module's research finds a genuine API gap.
+
+**New Neon schema** (`lib/market/persistence/schema.sql`, applied via `npm run macro:migrate`) -- deliberately narrow, per explicit direction: only what needs durable point-in-time history, everything else stays on the existing live-fetch-plus-cache architecture untouched:
+- `macro_steo_snapshots` -- one row per (series, calendar month fetched), `UNIQUE (series_id, snapshot_month)` so a same-month re-run upserts rather than duplicates. `points` is the compact normalized `{period, value}[]` forecast curve, never a raw EIA payload.
+- `macro_risk_summaries` -- cached AI Range Macro summary (Phase 6D will populate it), keyed by `UNIQUE (input_fingerprint)` -- a SHA-256 of the canonicalized deterministic-signal payload (`computeMacroSummaryFingerprint` in `lib/market/persistence/summary-repo.ts`), so an unchanged snapshot never regenerates or duplicates a summary, and a page load can never be what triggers an AI call (nothing in this phase calls AI at all -- the repo functions and their idempotency contract are proven by fixture-level tests, no prompt/provider code exists yet).
+
+**Canonical data model** (`lib/market/macro-steo-types.ts`): `SteoNormalizedSeries` (one live fetch, label/unit read directly from EIA's own `seriesDescription`/`unit` response fields, never hardcoded), `SteoSnapshotRecord` (the persisted shape), `SteoForecastRevision` (a pure diff between two snapshots of the same series -- `computeForecastRevisions()` in `lib/market/macro-steo.ts`, the only mechanism for any future "EIA raised its forecast by X" claim; nothing infers a revision that isn't a plain arithmetic difference between two real, persisted fetches).
+
+**New source registry** (`lib/eia/macro-registry.ts`): 14 entries (10 existing + 4 new STEO) documenting id/name/category/EIA product/route/series-or-facets/ingestion type/update frequency/freshness kind/geographic scope/Range relevance/Range driver mapping/verified status/description for every EIA source Macro uses. Explicitly flags that EIA's "East" storage region is *not* Appalachia (spans Maine to Georgia) to prevent future conflation with the precise PA/WV/OH state-production module.
+
+**Failure/staleness behavior**: `refreshSteoSnapshots()` (`lib/market/macro-steo-refresh.ts`) -- all 4 STEO series share one upstream API request; if that fetch itself fails or fails validation, the whole refresh fails cleanly (`attempted: 0`, nothing persisted) rather than writing partial/malformed data. Once the fetch succeeds, persistence is isolated per series (one series' DB write failing never blocks the other three). A series absent from a given month's response simply keeps its last-known-good snapshot from a prior month -- append/upsert-only, nothing is ever deleted. Snapshot freshness (`calculateSnapshotFreshness`) is based on when we last fetched, not on how far in the future a forecast period is -- deliberately separate from the existing `calculateFreshness()` used for observed actuals.
+
+**Tests**: 6 new test files (`macro-registry`, `macro-steo`, `macro-steo-fetch`, `macro-steo-persistence`, `macro-summary-cache`, `macro-steo-refresh`) -- 983 JS tests total (up from 945) + 14 Python tests pass, typecheck clean, build clean (no new routes/pages -- nothing in this phase is reachable from the deployed app yet).
+
+**Files changed**: new `lib/eia/macro-registry.ts`, `lib/market/macro-steo{,-types,-refresh}.ts`, `lib/market/persistence/{schema.sql,migrate.ts,steo-repo.ts,summary-repo.ts}`, `lib/persistence/db.ts`, `scripts/macro/migrate.mjs`, 6 new test files; modified `lib/eia/series.ts` (+`EIA_STEO_SERIES`/`steo` route), `lib/eia/macro-fundamentals.ts` (+`fetchSteoTable`), `package.json` (+`macro:migrate`), `scripts/news/migrate.mjs` (db.ts path fix), 10 News files (db.ts import path only, no behavior change), 3 News test files (same); deleted `lib/news/impact-framework.ts` and `lib/news/persistence/db.ts` (both relocated, see Phase 6A).
+
+**Known limitations / next steps for Phase 6C+**: LNG export forecast, total/commercial/residential STEO consumption forecasts, and electricity generation-by-fuel (`electricity/electric-power-operational-data`) all need live verification with the real `EIA_API_KEY` (this sandbox's key comes back redacted) before being added to the registry -- LNG forecast in particular is high-priority and should be verified first. Appalachia-play-level shale gas production (as opposed to state-level PA/WV/OH, which is already verified and working) was not confirmed to exist as a queryable STEO series this session. Weather/HDD-CDD series were not located this session (STEO's facet browser truncated before a full search completed) and remain unverified.
+
+### Phase 6C — Macro UI: high-value modules + Permian chart fix (2026-08-26)
+
+Turned the Phase 6B ingestion foundation into an interactive Macro tab. Explicitly out of scope and NOT built this phase: the "Biggest Risks to Range Resources" AI risk-ranking engine, the AI Macro Summary, and the weekly PDF report (all remain Phase 6D+).
+
+**Interrupted-run recovery**: this phase's run was manually stopped partway through by the user, then resumed. Recovery check (`git status`/`diff`/`log`/`fetch origin` against expected baseline `12c38ae`) found the working tree byte-identical to that commit — zero uncommitted diff, zero untracked files. The only in-progress work at interruption was a temporary, uncommitted diagnostic API route (`app/api/debug/steo-probe`) used to verify STEO series IDs against the real `EIA_API_KEY` via a throwaway Preview + `vercel curl`; it had already been deleted before the interruption and left no trace. No implementation work was lost — only verification conclusions, which were retained and carried forward into this phase.
+
+**Section 3 verification (real `EIA_API_KEY`, not DEMO_KEY)**: confirmed 5 additional STEO series live, via the same temporary-diagnostic-route-then-delete pattern Phase 6B established (never commits the real key or exposes it to the agent):
+- LNG exports forecast: `NGLXPUS` (the Phase 6B candidate) returns **zero rows** — real id is `NGEXPUS_LNG` ("Natural Gas LNG Gross Exports"). `NGEXPUS` (no suffix) is a *different*, real series ("Natural Gas Total Gross Exports", pipeline + LNG combined) — deliberately not used, to avoid mislabeling a broader figure as LNG-specific.
+- Industrial consumption forecast: `NGICPUS` (as it appeared in EIA's own facet browser) returns **zero rows** — real id is `NGINX_US` ("U.S. Natural Gas Industrial Consumption").
+- Total/residential/commercial consumption forecasts: `NGTCPUS`, `NGRCPUS`, `NGCCPUS` — all confirmed live with real data.
+- All 5 added to `EIA_STEO_SERIES` (`lib/eia/series.ts`, now 9 series total) and `EIA_MACRO_SOURCE_REGISTRY` (`lib/eia/macro-registry.ts`, 5 new entries, `verified: true`), following the exact shape of Phase 6B's 4 existing STEO entries.
+
+**UI architecture** (`components/dashboard/MacroPanel.tsx`, full rewrite of the render body): replaced the old flat stacked-sections layout with Section 6's requested hierarchy — Macro Pulse (unchanged compact top indicator strip) → a topic tab bar (`Gas Balance | Storage | Supply | Appalachia | LNG | Demand | EIA Outlook | Rigs`, reusing the existing `.macro-segmented` pattern) → one topic's content rendered at a time. No topic renders more than a handful of charts at once (progressive disclosure, per Section 6). Every pre-existing chart/table (`StorageChart`, `RegionalStorageTable`, `StateProductionRanking`, `DemandChart`, `MacroEnergyMap`, `BasinRigActivity`/`DrillingActivityModule`, the RRC risk callout, the Macro Snapshot evidence list) was relocated into the topic it fits, not duplicated — audited first per Section 5, nothing was rebuilt that already existed.
+
+**New modules**:
+- **Gas Balance** (new): a `classifyGasBalance()` function (`lib/market/macro-analytics.ts`, extracted as the one shared source of truth from the pre-existing Macro Snapshot "Natural Gas" row's logic, unchanged thresholds) drives a headline Tightening/Balanced/Loosening read from storage deviation + LNG export YoY growth only — deliberately **not** a raw production-minus-consumption figure, since marketed production and sector consumption are different-scoped EIA series and combining them would be an incompatible-unit aggregation. The Macro Snapshot evidence panel now lives in this (default/first) tab.
+- **Appalachia** (rebuilt): `buildAppalachiaProduction()` (`lib/market/macro-analytics.ts`) sums PA + WV + OH marketed production for every period all three states report (a period is excluded entirely, never zero-filled, if any of the three is missing it — no silently understated total). Labeled everywhere as "PA + WV + OH marketed production"; an explicit on-page disclosure states this is a state-level EIA aggregate, never an official Marcellus-play figure, and the label is never "Marcellus production".
+- **EIA Outlook** (new, `components/dashboard/EiaOutlookModule.tsx` + `app/api/macro/steo/route.ts` + `lib/market/use-macro-steo.ts`): a metric selector across all 9 verified STEO series, actual-vs-forecast charting where a compatible actual counterpart exists, and forecast-revision display via the existing `computeForecastRevisions()` — with an honest empty state ("only one EIA STEO snapshot has been captured ... revision tracking will populate as future monthly releases are captured") when only one snapshot exists, which is the current real state (no cron persists STEO snapshots yet — see below).
+- **Supply, LNG, Demand**: each tab's primary actual-observation chart got a dashed EIA STEO forecast overlay appended (`HistoricalLineChart`'s new `forecast?: boolean` field on `ChartSeries`, rendered dashed with a "(forecast)" legend suffix — the interactivity spec's actual-vs-forecast distinction).
+
+**Two real correctness bugs found and fixed during this phase's own visual QA** (not shipped):
+1. **Unit mismatch on every actual-vs-forecast overlay**: EIA STEO series are reported in Bcf/d (most series) or Bcf (storage, a stock not a rate), while every EIA fundamentals "actual" series (production, LNG exports, sector demand) is MMcf/month. Charting them unconverted on one shared axis silently flattened the smaller-magnitude series to a flat line at the chart's edge. Fixed with a new `toBcfdSeries()` (`lib/market/macro-analytics.ts`) applied to every actual series before overlay. Two series were deliberately left forecast-only rather than force an overlay: Henry Hub (actual is $/MMBtu, STEO is $/Mcf — a different, unconverted price basis with no verified Btu-content conversion factor) and electric power consumption (STEO reports this one series in a bare "billion cubic feet" with no confirmed daily-rate convention, unlike the other consumption series' explicit "per day").
+2. **STEO's own historical tail mislabeled as forecast**: live verification found every STEO series actually spans **2009-07 through the outlook's final forecast month** (~222 monthly points) in one continuous array, not just the forward-looking horizon. The initial build dashed and labeled "(forecast)" the entire span, including 16+ years of EIA-reported history — caught via visual QA when a Henry Hub "near-term forecast" stat showed "Jul 2009". Fixed with `filterToForecastHorizon()` (`lib/market/macro-analytics.ts`), which derives one shared forecast-start boundary (the month after the most recent EIA dry-gas-production actual — one STEO publication/fetch covers all 9 series with the same horizon start) and filters every chart, stat, and revision display to only the genuine forward projection.
+
+**Permian rig chart layout bug (Section 18) — root cause and fix**: the "Permian rig count — last 12 months" chart (`components/dashboard/BasinRigActivity.tsx`, rendered via the shared `HistoricalLineChart`) appeared as a narrow plot centered in a large empty area. Root cause: `app/globals.css`'s `.drilling-history .macro-evidence-chart svg { height: 92px; }` rule is shared between two structurally different consumers of the same `.drilling-history` class — `DrillingActivityModule` (Pennsylvania rig chart), which renders inside the narrow `.macro-map-detail` sidebar column (`minmax(260px, .55fr)`, where 92px height roughly matches the SVG's fixed 660:220 viewBox aspect ratio), and `BasinRigActivity` (Permian etc.), which renders in the *wide* `.macro-map-layout` column (`minmax(0, 1.7fr)`). At that much greater width, the same fixed 92px height no longer matches the viewBox's 3:1 aspect ratio, so the SVG's default `preserveAspectRatio="xMidYMid meet"` shrinks the plot to fit the height and centers it, leaving large empty side margins. Fixed with a more specific, scoped override — `.basin-detail .drilling-history .macro-evidence-chart svg { height: auto; aspect-ratio: 660 / 220; }` — that derives height from width instead of hardcoding it, so the rendered box's aspect ratio always matches the viewBox's at any container width. Data was never touched. Regression-checked visually: the PA sidebar chart (same shared component, same CSS class, narrow column) is unaffected; Storage, Supply, and LNG charts (all also `HistoricalLineChart` consumers, different CSS scope) are unaffected.
+
+**STEO snapshot persistence**: no cron job persists STEO snapshots yet. `app/api/macro/steo/route.ts` opportunistically upserts the current fetch as the current calendar month's snapshot on every real request (idempotent per `(series, month)`, per Phase 6B's existing upsert), so revision tracking will begin populating as real traffic spans different months — no new Vercel Cron entry was added (Hobby's cron allowance is already spent on the one daily news cron, and STEO only republishes monthly regardless). `refreshSteoSnapshots()`'s own doc comment reserves an explicit scheduled-route caller for a future phase; this phase intentionally did not add one.
+
+**Tests**: `tests/macro-appalachia-gas-balance.test.cjs` (new — `buildAppalachiaProduction`, `classifyGasBalance`, `toBcfdSeries`, `filterToForecastHorizon`), `tests/macro-registry.test.cjs` / `tests/macro-steo.test.cjs` / `tests/macro-steo-fetch.test.cjs` (updated for 9 series), `tests/macro-fundamentals.test.cjs` (updated for the new tab architecture — the old numbered-section-ordering assertion was replaced with an equivalent one for the tab structure, not weakened). **996 JS tests pass** (up from 991 pre-phase; 38 DB-gated tests skip with no local Postgres, 0 fail) + **14 Python tests pass**. `npm run typecheck` clean. `npm run build` succeeds, including the new `/api/macro/steo` route.
+
+**Preview QA**: deployed to Preview (`vercel deploy --yes`, never `--prod`) across two iterations as the two bugs above were found and fixed; each fix was re-deployed and re-verified live in a real browser before proceeding. Confirmed live: all 8 Macro topic tabs render with real data; the Permian chart fix; Supply/LNG/Demand actual-vs-forecast overlays share a correct axis after the unit fix; EIA Outlook's metric selector lists all 9 series with the correct forecast-only near-term date after the horizon fix; Overview, Forecast, and News tabs render unchanged. Mobile-viewport screenshot verification was attempted but the browser automation tooling's window resize did not take effect in this session (screenshots stayed at the desktop viewport regardless) — the new tab bar's responsive CSS (`overflow-x: auto` on `.macro-topic-tabs`) follows the same pattern already used elsewhere in this file's existing mobile media queries, but is unverified visually at a real mobile width.
+
+**Files changed**: new `app/api/macro/steo/route.ts`, `components/dashboard/EiaOutlookModule.tsx`, `lib/market/use-macro-steo.ts`, `tests/macro-appalachia-gas-balance.test.cjs`; modified `app/globals.css` (Permian fix + new EIA Outlook/tab styles), `components/dashboard/MacroPanel.tsx` (full render-body rewrite), `components/dashboard/MacroVisuals.tsx` (`ChartSeries.forecast` field), `lib/eia/macro-registry.ts` (+5 STEO entries), `lib/eia/series.ts` (+5 `EIA_STEO_SERIES` keys), `lib/market/macro-analytics.ts` (+`classifyGasBalance`, `buildAppalachiaProduction`, `toBcfdSeries`, `filterToForecastHorizon`, exported `shiftMonth`), `lib/market/macro-steo-types.ts` (+5 `SteoSeriesKey` values), `tests/macro-fundamentals.test.cjs`, `tests/macro-steo-fetch.test.cjs`.
+
+**What exists now**: everything from Phases 2–6B (see prior phase notes below this section) plus everything above.
+
+### Phase 6D — Dynamic Range Macro Risk Engine + AI Macro Summary (2026-08-26)
+
+Replaced the static single-signal "Biggest Risks to Range Resources" widget (`buildRrcMacroRisk`, negative-only, one risk at a time) with a fully deterministic, multi-signal, ranked risk/opportunity engine, plus a cached AI executive summary that only ever explains what the engine already computed. `buildRrcMacroRisk`/`RrcMacroRisk` and their 3 tests were deleted, not deprecated -- the new engine is a strict superset of what they did.
+
+**The deterministic engine is the source of truth; AI is commentary only** -- enforced structurally, not just by convention: the AI provider's input type (`MacroRiskPayload`) contains only already-classified signals, never a raw metric, and nothing in `lib/market/ai/` can rank or reclassify a signal.
+
+**7 signals evaluated** (`lib/market/macro-risk-engine.ts`), each reusing an existing Range driver taxonomy key (`lib/range-impact-framework.ts`) and only real, already-validated project data -- no new EIA series, no speculative driver added merely to fill the widget:
+- **Primary tier**: `gas_pricing` (Henry Hub 30-observation trend), `storage_levels` (storage vs. 5-year average, inverted -- a surplus is a price *risk*), `us_gas_supply` (national dry-gas production YoY, inverted -- accelerating supply is a risk), `appalachia_supply` (Phase 6C's `buildAppalachiaProduction()` PA+WV+OH YoY, inverted, same reasoning, and labeled identically -- never "Marcellus production"), `lng_demand` (LNG exports YoY, not inverted -- growth is supportive; verified `NGEXPUS_LNG` STEO forecast direction appended as reason-text context only, never blended into the number).
+- **Secondary tier**: `power_data_center_demand` (electric-power gas demand YoY only -- Phase 6C's unit-ambiguity finding for this one STEO series is preserved here too, so no forecast direction is claimed for it), `industrial_demand` (industrial gas demand YoY, with STEO forecast direction as context, since that series' unit *is* confirmed compatible after Phase 6C's `toBcfdSeries` conversion).
+- Explicitly excluded, and why: weather/HDD-CDD (no validated series located in Phase 6B/6C), `appalachian_takeaway`/regional basis differentials (no validated data source in this project), `ngl_demand`/`regulation` (not requested, no validated quantitative series).
+
+**Classification**: one ordinal scale, `HIGH_RISK > MODERATE_RISK > WATCH > SUPPORTIVE` (`UNAVAILABLE` when an input is missing/stale -- never guessed or zero-filled). Thresholds are the *same* +/-5% relative-deviation convention already shipped and tested for storage/LNG/gas-balance classification (`classifyGasBalance`), reused rather than inventing new numbers; `HIGH_RISK`/`SUPPORTIVE`'s +/-10% is a natural doubling, not a separately-tuned cutoff. No fabricated numeric score (no "73.4/100") anywhere in the payload or UI.
+
+**Ranking** (`rankRangeMacroSignals`): primarily by state in the fixed severity order above, then by Range-priority tier (primary before secondary), then alphabetically by driver key as the final deterministic tie-break. Section 11's "not only-negative" requirement is a separate, explicit, testable rule on top of that sort: if the top-N slice contains no `SUPPORTIVE` signal but at least one exists anywhere in the full ranking, the single best-ranked `SUPPORTIVE` signal replaces the slice's last (least-severe) item. Verified live on Preview with real EIA data: Storage (MODERATE_RISK) → 3 primary-tier WATCH signals alphabetically → LNG Demand swapped in as the guaranteed supportive item, exactly matching the tested rule.
+
+**Freshness gating** (`lib/market/macro-risk-orchestrate.ts`): every input is treated as unavailable (never just "missing") if its underlying `NormalizedMarketMetric`/`DemandMetric`'s own `freshness` is `"stale"` or `"unavailable"` -- Section 9's "stale data must not produce a risk state" is enforced at the same layer that already computes freshness for the rest of the Macro tab, not reimplemented. One source failing (STEO down, demand table down) degrades only the signals that depend on it (verified with mocked partial failures); the deterministic snapshot still renders fully otherwise.
+
+**AI summary** (`lib/market/ai/`, mirrors `lib/news/ai/`'s structure but is its own separate implementation per the Phase 6A News/Macro boundary -- only `lib/news/ai/retry.ts`'s `withBoundedRetry` is imported directly, since it's a genuinely domain-neutral utility with zero News coupling): Claude Haiku 4.5, forced tool-use output (a single `summary` string field, 3-6 sentences, validated for length and for guaranteed-outcome/stock-direction-certainty language -- its own copy of the forbidden-phrase check, extended with "stock will rise/fall/outperform/underperform"). The AI receives only the structured `MacroRiskPayload` (ranked signals + all-evaluated supportingMetrics + a data-period `snapshotAsOf`, deliberately never a wall-clock timestamp, so re-fetching the *same* underlying EIA data always fingerprints identically) plus, when available, the previous distinct summary's text as "what changed" context -- never raw EIA rows, never asked to recalculate anything.
+
+**Caching / idempotency** (`lib/market/macro-summary-service.ts`, `computeMacroSummaryFingerprint` unchanged from Phase 6B): fingerprint lookup first; AI is called only on a genuine cache miss, with `DEFAULT_ANALYSIS_RETRY_CONFIG`'s bounded retry. `ON CONFLICT DO NOTHING` plus a re-read means two concurrent callers for the same fingerprint (a duplicate cron delivery) always converge on whichever summary persisted first -- proven with a real concurrent-write test against local Postgres, not just asserted.
+
+**Scheduled generation, never browser-triggered**: a new, genuinely separate cron entry, `/api/cron/macro` at `15 12 * * *` UTC (1 hour after News's `15 11`), added to `vercel.json`. Confirmed live against current Vercel docs before adding it: Hobby allows up to 100 cron jobs per project (each still capped at once/day) -- the earlier assumption in this doc's Phase 6C section that "Hobby's cron allowance is already spent on the one daily news cron" was wrong and is superseded by this finding. The cron route (`lib/market/macro-orchestrate-daily.ts`) is guarded by its own Postgres advisory lock (`rrc_macro_daily_orchestration`, separate key from News's `rrc_news_daily_orchestration`) against duplicate-delivery double-billing, same mechanism News already uses. It also persists this run's STEO snapshot via Phase 6B's existing (unchanged) `refreshSteoSnapshots()`, so revision tracking keeps accumulating real history. The browser-facing `/api/macro/risk` route recomputes the deterministic signals fresh on every request (cheap, same live-fetch pattern as the rest of the Macro tab) but only ever *reads* a cached summary -- verified by source-inspection test that neither Macro browser route ever imports `AnthropicMacroSummaryProvider`.
+
+**Stale-summary handling**: if no cached summary matches the current fingerprint (data changed since the last cron run), the route falls back to the most recent available summary but labels it `aiSummaryStatus: "stale"` with its own real `generatedAt`, distinct from `"pending"` (no summary has ever been generated) and `"ready"` (matches current data exactly) -- the UI never presents old commentary as current. "What changed" similarly distinguishes "no prior snapshot exists yet" from "compared, and nothing changed" (`hasPriorSnapshot` flag) -- both would otherwise render an empty `changes: []` list with no way to tell them apart.
+
+**UI** (`components/dashboard/MacroRiskWidget.tsx`): replaced the Appalachia tab's old single-callout in place (Section 10's "existing widget" upgraded, not relocated). Ranked items show rank, driver label, a restrained left-border/badge color (green=SUPPORTIVE, amber=MODERATE_RISK, red=HIGH_RISK, muted=WATCH -- never an aggressively-colored full card), 1-2 real metrics, the deterministic reason text, and a "View \[driver\] data →" button that switches the Macro tab's active topic (`RISK_DRIVER_TOPIC` maps all 7 driver keys to an existing topic tab; a test asserts every engine-producible key has a mapping, so a click can never target a nonexistent tab).
+
+**Not built this phase** (explicitly deferred, per instruction): the weekly PDF report feature.
+
+**Verification note**: the real cron route was intentionally *not* triggered by the agent against the Preview-scoped real `ANTHROPIC_API_KEY`/`CRON_SECRET` -- Phase 5 established that live-cost/live-credential verification via `vercel curl` is performed by the user directly, not the agent, and that boundary was preserved here. Everything reachable without spending real AI budget was verified live on Preview (deterministic ranking exactly as tested, `"pending"` AI state, `"more history is needed"` state) -- the `"ready"`/`"stale"` AI states and the actual cron orchestration are covered by DB-gated automated tests against a real local Postgres (`tests/macro-summary-service.test.cjs`, `tests/macro-risk-route.test.cjs`) but not by a live Preview AI generation. The user should trigger `/api/cron/macro` once with the real `CRON_SECRET` (same `vercel curl` pattern as News) to confirm the live AI summary end-to-end before considering Phase 6D fully closed out in production.
+
+**Tests**: 6 new test files (`macro-risk-engine` -- 29 tests, `macro-risk-orchestrate` -- 4, `macro-ai-schema-validation` -- 10, `macro-summary-service` -- 6 DB-gated, `macro-cron-route` -- 8, `macro-risk-route` -- 5 (2 DB-gated), `macro-risk-widget` -- 10) plus extensions to `macro-summary-cache` (+4 DB-gated) and `macro-appalachia-gas-balance` (+2, for the `monthlyYoy` relocation). **1071 JS tests pass** (996 → 1071; 50 skip with no local Postgres in the default sandbox run, 0 fail) + **14 Python tests pass**. Every new DB-gated test file was also individually verified passing against a real local Postgres (started for this session, stopped and dropped afterward) -- not left as merely-skipped and unproven. `npm run typecheck` clean. `npm run build` succeeds, including both new routes (`/api/cron/macro`, `/api/macro/risk`).
+
+**Files changed**: new `lib/market/macro-risk-engine.ts`, `lib/market/macro-risk-orchestrate.ts`, `lib/market/macro-orchestrate-daily.ts`, `lib/market/macro-summary-service.ts`, `lib/market/build-market-metrics.ts`, `lib/market/use-macro-risk.ts`, `lib/market/ai/{provider,anthropic-provider,types,model-config}.ts`, `app/api/macro/risk/route.ts`, `app/api/cron/macro/route.ts`, `components/dashboard/MacroRiskWidget.tsx`, 6 new test files; modified `app/api/market/route.ts` (metric-fetch logic extracted to build-market-metrics.ts, same behavior), `lib/market/persistence/summary-repo.ts` (+`getLatestMacroSummary`, +`getPreviousMacroSummary`), `lib/market/macro-analytics.ts` (removed `buildRrcMacroRisk`/`RrcMacroRisk`; moved `monthlyYoy` in from MacroPanel.tsx as the one shared implementation), `components/dashboard/MacroPanel.tsx` (widget wiring, `rrcRisk` removed), `app/globals.css` (+widget styles), `vercel.json` (+macro cron entry), `tests/macro-panel-metric-mapping.test.cjs` / `tests/macro-analytics.test.cjs` / `tests/macro-fundamentals.test.cjs` (updated for the above, not weakened).
+
+### Phase 6E — Macro date/freshness closeout (2026-08-28)
+
+Final Macro closeout pass. No signal calculation, ranking, threshold, chart dataset, or AI prompt logic from Phase 6D was touched — this phase is date/freshness UI plus one real architectural bug fix in how "Last Updated" is sourced.
+
+**Resume note**: this phase's work was fully code-complete and uncommitted when this session resumed after an interruption. Recovery (`git status`/`log`/`diff` against expected baseline `8adc856`) confirmed local HEAD == `origin/feat/daily-energy-intelligence` at `8adc856`, with exactly the Phase 6E files (5 new, 9 modified) sitting uncommitted in the working tree — nothing was lost, nothing was redone. This session's job was to verify that existing work, finish the visual QA it was mid-way through, and close out.
+
+**"Last Updated" — exact definition**: the most recent `completed_at` timestamp from a new, genuinely cron-exclusive table, `macro_orchestration_runs` (`lib/market/persistence/orchestration-repo.ts`'s `getLatestOrchestrationTimestamp`), written to from exactly one place — the success path at the end of `runMacroDailyOrchestration()` (`lib/market/macro-orchestrate-daily.ts`). It is never derived from `Date.now()`, a request timestamp, or any page-view side effect. `/api/macro/risk` exposes it as `lastOrchestrationAt`; `MacroPanel.tsx` renders it via `formatRefreshTimestamp()` in Central Time (e.g. "Aug 28, 2026 · 6:15 AM CT"), or "Not yet available" when the table is empty — which is the real, honest state on the current Preview, since no cron run has ever executed against its database.
+
+**Bug found and fixed — "Last Updated" was reflecting page views, not cron runs**: the first implementation read `MAX(updated_at) FROM macro_steo_snapshots` as a proxy for "last successful Macro refresh." That table is *also* opportunistically upserted by `/api/macro/steo/route.ts` on every ordinary page view (a Phase 6C behavior, unrelated to cron) — so "Last Updated" was silently showing "the last time anyone loaded the Macro tab," directly violating the requirement that it never imply a refresh just because the page was opened. Caught via live Preview QA, not by any unit test (existing tests only checked source text/mocked behavior, not the real cross-route interaction). Fixed by introducing `macro_orchestration_runs` as a new, separate, append-only table (`lib/market/persistence/schema.sql`), written only from the cron's own success path; `steo-repo.ts` was left untouched behaviorally (a stray addition/removal there nets to a trailing-newline-only diff). Re-verified live: a fresh Preview deploy now correctly shows "Not yet available" instead of a fabricated recent timestamp.
+
+**How chart/module dates are determined**: every date shown is the source's own reported period, read from already-existing metric/series fields (`metric.period`, `series.fetchedAt`, `getRigDataset().source.reportDate`, etc.) — nothing is inferred from the browser clock or hardcoded. Three shared formatters (`lib/market/format-dates.ts`) enforce consistent, UTC-anchored (for data periods) or Central-Time (for refresh instants) display: `formatDataDate()` ("Aug 2026" or "Aug 14, 2026"), `formatWeekEnding()` ("Week ending Aug 21, 2026"), `formatRefreshTimestamp()` ("Aug 28, 2026 · 6:15 AM CT" / "Not yet available" for null). STEO vintage/release dates use the existing `snapshotMonthFrom(series.fetchedAt)` (unchanged, from Phase 6B). Every module in the Section 5 audit list got its date surfaced: Macro Pulse (per-metric footer), Henry Hub/Storage/Supply/Gas Balance/Appalachia/LNG/Power/Industrial (via `observationLabel()`, extended with a `freshness` param), EIA Outlook + inline STEO subsections (`steoVintageLabel()`), Rigs (Baker Hughes `reportDate` via `formatWeekEnding`), regional storage panels, the risk widget, and the AI summary — without duplicating a date at the module level when one clearly covers the whole section.
+
+**Stale-data behavior**: `observationLabel()` now appends "· Stale" whenever the underlying metric's existing `MarketFreshness` value (`calculateFreshness()`, unchanged Phase-6-era logic) is `"stale"` — e.g. "Data through Jul 2026 · Stale" — so old data is never shown identically to current data. This surfaces an existing classification; no new freshness logic was written.
+
+**Risk-widget date behavior**: the widget header shows "Macro snapshot: {formatDataDate(data.snapshotAsOf)}" using the deterministic engine's own data-period marker (`MacroRiskPayload.snapshotAsOf`, unchanged from Phase 6D, never a fetch timestamp) — verified live showing "Macro snapshot: Aug 25, 2026". The "DATA FRESHNESS" disclosure block beneath it (pre-existing) already lists each tracked metric's own observation date, retrieval time, and freshness state, satisfying the "concise per-metric disclosure" requirement without new UI.
+
+**AI-summary date behavior**: `MacroRiskWidget.tsx` now reads `data.aiSummary.snapshotAsOf` (the cached summary's own persisted data-period, exposed for the first time this phase via `/api/macro/risk`'s response) and `data.aiSummary.generatedAt` (unchanged) as two distinct labels: "Based on Macro snapshot {date} · Generated {timestamp}". On the current Preview (no cron has run), `aiSummaryStatus` is correctly `"pending"` and the widget shows "AI summary has not been generated for the current data snapshot yet. It updates on the daily Macro schedule, never on page load." — verified live.
+
+**Test-fixture fix (unrelated to product code)**: `tests/macro-risk-orchestrate.test.cjs`'s hardcoded `Date.UTC(2026, ...)`-based fixture dates had aged past `calculateFreshness()`'s real thresholds as wall-clock time advanced during this long-running effort (a "lagged" fixture drifted to "stale," causing a false failure). Fixed with a `DAY_SHIFT` pattern that shifts every fixture date by the same delta so the fixture's "latest" point stays pinned near the real test-run time indefinitely, while preserving exact relative day-offsets (needed for `fiveYearStorageRows`'s hand-tuned same-ISO-week alignment across 5 years). This is a test-infrastructure fix only — no engine/threshold logic changed.
+
+**Cron-trigger investigation**: confirmed via live Vercel CLI docs (`vercel docs cli/crons`) that `vercel crons run <path>` is Production-only by design — "reads cron definitions from your deployed project... you must `vercel deploy --prod` before `vercel crons run` can find it." There is no safe way to trigger `/api/cron/macro` against a Preview deployment via the Vercel CLI. Per explicit instruction, this validation step was left pending for the user rather than promoting to Production, weakening auth, or adding a temporary unauthenticated route. Exact command for the user to run themselves (never pastes the secret into chat; hidden input; same `vercel curl` pattern as Phase 5's News validation):
+
+```bash
+read -s -p "CRON_SECRET: " CRON_SECRET && echo && \
+vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-1.json && echo && \
+echo "--- second identical call (idempotency check) ---" && \
+vercel curl "<PREVIEW_URL>/api/cron/macro" -- -H "Authorization: Bearer $CRON_SECRET" -s | tee /tmp/macro-cron-2.json && echo && \
+unset CRON_SECRET && \
+echo "--- /api/macro/risk aiSummary state ---" && \
+vercel curl "<PREVIEW_URL>/api/macro/risk" -- -s | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify({aiSummaryStatus:d.aiSummaryStatus,generatedAt:d.aiSummary?.generatedAt,snapshotAsOf:d.aiSummary?.snapshotAsOf,lastOrchestrationAt:d.lastOrchestrationAt},null,2))"
+```
+Replace `<PREVIEW_URL>` with the latest deployment URL (see "Preview deployment" below). Expect: first call `status: "ok"` with `aiGenerated: true`; second call `aiGenerated: false`/`aiCacheHit: true` (same fingerprint, no regeneration/recharge); the final `/api/macro/risk` read should show `aiSummaryStatus: "ready"` with a real `generatedAt`/`snapshotAsOf`.
+
+**Tests**: 5 new test files (`macro-format-dates` — 9 tests, `macro-last-updated` — 17 source-level tests, `macro-orchestration-repo` — 4 DB-gated) plus updates to `macro-risk-route` (2 DB-gated tests re-pointed at the correct table) and `macro-risk-orchestrate` (the `DAY_SHIFT` fix, same 4 tests). **1106 JS tests pass** (1071 → 1106; 0 fail, 56 skip with no local Postgres in the default sandbox run — all DB-gated tests, including the new ones, were also individually verified passing against a real local Postgres started for this session and torn down afterward) + **14 Python tests pass**. `npm run typecheck` clean. `npm run build` succeeds with no new routes.
+
+**Preview deployment**: `https://rrc-peer-dashboard-l5uinm1lt-christian-04-codes-projects.vercel.app` (never promoted to Production). Visually verified live, real EIA/Neon data: Overview unaffected; every Macro topic tab (Gas Balance, Storage, Supply, Appalachia, LNG, Demand, EIA Outlook, Rigs) shows its own correctly-formatted, non-duplicated date; "LAST UPDATED / Not yet available" renders correctly and honestly at the top of the Macro tab; the risk widget's "Macro snapshot: Aug 25, 2026" and the AI summary's "pending" state render correctly; the "DATA FRESHNESS" disclosure lists real per-metric dates; the Permian rig chart (Phase 6C's fix) still renders full-width with no letterboxing; Forecast and News tabs are unaffected.
+
+**Not built this phase** (explicitly deferred, per instruction): the weekly PDF report feature.
+
+**Files changed**: new `lib/market/format-dates.ts`, `lib/market/persistence/orchestration-repo.ts`, `tests/macro-format-dates.test.cjs`, `tests/macro-last-updated.test.cjs`, `tests/macro-orchestration-repo.test.cjs`; modified `app/api/macro/risk/route.ts` (+`snapshotAsOf`/`lastOrchestrationAt` fields), `app/globals.css` (+freshness/snapshot-date styles), `components/dashboard/{EiaOutlookModule,MacroEnergyMap,MacroPanel,MacroRiskWidget}.tsx`, `lib/market/macro-orchestrate-daily.ts` (+`recordOrchestrationRun` call), `lib/market/persistence/schema.sql` (+`macro_orchestration_runs` table), `lib/market/persistence/steo-repo.ts` (net no-op), `tests/macro-risk-orchestrate.test.cjs`, `tests/macro-risk-route.test.cjs`.
+
+**What remains before Production promotion**: (1) the live cron/AI validation command above, run by the user with the real `CRON_SECRET`; (2) PR #13 stays a draft, not merged, per standing instruction; (3) the weekly PDF report feature (explicitly out of scope for Phase 6). With those caveats, Phase 6 (Macro/EIA Intelligence) is functionally code-complete as of this commit.
+
+### Phase 5 — Full Daily Automation (2026-08-26)
+
+- **`lib/news/pipeline/orchestrate.ts`** (new) — `runDailyNewsOrchestration()`, the one shared orchestration path for a full scheduled run. Calls the *existing* `runNewsPipeline()` then the *existing* `analyzeEligibleArticles()` — the same domain functions the Phase 3 manual `/api/cron/news/analyze` endpoint already used; no business logic was duplicated. AI analysis is capped at the existing centralized `PIPELINE_CONFIG.maxAiAnalysesPerRun` (40, env-overridable via `NEWS_MAX_AI_ANALYSES_PER_RUN`). A Postgres advisory lock (`pg_try_advisory_lock(hashtext('rrc_news_daily_orchestration'))`) guards against Vercel's documented occasional-duplicate-cron-delivery causing two overlapping invocations to double-charge AI on the same article before either writes back.
+- **`app/api/cron/news/route.ts`** — now the one production Vercel Cron target. Runs idempotent schema migration (`runNewsMigrations()`, only when a database is configured) then `runDailyNewsOrchestration()`. `maxDuration` raised to 300s — Hobby's actual fluid-compute default *and* max, confirmed live from current Vercel docs (not the 60s an old assumption would have used). Auth unchanged: `Authorization: Bearer $CRON_SECRET`, which Vercel auto-attaches to real cron-triggered requests; graceful (not hard-failing) when DB/AI key are unset, matching the pre-existing Phase 2 tolerance for a DB-less dev environment.
+- **`app/api/cron/news/analyze/route.ts`** — untouched. Stays the separate, lower-capped (5 articles), manual-only validation endpoint. A pre-existing test already forbids this route from ever appearing in `vercel.json`; a new test confirms only `/api/cron/news` is registered there.
+- **`lib/news/pipeline/analyze.ts`** — `analyzeEligibleArticles` gained an optional `scopeArticlesToRun` (default `true`, so Phase 3's manual-validation behavior is byte-for-byte unchanged). The scheduled orchestration passes `false`, so an article a previous day's run left `retained` (e.g. because that run hit the AI cap or the function time limit) is picked up by the *next* run instead of being permanently stranded — under the old always-scoped-to-one-run behavior, no future run's own new `pipeline_run_id` would ever match it again.
+- **`lib/news/persistence/schema.sql` / `pipeline-runs-repo.ts` / `types.ts`** — additive `ai_analyses_failed` column + field (idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), alongside the pre-existing attempted/completed counts.
+- **`vercel.json`** (new — first one in the repo): registers exactly one cron entry, `{"path": "/api/cron/news", "schedule": "15 11 * * *"}`.
+
+**Schedule** (`15 11 * * *` UTC — Vercel Cron is always UTC): targets an early-morning Central run. Central alternates CST (UTC-6, ~Nov–Mar) and CDT (UTC-5, ~Mar–Nov); a single fixed UTC cron cannot track DST. 11:15 UTC = **6:15am CDT** (~8 months/year) or **5:15am CST** (the other ~4, winter) — chosen so the run is never *later* than 6:15am Central, only up to an hour early in winter. Vercel Hobby also only guarantees firing *within* the specified hour (±59 min, confirmed live from current docs) — so "6:15am Central" is a target, not a guarantee, on top of the DST drift.
+
+**AI cost controls** (reused from Phase 3, not reimplemented): deterministic relevance filtering happens before any AI call; hard cap of 40 analyses/run (`PIPELINE_CONFIG.maxAiAnalysesPerRun`); bounded retry (3 attempts, `lib/news/ai/retry.ts`); an article with a completed analysis is never re-analyzed.
+
+**Idempotency**: enforced at the persistence layer, not just by "don't retrigger" — `articles` has unique constraints on both `normalized_url` and `fingerprint` (`INSERT ... ON CONFLICT DO NOTHING`), and `saveArticleAnalysis`/`markArticleAnalysisFailed` both guard `WHERE processing_status = 'retained'`. A re-run of the same day's collection, or a duplicate cron delivery, discovers zero new articles and re-charges zero AI analyses for anything already `analyzed`. The advisory lock additionally prevents two *overlapping* runs from both selecting the same eligible article before either writes back.
+
+**Tests**: 902 JS tests (25 new/extended for Phase 5, DB-gated, run against a real local Postgres) + 14 Python tests, all passing. `npm run typecheck` clean. `npm run build` succeeds; `git diff --stat` confirmed zero diff to `components/dashboard/`, `lib/forecast/`, `data/`, `config/companies.json`, and every other pre-existing dashboard file outside `lib/news/`, `app/api/cron/`, `app/api/news/status/`, and this doc.
+
+**Manual Preview validation**: performed by the user directly (not the agent — see Known limitations) against Preview deployment `dpl_5C516uub5zEpGoRpvmYnAQwvZpgX` (`https://rrc-peer-dashboard-8evwz3ez7-christian-04-codes-projects.vercel.app`) via `vercel curl` with the real `CRON_SECRET`. Two consecutive real runs against the real Preview-scoped Neon DB and Anthropic key; user confirmed both succeeded and the second did not duplicate articles or re-charge AI for already-analyzed stories.
+
+**Production activation**: Vercel Cron only ever triggers against a project's Production deployment URL (confirmed live from Vercel's docs) — Preview deployments never run cron jobs regardless of `vercel.json` content. At the user's explicit direction, this branch was deployed straight to Vercel Production via `vercel deploy --prod`, independent of a git merge to `main`. This means Production now runs code that diverges from `main`'s git history until PR #13 is eventually merged — **the next ordinary deploy triggered by a push to `main` will silently replace this Production deployment (and its News functionality) unless that merge happens first.** Exact deployment ID/URL and cron registration status are reported in-chat at the end of the Phase 5 session, not duplicated here to avoid staleness.
+
+**Known limitations**:
+- The Range/peer-entity-specific AI-analysis path is built and tested but has been exercised against very few live, naturally-retained Range-/peer-specific stories so far (still mostly topic-driven articles).
+- The optional "24-Hour Range Environment" aggregate widget remains intentionally unbuilt — no defensible aggregate methodology exists yet.
+- Running multiple DB-gated `news-*` test files concurrently against one shared local Postgres can race (each truncates shared tables in `beforeEach`); each file passes reliably run individually or with `--test-concurrency=1`, and this never affects real CI (no `DATABASE_URL` there) or the deployed app.
+- All Neon/Postgres, `CRON_SECRET`, and `ANTHROPIC_API_KEY` values are Vercel "Sensitive" — pulled via the Vercel CLI in this sandbox, they come back as the literal string `[SENSITIVE]`, not real values. Any live-HTTP validation against a real deployment must be run by the user themselves (e.g. `read -s CRON_SECRET` in their own terminal, never pasted into chat), not by the agent.
+- Production is now running ahead of `main` (see "Production activation" above) — merging PR #13 should happen with awareness that Production already reflects this branch's tip, not `main`'s.
+
+### Phase 5.1 — News tab UI simplification (2026-08-26)
+
+UI-only change (explicitly out of scope: ingestion, AI analysis, persistence schema, cron, and all other dashboard tabs — none of it was touched).
+
+- **Removed the category/impact/strength filter button rows** from the primary News experience. `NewsPanel.tsx` no longer imports or renders `NewsFilters.tsx`, no longer holds filter state, and now maps directly over every displayable article (the full, unfiltered daily feed) under a single understated "All News" section heading. `NewsFilters.tsx` and the filter data/logic it depends on (`NEWS_CATEGORY_FILTERS`, `IMPACT_FILTERS`, `IMPACT_STRENGTH_FILTERS`, `filterArticles`, `NewsFilterState`) were **not deleted** — preserved on disk, unrouted, the same pattern already established for `components/dashboard/PeersPanel.tsx`.
+- **Deterministic headline-color rule** — new `rangeImpactTone(article)` in `lib/news/article-display.ts`, using only the two existing categorical AI fields (never a new numeric confidence cutoff): no AI result yet → `neutral` (default text color); `rangeImpact === "neutral"` → `caution` (amber); `rangeImpact` positive/negative at `impactStrength` `"low"` (or missing) → `caution`; positive/negative at `"medium"`/`"high"` → that direction's color. Applied to the headline only (`ArticleCard.tsx` and `NewsDetailDrawer.tsx`), never the whole card. New `--caution: #e5ad63` design token in `app/globals.css` (additive, one line) — reuses the app's existing amber/warning hue (already used for rig counts, oil commodity lines, "completed with errors" states) rather than inventing a new color.
+- **Two real bugs found and fixed during live visual QA against Preview** (both were silent CSS-specificity issues, not visible from source review alone):
+  1. The card headline is a `<button>` inside `.news-card.panel`; the pre-existing global `.panel button { color: var(--accent); }` rule (specificity 0,1,1) silently outranked a single-class `.news-headline-positive` selector (0,1,0), so every headline rendered accent-blue regardless of tone. Fixed with a compound `.news-card-headline.news-headline-positive` selector (0,2,0).
+  2. The drawer's AI section applied `.news-ai-label`'s accent-blue color to the whole `<section>` (inherited by its own `rangeAnalysis` paragraph, not just the heading), so the "AI Range Analysis" label didn't actually stand out from its own body text — working against the task's own "headers must be distinguishable from body copy" goal. Fixed by moving the class from the `<section>` onto the `<h3>` directly, matching the pattern `ArticleCard.tsx` already used correctly.
+- **Header hierarchy strengthened**: "Daily Energy Intelligence" (15px→18px, bold, now separated from the stats grid by a border), "Factual Summary"/"AI Range Analysis" card and drawer labels (10px→11-12px, heavier weight/letter-spacing).
+- **Tests**: 12 new tests (`tests/news-ui-simplification.test.cjs`) plus updates to `tests/news-article-display.test.cjs` (8 new `rangeImpactTone` cases), `tests/news-empty-states.test.cjs` (the now-impossible "filtered to nothing" state removed), and `tests/news-fact-vs-ai-separation.test.cjs` (drawer AI-label scoping). 922 JS tests + 14 Python tests pass, typecheck clean, build clean.
+- **Visually verified against Preview** (real Neon data, real analyzed articles: two neutral/low stories rendered amber, two positive/medium stories rendered green) and confirmed Overview/Forecast/Macro unaffected, both before and after the two CSS fixes above.
+
+### Phase 5.2 — Progressive disclosure + "How this feed works" explainer (2026-08-26)
+
+UI-only change (explicitly out of scope: pipeline, AI analysis, persistence, cron -- none touched).
+
+- **Cards collapsed by default** -- `ArticleCard.tsx` now holds two independent `useState` toggles (`summaryOpen`, `analysisOpen`). The full factual-summary paragraph and full AI Range Analysis paragraph (plus its affected-drivers/time-horizon/confidence metadata) are no longer rendered unconditionally; each only mounts once its own toggle (`Show summary`/`Hide summary`, `Show Range analysis`/`Hide Range analysis`) is clicked. The always-visible collapsed state is: category badge, colored headline, publisher/date, the impact pill (or a muted "Analysis Pending"/"Analysis Unavailable" chip for unanalyzed/failed articles -- moved out from behind the analysis toggle so it's never hidden), and a short truncated preview of the excerpt (new `truncateText()` in `lib/news/article-display.ts`, word-boundary-aware, 130 chars -- not a second AI summary, just a client-side substring of the already-persisted excerpt).
+- **The "Show Range analysis" button never renders for a pending or failed article** -- gated on `hasAnalysis = isAnalyzed && article.rangeImpact && article.impactStrength`, so there's nothing misleading to click. Failed analyses still show only the safe "Analysis Unavailable" chip, never provider error text (unchanged from Phase 4/5.1).
+- **Headline tone rule (Phase 5.1's `rangeImpactTone`) is byte-for-byte unchanged.**
+- **A second silent CSS-specificity bug found and fixed during this task's own visual QA**, same root cause as Phase 5.1's two: `.news-card-excerpt`/`.news-card-analysis` (single-class selectors) were being silently overridden to muted-gray by the pre-existing global `.panel p { color: var(--muted); }` rule, and the new toggle/info-trigger buttons would have lost their border/padding/background entirely to `.panel button { border:0; padding:0; ... }` had they not been written as compound selectors (`.news-card .news-card-toggle`, `.news-header .news-info-trigger`) from the start. Documented inline in `News.css` as a recurring pattern to watch for on any future `<button>`/`<p>` added inside a `.panel`-classed ancestor in this file.
+- **Cards are more compact**: `.news-card` padding 16px→14px, internal gap 8px→6px, section `padding-top` 10px→8px. On the real deployed Preview, this took the initial viewport from showing roughly 1 card to showing all 5 currently-analyzed cards at once.
+- **New `FeedInfoDisclosure.tsx`** -- a "How this feed works" disclosure button next to the Daily Energy Intelligence title, `aria-expanded`/`aria-controls`-wired (keyboard-operable, not hover-only), revealing a floating popover (`role="region"`, `aria-label`) with six short verified sections: Refresh, Sources, Selection, Colors, Sorting, History. Every line was checked against the actual implementation before writing it (see the file's own doc comment and "Verified feed rules" below) -- nothing in the copy is assumed.
+- **Tests**: new `tests/news-progressive-disclosure.test.cjs` (18 tests: collapse-by-default, independent toggle state, no misleading button on unanalyzed/failed articles, ARIA wiring, info-panel accessibility, and several tests that cross-check the info copy's claims against the real source files it describes -- e.g. asserting the "Sources" copy excludes SEC EDGAR by reading `lib/news/sources/index.ts`'s own `SEC_USER_AGENT` gating, and the "Sorting"/"History" copy against `articles-repo.ts`'s actual SQL). 940 JS tests + 14 Python tests pass, typecheck clean, build clean.
+- **Visually verified against Preview**: 5 collapsed cards fit in the initial viewport (vs. ~1 before), both toggles expand/collapse independently and correctly on the same card simultaneously, expanded text renders in full white (confirming the specificity fix), the info popover renders cleanly with accurate content, Overview/Forecast unaffected. Mobile viewport rendering could not be visually confirmed in this session (the browser-automation tool's resize did not affect the captured screenshot's actual viewport) -- the responsive CSS itself was reviewed by hand (existing `@media (max-width: 980px)` card-grid collapse is unchanged; new `@media (max-width: 620px)` rules only reposition/stack the info popover) but not visually spot-checked on a real narrow viewport this session.
+
+**Verified feed rules** (source of truth for the "How this feed works" copy, re-verify here if the copy ever needs updating):
+- Schedule: `vercel.json`'s only cron entry, `"15 11 * * *"` UTC, targets `/api/cron/news`.
+- Sources actually active: `lib/news/sources/index.ts`'s `getDefaultSourceAdapters()` always registers EIA Today in Energy, Natural Gas Intelligence, and OilPrice.com; it also registers a SEC EDGAR 8-K adapter, but only `if (process.env.SEC_USER_AGENT)` -- confirmed via `vercel env ls` that this project has no `SEC_USER_AGENT` configured, so SEC EDGAR is not currently active and is not listed in the explainer.
+- Selection: `lib/news/pipeline/runner.ts` (collect → normalize → dedupe → `scoreRelevance` → retained/rejected split) and `lib/news/pipeline/analyze.ts`'s `analyzeEligibleArticles` (only ever selects `processing_status = 'retained'` rows for AI).
+- Sort order: `lib/news/persistence/articles-repo.ts`'s `queryArticles()` -- `ORDER BY published_at DESC NULLS LAST`.
+- Retention/history: no `DELETE` statement exists anywhere in `lib/news/persistence/` -- articles are never removed. The News tab calls `GET /api/news?limit=100` (`lib/news/use-news-articles.ts`); the visible feed is capped by that fetch limit (and further narrowed client-side to `retained`/`analyzed`/`analysis_failed` rows only), not by a time window or a cleanup job.
 
 ## Status as of fix/q2-data-foundation (2026-08-12)
 

@@ -4,7 +4,7 @@ import { StockDetailView } from "@/components/stocks/StockDetailView";
 
 export function generateMetadata({ params }: { params: { ticker: string } }): Metadata {
   const company = getStockCompany(params.ticker);
-  return { title: company ? `${company.ticker} Stock Detail | RRC Peer Intelligence` : "Unsupported Stock | RRC Peer Intelligence" };
+  return { title: company ? `${company.ticker} Stock Detail | Range Resources Market & Peer Dashboard` : "Unsupported Stock | Range Resources Market & Peer Dashboard" };
 }
 
 export default function StockPage({ params }: { params: { ticker: string } }) {

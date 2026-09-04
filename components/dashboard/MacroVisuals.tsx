@@ -7,6 +7,8 @@ export type ChartSeries = {
   label: string;
   color: string;
   history: MarketObservation[];
+  /** Renders this series dashed with a "(forecast)" legend suffix -- the interactive actual-vs-forecast distinction, never conflating a projection with an observed value visually. */
+  forecast?: boolean;
 };
 
 function formatAxis(value: number): string {
@@ -42,17 +44,17 @@ export function HistoricalLineChart({ series, unit, limit = 60, ariaLabel }: { s
           }).join(" ");
           return (
             <g key={item.id}>
-              <path className="macro-series-line" d={path} style={{ stroke: item.color }} />
+              <path className="macro-series-line" d={path} style={{ stroke: item.color, strokeDasharray: item.forecast ? "4 3" : undefined }} />
               {item.history.map((point, index) => {
                 const x = 52 + (index / (item.history.length - 1)) * 596;
-                return <circle key={`${item.id}-${point.period}`} cx={x} cy={y(point.value)} r={index === item.history.length - 1 ? 3.5 : 1.8} fill={item.color}><title>{item.label} · {point.period}: {new Intl.NumberFormat("en-US").format(point.value)} {unit}</title></circle>;
+                return <circle key={`${item.id}-${point.period}`} cx={x} cy={y(point.value)} r={index === item.history.length - 1 ? 3.5 : 1.8} fill={item.color}><title>{item.label}{item.forecast ? " (EIA STEO forecast)" : ""} · {point.period}: {new Intl.NumberFormat("en-US").format(point.value)} {unit}</title></circle>;
               })}
             </g>
           );
         })}
       </svg>
       <div className="macro-chart-axis"><span>{latestPeriods[0]}</span><span>{latestPeriods[latestPeriods.length - 1]}</span></div>
-      <div className="macro-series-legend">{visible.map((item) => <span key={item.id}><i style={{ background: item.color }} />{item.label}</span>)}</div>
+      <div className="macro-series-legend">{visible.map((item) => <span key={item.id}><i className={item.forecast ? "forecast" : ""} style={{ background: item.forecast ? "transparent" : item.color, borderColor: item.color }} />{item.label}{item.forecast ? " (forecast)" : ""}</span>)}</div>
     </div>
   );
 }

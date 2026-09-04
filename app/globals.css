@@ -11,6 +11,7 @@
   --accent-soft: rgba(0, 129, 198, 0.15);
   --positive: #70c99a;
   --negative: #e48686;
+  --caution: #e5ad63;
 }
 
 * { box-sizing: border-box; }
@@ -59,6 +60,17 @@ h2 { font-size: 15px; }
 .metric-rank { position: absolute; top: 11px; right: 12px; display: grid; justify-items: end; gap: 1px; line-height: 1.05; }
 .metric-rank span { color: var(--muted); font-size: 9px; }
 .metric-rank b { color: #8fd6ff; font-size: 12px; }
+/* Phase 7E/7F: the Overview page's Weekly AI Report control -- a slim,
+   prominent row (not a hero section), consistent with the dashboard's
+   existing accent/panel tokens rather than a distinct visual style. */
+.weekly-report-control { display: flex; align-items: center; gap: 4px; margin: 14px 0; }
+.weekly-report-download-button { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--accent-strong); border-radius: 8px; padding: 10px 16px; background: var(--accent); color: #04111d; font-weight: 700; font-size: 13px; font-family: inherit; text-decoration: none; transition: background .12s ease, border-color .12s ease; }
+.weekly-report-download-button svg { width: 15px; height: 15px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.weekly-report-download-button:hover { background: var(--accent-strong); }
+.weekly-report-download-meta { font-weight: 500; font-size: 11px; color: rgba(4, 17, 29, 0.72); }
+.weekly-report-download-button--disabled { background: var(--panel-2); color: var(--muted); border-color: var(--border); font-weight: 600; cursor: not-allowed; }
+.weekly-report-download-button--disabled:hover { background: var(--panel-2); }
+
 .company-selector { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 14px 0; margin-bottom: 16px; }
 .selector-block { display: grid; gap: 8px; }
 .selector-block > div { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -206,8 +218,11 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-page-head h1 { margin: 0 0 4px; }
 .macro-page-head p { margin: 0; color: var(--muted); font-size: 13px; }
 .macro-kicker, .macro-section-head > div > span, .macro-flow-strip > div > span, .macro-rrc-callout > span { color: #75c7ee; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
-.macro-asof { display: grid; gap: 3px; text-align: right; font-size: 12px; }
+.macro-asof { display: grid; gap: 3px; text-align: right; font-size: 12px; max-width: 320px; }
 .macro-asof span, .macro-asof small { color: var(--muted); }
+.macro-asof-note { font-size: 9px; line-height: 1.4; }
+.macro-section-asof { color: var(--muted); }
+.macro-risk-snapshot-date { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .macro-snapshot { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
 .macro-snapshot-item { position: relative; border-right: 1px solid var(--border); }
 .macro-snapshot-item:last-child { border-right: 0; }
@@ -327,6 +342,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-series-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; color: var(--muted); font-size: 9px; }
 .macro-series-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .macro-series-legend i { width: 13px; height: 2px; }
+.macro-series-legend i.forecast { height: 0; border-top: 2px dashed; }
 .macro-regional-table { display: grid; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
 .macro-regional-row { display: grid; grid-template-columns: 1.05fr repeat(7, .72fr) 1.2fr; align-items: center; gap: 10px; min-height: 42px; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 11px; }
 .macro-regional-row:last-child { border-bottom: 0; }
@@ -340,6 +356,46 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
+.macro-topic-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 10px 0 4px; }
+.macro-topic-tabs button { flex: 0 0 auto; white-space: nowrap; }
+.eia-outlook { display: grid; gap: 10px; }
+.eia-outlook-select { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--muted); max-width: 320px; }
+.eia-outlook-select select { background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.eia-outlook-revisions { display: grid; gap: 6px; }
+.eia-outlook-revisions > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.eia-outlook-revision-table { display: grid; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.eia-outlook-revision-row { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1.3fr; gap: 6px; padding: 5px 8px; font-size: 10px; border-bottom: 1px solid var(--border); align-items: center; }
+.eia-outlook-revision-row.header { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+.eia-outlook-revision-row:last-child { border-bottom: 0; }
+.eia-outlook-revision-row small { color: var(--muted); }
+.appalachia-label-note { color: var(--muted); font-size: 10px; margin: 4px 0 0; }
+
+.macro-risk-widget { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; margin-top: 12px; display: grid; gap: 12px; }
+.macro-risk-list { display: grid; gap: 8px; }
+.macro-risk-item { border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; padding: 9px 11px; display: grid; gap: 5px; background: rgba(6,17,31,.4); }
+.macro-risk-item.high-risk { border-left-color: var(--negative); }
+.macro-risk-item.moderate-risk { border-left-color: #e5ad63; }
+.macro-risk-item.watch { border-left-color: var(--muted); }
+.macro-risk-item.supportive { border-left-color: var(--positive); }
+.macro-risk-item-head { display: flex; align-items: center; gap: 8px; }
+.macro-risk-rank { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--border); font-size: 10px; font-weight: 700; flex: 0 0 auto; }
+.macro-risk-item-head strong { font-size: 13px; flex: 1; }
+.macro-risk-badge { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 3px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); }
+.macro-risk-badge.high-risk { color: var(--negative); border-color: var(--negative); }
+.macro-risk-badge.moderate-risk { color: #e5ad63; border-color: #e5ad63; }
+.macro-risk-badge.watch { color: var(--muted); border-color: var(--border); }
+.macro-risk-badge.supportive { color: var(--positive); border-color: var(--positive); }
+.macro-risk-item-metrics { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 10px; color: var(--muted); }
+.macro-risk-item-metrics b { color: var(--text); }
+.macro-risk-item p { margin: 0; font-size: 11px; color: var(--text); line-height: 1.5; }
+.macro-risk-view { justify-self: start; border: 0; background: transparent; color: var(--accent); font-size: 10px; font-weight: 700; padding: 0; cursor: pointer; }
+.macro-risk-changes { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 4px; }
+.macro-risk-changes > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.macro-risk-changes ul { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text); }
+.macro-ai-summary { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 6px; }
+.macro-ai-summary > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.macro-ai-summary p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text); }
+.macro-ai-summary small { color: var(--muted); font-size: 9px; }
 .macro-segmented button, .macro-map-detail button { border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 5px 8px; font-size: 10px; }
 .macro-segmented button.active { color: #04111d; background: var(--accent); }
 .macro-segmented.secondary { padding: 2px; }
@@ -410,6 +466,19 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .drilling-history > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .drilling-history .macro-evidence-chart { margin-top: 4px; }
 .drilling-history .macro-evidence-chart svg { height: 92px; }
+/*
+ * .basin-detail's rig-history chart (BasinRigActivity, e.g. Permian) lives in
+ * the wide macro-map-layout column, unlike .drilling-activity's chart (PA,
+ * via DrillingActivityModule) which lives in the narrow macro-map-detail
+ * sidebar column that the 92px height above was sized for. At that much
+ * wider rendered width, a fixed 92px height stops matching the SVG's fixed
+ * viewBox aspect ratio (660:220 = 3:1), so preserveAspectRatio="xMidYMid
+ * meet" (the default) shrinks the plot to fit the height and centers it,
+ * leaving large empty margins on both sides. Deriving height from width via
+ * aspect-ratio keeps the rendered box's ratio equal to the viewBox's ratio
+ * at any container width, so the plot always fills it with no letterboxing.
+ */
+.basin-detail .drilling-history .macro-evidence-chart svg { height: auto; aspect-ratio: 660 / 220; }
 .drilling-history .macro-series-legend { margin-top: 2px; }
 .drilling-concentration { display: grid; gap: 4px; }
 .drilling-concentration > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }

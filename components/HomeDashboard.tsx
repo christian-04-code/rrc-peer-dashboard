@@ -21,6 +21,7 @@ import { useMarketData } from "@/lib/market/use-market-data";
 import { useFinnhubQuotes } from "@/lib/market/use-finnhub-quotes";
 import { MarketRibbon } from "@/components/dashboard/MarketRibbon";
 import { CompanyHero } from "@/components/dashboard/CompanyHero";
+import { WeeklyReportDownloadButton } from "@/components/dashboard/WeeklyReportDownloadButton";
 import { MetricStrip } from "@/components/dashboard/MetricStrip";
 import { CompanyComparisonSelector } from "@/components/dashboard/CompanyComparisonSelector";
 import { ChartWorkspace } from "@/components/dashboard/ChartWorkspace";
@@ -30,6 +31,7 @@ import { ValuationsPanel } from "@/components/dashboard/ValuationsPanel";
 import { MacroPanel } from "@/components/dashboard/MacroPanel";
 import { ForecastWorkspacePanel } from "@/components/dashboard/ForecastWorkspacePanel";
 import { DetailDrawer, type DrawerContent } from "@/components/dashboard/DetailDrawer";
+import { NewsPanel } from "@/components/news/NewsPanel";
 
 const DEFAULT_COMPARISONS = comparisonPreferences.defaultComparisonPeers as Ticker[];
 const DEFAULT_SELECTED_TICKERS = [defaultTicker, ...DEFAULT_COMPARISONS.filter((ticker) => ticker !== defaultTicker)];
@@ -116,14 +118,15 @@ export function HomeDashboard() {
             <div className="topbar-left">
               <div className="brand-mark"><Image src={brandCompany.logo} alt={brandCompany.logoAlt} fill sizes="32px" /></div>
               <div className="brand">
-                <strong>RRC Peer Intelligence</strong>
-                <span>Interactive Peer Dashboard</span>
+                <strong>Range Resources Market &amp; Peer Dashboard</strong>
+                <span>Company, Market &amp; Peer Analytics</span>
               </div>
             </div>
             <nav aria-label="Primary navigation">
               <button className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}>Overview</button>
               <button className={view === "forecast" ? "active" : ""} onClick={() => setView("forecast")}>Forecast</button>
               <button className={view === "macro" ? "active" : ""} onClick={() => setView("macro")}>Macro</button>
+              <button className={view === "news" ? "active" : ""} onClick={() => setView("news")}>News</button>
             </nav>
           </div>
           <div className="status-row">
@@ -138,9 +141,13 @@ export function HomeDashboard() {
             <MacroPanel />
           ) : view === "forecast" ? (
             <ForecastWorkspacePanel />
+          ) : view === "news" ? (
+            <NewsPanel />
           ) : (
             <>
               <CompanyHero company={company} activity={activity} />
+
+              <WeeklyReportDownloadButton />
 
               <MetricStrip metrics={metrics} companyShortName={company.shortName} ticker={focusedTicker} />
 
