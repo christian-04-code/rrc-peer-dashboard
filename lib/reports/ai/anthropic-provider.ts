@@ -70,7 +70,7 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
               biggestOpportunity: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied opportunityCandidates." },
               whatChanged: { type: "array", items: NARRATIVE_ITEM_SCHEMA, maxItems: 5, description: "At most 5 items, each grounded in supplied change evidence." },
               managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 6 },
-              bottomLine: { type: "string", description: "1-3 sentence closing synthesis." },
+              bottomLine: { type: "string", minLength: 20, description: "1-3 sentence closing synthesis. Required and must not be left empty." },
               selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." }
             },
             required: ["executiveAssessment", "biggestRisk", "biggestOpportunity", "whatChanged", "managementWatchItems", "bottomLine", "selectedEvidenceIds"]
@@ -82,6 +82,17 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
     const toolUse = response.content.find((block) => block.type === "tool_use" && block.name === ASSESSMENT_TOOL_NAME);
     if (!toolUse || toolUse.type !== "tool_use") {
       throw new WeeklyAnalystProviderError("Anthropic response did not include the expected tool_use block.");
+    }
+    // Caught here, before validation, so a truncated response produces a
+    // clear, actionable error ("raise WEEKLY_ANALYST_MAX_OUTPUT_TOKENS")
+    // instead of a confusing "missing bottomLine" -- bottomLine and
+    // selectedEvidenceIds are the schema's last two properties, so they are
+    // exactly what a max_tokens cutoff drops first. withBoundedRetry (the
+    // caller) still retries this like any other error.
+    if (response.stop_reason === "max_tokens") {
+      throw new WeeklyAnalystProviderError(
+        "Anthropic response was truncated by the max_tokens limit before the structured output finished -- raise WEEKLY_ANALYST_MAX_OUTPUT_TOKENS."
+      );
     }
 
     return validateWeeklyAnalystAssessment(

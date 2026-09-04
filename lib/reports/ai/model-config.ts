@@ -15,16 +15,27 @@
 export const WEEKLY_ANALYST_MODEL = "claude-haiku-4-5";
 
 /**
- * Generous headroom for the full structured output: a ~150-250 word
+ * Headroom for the full structured output: a ~150-250 word
  * executiveAssessment (~350 tokens, Phase 7C.1 -- shortened from Phase 7C's
  * original ~450-550 words now that the report's own evidence sections carry
  * the detailed analysis) + biggestRisk/biggestOpportunity narrative (~150-200
  * tokens each) + up to 5 whatChanged items (~100 tokens each) + up to 6
- * watch items (~60 tokens each) + bottomLine + JSON structure overhead --
- * comfortably under 2200 output tokens in practice, with headroom kept for a
- * verbose response without giving the model an effectively unbounded budget.
+ * watch items (~60 tokens each) + bottomLine + JSON structure overhead.
+ *
+ * Raised from the original 2200 (Phase 7C's pre-live estimate, never
+ * verified against a real call) to 4096 after the first real Preview
+ * invocation: `bottomLine` -- the second-to-last property in the tool
+ * schema -- came back empty, consistent with the real response hitting
+ * this budget and getting cut off (`stop_reason: "max_tokens"`) before
+ * reaching the schema's final two properties. Everything earlier in the
+ * schema (executiveAssessment, biggestRisk, biggestOpportunity,
+ * whatChanged, managementWatchItems) validated fine, which is exactly the
+ * truncation signature you'd expect. See anthropic-provider.ts's explicit
+ * stop_reason check, added alongside this change, for a clear error the
+ * next time this budget proves too tight instead of a confusing
+ * "missing bottomLine" message.
  */
-export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 2200;
+export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 4096;
 
 /** Anthropic per-million-token pricing for WEEKLY_ANALYST_MODEL, used only for cost estimates in reporting -- not sent to the API. */
 export const WEEKLY_ANALYST_MODEL_PRICING = {

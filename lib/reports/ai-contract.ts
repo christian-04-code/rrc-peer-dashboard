@@ -118,6 +118,10 @@ export class WeeklyAnalystValidationError extends Error {}
 const MIN_EXECUTIVE_ASSESSMENT_WORDS = 120;
 const MAX_EXECUTIVE_ASSESSMENT_WORDS = 320;
 
+// Rejects a technically-non-empty but meaningless bottomLine (e.g. "N/A",
+// a stray period) that isNonEmptyString alone would let through.
+const MIN_BOTTOM_LINE_CHARS = 15;
+
 const MAX_WHAT_CHANGED_ITEMS = 5;
 const MAX_WATCH_ITEMS = 6;
 const MIN_WATCH_ITEMS = 1;
@@ -231,6 +235,9 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
 
   if (!isNonEmptyString(record.executiveAssessment)) fail('Weekly analyst response is missing non-empty "executiveAssessment".');
   if (!isNonEmptyString(record.bottomLine)) fail('Weekly analyst response is missing non-empty "bottomLine".');
+  if ((record.bottomLine as string).trim().length < MIN_BOTTOM_LINE_CHARS) {
+    fail(`Weekly analyst response "bottomLine" is too short (${(record.bottomLine as string).trim().length} chars) to be a meaningful closing synthesis -- must be at least ${MIN_BOTTOM_LINE_CHARS}.`);
+  }
 
   const words = wordCount(record.executiveAssessment as string);
   if (words < MIN_EXECUTIVE_ASSESSMENT_WORDS || words > MAX_EXECUTIVE_ASSESSMENT_WORDS) {

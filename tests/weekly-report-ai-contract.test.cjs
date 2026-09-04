@@ -94,6 +94,16 @@ test("rejects guaranteed-outcome language in bottomLine too", () => {
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "Range stock will rise from here." }), baseInput()), WeeklyAnalystValidationError);
 });
 
+test("rejects a bottomLine that is technically non-empty but too short to be a meaningful synthesis", () => {
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "N/A" }), baseInput()), WeeklyAnalystValidationError);
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "." }), baseInput()), WeeklyAnalystValidationError);
+});
+
+test("rejects an empty or whitespace-only bottomLine (the exact truncated-response failure seen in the first live Preview invocation)", () => {
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "" }), baseInput()), WeeklyAnalystValidationError);
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "   " }), baseInput()), WeeklyAnalystValidationError);
+});
+
 test("rejects a biggestRisk with no evidenceIds", () => {
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ biggestRisk: { title: "x", assessment: "y", evidenceIds: [] } }), baseInput()), WeeklyAnalystValidationError);
 });
