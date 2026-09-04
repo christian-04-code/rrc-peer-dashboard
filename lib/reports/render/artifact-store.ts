@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { withBoundedRetry, type RetryConfig } from "@/lib/news/ai/retry";
 
 /**
  * Phase 7D artifact storage abstraction (Section 18), extended in Phase 7E
@@ -57,6 +58,22 @@ export function computeChecksum(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
+/**
+ * A real Preview download reproduced this exact intermittent failure: 5
+ * back-to-back requests for the SAME already-published artifact returned
+ * 503/200/200/503/503 -- while the sibling status endpoint (same DB pool,
+ * no Blob access) succeeded 8/8 in the same session, isolating the
+ * flakiness to the Blob read itself rather than the DB or the route. The
+ * downloaded bytes were byte-identical and valid (%PDF-, 162076 bytes)
+ * every time the read succeeded, confirming the stored object itself is
+ * intact -- this is a transient read failure (consistent with a cold
+ * function instance or a brief origin hiccup), not a missing/corrupt
+ * artifact, so a bounded retry (the same pattern already used for the
+ * Anthropic call, lib/news/ai/retry.ts) is the correct fix rather than
+ * any kind of regeneration or republish.
+ */
+const BLOB_GET_RETRY_CONFIG: RetryConfig = { maxAttempts: 3, baseDelayMs: 250 };
+
 /** Test/dev double -- stores buffers in a plain Map, no real I/O. Also usable as a local-development fallback when BLOB_READ_WRITE_TOKEN isn't configured. */
 export class InMemoryArtifactStore implements ArtifactStorageProvider {
   private readonly store = new Map<string, Buffer>();
@@ -99,23 +116,36 @@ export class VercelBlobArtifactStore implements ArtifactStorageProvider {
     return { key: result.url, checksum, sizeBytes: buffer.byteLength, contentType };
   }
 
-  /** `key` must be a blob URL previously returned by this class's own put(). A private blob is not fetchable with a bare `fetch()` -- reads must go through the SDK's own `get()`, which authenticates with the same read-write token, so the bytes never pass through anything but this server-side code. */
+  /**
+   * `key` must be a blob URL previously returned by this class's own put().
+   * A private blob is not fetchable with a bare `fetch()` -- reads must go
+   * through the SDK's own `get()`, which authenticates with the same
+   * read-write token, so the bytes never pass through anything but this
+   * server-side code. Wrapped in a short bounded retry: a real Preview
+   * download reproduced this exact read intermittently failing (503) on a
+   * majority of back-to-back requests for the same, already-verified-intact
+   * artifact (see BLOB_GET_RETRY_CONFIG's own comment) -- a plain, side-
+   * effect-free read is safe to retry outright, and this is the same
+   * pattern already used for the Anthropic call rather than a new mechanism.
+   */
   async get(key: string): Promise<Buffer | null> {
-    const { get } = await import("@vercel/blob");
-    let result: Awaited<ReturnType<typeof get>>;
-    try {
-      result = await get(key, { access: "private", token: this.token });
-    } catch (error) {
-      throw new ArtifactStorageError(`Vercel Blob fetch failed: ${error instanceof Error ? error.message : "unknown error"}`);
-    }
-    if (!result || !result.stream) return null;
-    const reader = result.stream.getReader();
-    const chunks: Buffer[] = [];
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(Buffer.from(value));
-    }
-    return Buffer.concat(chunks);
+    return withBoundedRetry(async () => {
+      const { get } = await import("@vercel/blob");
+      let result: Awaited<ReturnType<typeof get>>;
+      try {
+        result = await get(key, { access: "private", token: this.token });
+      } catch (error) {
+        throw new ArtifactStorageError(`Vercel Blob fetch failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      }
+      if (!result || !result.stream) return null;
+      const reader = result.stream.getReader();
+      const chunks: Buffer[] = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(Buffer.from(value));
+      }
+      return Buffer.concat(chunks);
+    }, BLOB_GET_RETRY_CONFIG);
   }
 }

@@ -58,6 +58,42 @@ test("VercelBlobArtifactStore.put() still returns the blob's own URL as the Arti
   assert.match(source, /return \{ key: result\.url, checksum, sizeBytes: buffer\.byteLength, contentType \}/);
 });
 
+test("VercelBlobArtifactStore.get() wraps the Blob read in a bounded retry (reusing lib/news/ai/retry.ts, not a new mechanism)", () => {
+  const source = readSource();
+  assert.match(source, /import\s*\{\s*withBoundedRetry,\s*type RetryConfig\s*\}\s*from\s*"@\/lib\/news\/ai\/retry"/, "must reuse the existing bounded-retry helper, not invent a new one");
+  const getMethodBody = source.slice(source.indexOf("async get(key: string)"), source.lastIndexOf("}"));
+  assert.match(getMethodBody, /return withBoundedRetry\(/, "get() must retry the whole Blob read, not just call the SDK directly");
+});
+
+test("BLOB_GET_RETRY_CONFIG is a small, bounded config (not unbounded retries)", () => {
+  const source = readSource();
+  const match = source.match(/const BLOB_GET_RETRY_CONFIG: RetryConfig = \{ maxAttempts: (\d+), baseDelayMs: (\d+) \}/);
+  assert.ok(match, "BLOB_GET_RETRY_CONFIG must be defined with explicit maxAttempts/baseDelayMs");
+  assert.ok(Number(match[1]) >= 2 && Number(match[1]) <= 5, "should retry a small, bounded number of times");
+});
+
+test("withBoundedRetry (the exact helper get() now uses) recovers from the reproduced 503/200 intermittent pattern within its bounded attempts", async () => {
+  const { withBoundedRetry } = load("lib/news/ai/retry.ts");
+  // Mirrors the real reproduction: 1st attempt fails (503-equivalent), 2nd succeeds.
+  let attempts = 0;
+  const flakyRead = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error("Vercel Blob fetch failed: HTTP 503");
+    return Buffer.from("%PDF-1.4 fake bytes");
+  };
+  const result = await withBoundedRetry(flakyRead, { maxAttempts: 3, baseDelayMs: 5 });
+  assert.equal(attempts, 2);
+  assert.ok(result.toString().startsWith("%PDF-"));
+});
+
+test("withBoundedRetry still throws (never silently returns corrupt/empty data) if every attempt fails", async () => {
+  const { withBoundedRetry } = load("lib/news/ai/retry.ts");
+  const alwaysFails = async () => {
+    throw new Error("Vercel Blob fetch failed: HTTP 503");
+  };
+  await assert.rejects(() => withBoundedRetry(alwaysFails, { maxAttempts: 3, baseDelayMs: 5 }), /HTTP 503/);
+});
+
 test("InMemoryArtifactStore is untouched by the private-Blob fix (still a plain in-process Map, no access-level concept)", () => {
   const { InMemoryArtifactStore } = load("lib/reports/render/artifact-store.ts");
   const store = new InMemoryArtifactStore();
