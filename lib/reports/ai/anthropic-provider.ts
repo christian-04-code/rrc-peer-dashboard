@@ -68,7 +68,13 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
               executiveAssessment: { type: "string", description: "~150-250 word, 2-3 paragraph opening assessment synthesizing the week for Range Resources -- a fast read, not the full analysis." },
               biggestRisk: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied riskCandidates." },
               biggestOpportunity: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied opportunityCandidates." },
-              whatChanged: { type: "array", items: NARRATIVE_ITEM_SCHEMA, maxItems: 5, description: "At most 5 items, each grounded in supplied change evidence." },
+              whatChanged: {
+                type: "array",
+                items: NARRATIVE_ITEM_SCHEMA,
+                maxItems: 5,
+                description:
+                  "At most 5 items, each grounded in one or more of the supplied deterministic change records. Never more items than the number of change records actually supplied -- combine related records into one item rather than inventing an extra one. Zero items is correct and expected when no real change was supplied (e.g. the first-ever report)."
+              },
               managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 6 },
               bottomLine: { type: "string", minLength: 20, description: "1-3 sentence closing synthesis. Required and must not be left empty." },
               selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." }

@@ -18,7 +18,7 @@ Your job is prioritization, synthesis, interpretation, and narrative framing -- 
 2. Every exact number, date, ranking, or comparison you reference must come directly from the supplied evidence. Never calculate, re-derive, or estimate a figure yourself.
 3. biggestRisk must explain one of the supplied riskCandidates (cite its evidenceId) -- you may explain WHY it matters to Range, you may never invent a risk outside this list or override the deterministic ranking.
 4. biggestOpportunity must explain one of the supplied opportunityCandidates (cite its evidenceId) -- same rule.
-5. whatChanged narrative items must each be grounded in one or more of the supplied change records (cite their evidenceIds) -- you may combine related changes into one narrative item and explain implications, but never describe a change that was not supplied.
+5. whatChanged narrative items must each be grounded in one or more of the supplied change records (cite their evidenceIds) -- you may combine related changes into one narrative item and explain implications, but never describe a change that was not supplied. The supplied change records are an exact, closed list -- you may return FEWER whatChanged items than the number of records supplied (by combining related ones), but you may NEVER return MORE items than the number of change records supplied. If only one or two things genuinely changed, or if none did, return only that many items (zero is a valid, expected answer for the first-ever report or a genuinely quiet week) -- do not manufacture an additional item by repurposing a market-backdrop, company, peer, or other non-change evidence id just to make the section feel fuller.
 6. managementWatchItems must be forward-looking monitoring priorities directly supported by the supplied evidence (e.g. "watch the next EIA storage release," "watch whether the LNG feedgas trend supplied above persists") -- never a fabricated forecast, invented event date, or predicted outcome.
 7. If evidence on a topic is genuinely mixed or incomplete, say so plainly ("mixed," "uncertain," "limited visibility") rather than forcing a confident conclusion. Missing information must never be filled in with a guess.
 8. Never state or imply a guaranteed outcome, and never state or imply that Range's stock will rise, fall, outperform, or underperform. Use conditional, analytical language ("may," "could," "suggests," "would be supportive if").
@@ -62,7 +62,7 @@ export function formatAnalystInputForPrompt(input: WeeklyAnalystInput): string {
     ),
     formatSection("Market/macro backdrop", input.marketBackdrop.map(formatRef)),
     formatSection(
-      "What changed since the previous published report (deterministic)",
+      `What changed since the previous published report (deterministic -- exactly ${input.whatChanged.length} record(s) supplied; your whatChanged response must contain at most ${input.whatChanged.length} item(s), never more, though it may contain fewer by combining related records)`,
       input.whatChanged.map(
         (change) =>
           `- [${change.evidenceId}] (${change.kind}) ${change.label}: ${change.fromState ?? change.fromValue ?? "n/a"} -> ${change.toState ?? change.toValue ?? "n/a"}`

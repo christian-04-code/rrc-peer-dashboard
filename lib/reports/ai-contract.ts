@@ -252,6 +252,20 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
   if (!Array.isArray(record.whatChanged) || record.whatChanged.length > MAX_WHAT_CHANGED_ITEMS) {
     fail(`Weekly analyst response "whatChanged" must be an array of at most ${MAX_WHAT_CHANGED_ITEMS} items.`);
   }
+  // Hard ceiling at the number of deterministic change records actually
+  // supplied -- a model may combine several supplied changes into one
+  // narrative item (fewer items than records is fine), but it may never
+  // invent an extra item beyond that count by re-purposing a non-change
+  // evidence id (e.g. a market-backdrop or company metric) to manufacture
+  // a "what changed" claim that was never in the deterministic change set.
+  // The per-item grounding check below would eventually catch such an item
+  // too, but only once the model has already gone looking for something to
+  // cite for it; bounding the count up front is the more direct fix.
+  if (record.whatChanged.length > input.whatChanged.length) {
+    fail(
+      `Weekly analyst response returned ${record.whatChanged.length} "whatChanged" items but only ${input.whatChanged.length} deterministic change record(s) were supplied -- at most one narrative item per supplied change record (items may combine multiple change ids into one, but the model may not invent additional items beyond the supplied count).`
+    );
+  }
   const whatChanged = record.whatChanged.map((item, index) => validateNarrativeItem(item, `whatChanged[${index}]`));
 
   if (!Array.isArray(record.managementWatchItems) || record.managementWatchItems.length < MIN_WATCH_ITEMS || record.managementWatchItems.length > MAX_WATCH_ITEMS) {

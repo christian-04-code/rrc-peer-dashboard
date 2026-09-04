@@ -139,6 +139,40 @@ test("rejects a whatChanged item that does not cite any of the supplied determin
   assert.throws(() => validateWeeklyAnalystAssessment(output, baseInput()), WeeklyAnalystValidationError);
 });
 
+test("rejects more whatChanged items than deterministic change records were supplied, even when each item individually cites a real (but reused or unrelated) evidence id", () => {
+  // Reproduces the real Preview failure: baseInput() supplies exactly ONE
+  // change record (storage:lower48). Two items citing it is already one
+  // too many -- the model may combine into fewer items than supplied, but
+  // never manufacture more items than records actually exist.
+  const grounded = { title: "Storage rose", assessment: "...", evidenceIds: ["storage:lower48"] };
+  const extra = { title: "Extra invented item", assessment: "...", evidenceIds: ["storage:lower48"] };
+  assert.throws(
+    () => validateWeeklyAnalystAssessment(baseOutput({ whatChanged: [grounded, extra] }), baseInput()),
+    /only 1 deterministic change record\(s\) were supplied/
+  );
+});
+
+test("accepts fewer whatChanged items than deterministic change records were supplied (combining is allowed)", () => {
+  const twoChangeInput = baseInput({
+    whatChanged: [
+      { kind: "value_changed", evidenceId: "storage:lower48", category: "storage", label: "Storage", fromValue: "2900 Bcf", toValue: "3000 Bcf", fromState: null, toState: null },
+      { kind: "value_changed", evidenceId: "peers:AR:revenue", category: "peers", label: "AR Revenue", fromValue: "$550MM", toValue: "$600MM", fromState: null, toState: null }
+    ]
+  });
+  const combined = { title: "Storage and peer moves", assessment: "...", evidenceIds: ["storage:lower48", "peers:AR:revenue"] };
+  const result = validateWeeklyAnalystAssessment(baseOutput({ whatChanged: [combined] }), twoChangeInput);
+  assert.equal(result.whatChanged.length, 1);
+});
+
+test("rejects any whatChanged item count greater than zero when zero change records were supplied (first-ever report, nothing to compare against)", () => {
+  const zeroChangeInput = baseInput({ whatChanged: [] });
+  const invented = { title: "Invented change", assessment: "...", evidenceIds: ["storage:lower48"] };
+  assert.throws(
+    () => validateWeeklyAnalystAssessment(baseOutput({ whatChanged: [invented] }), zeroChangeInput),
+    /only 0 deterministic change record\(s\) were supplied/
+  );
+});
+
 test("rejects zero managementWatchItems", () => {
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ managementWatchItems: [] }), baseInput()), WeeklyAnalystValidationError);
 });

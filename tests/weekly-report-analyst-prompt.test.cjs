@@ -75,3 +75,20 @@ test("formatAnalystInputForPrompt handles an entirely empty section gracefully, 
   const text = formatAnalystInputForPrompt(baseInput({ news: [], peers: [], range: [], outlook: [] }));
   assert.match(text, /none supplied this week/);
 });
+
+test("formatAnalystInputForPrompt states the exact whatChanged record count and forbids exceeding it", () => {
+  const text = formatAnalystInputForPrompt(baseInput());
+  assert.match(text, /exactly 1 record\(s\) supplied/);
+  assert.match(text, /at most 1 item\(s\), never more/);
+});
+
+test("formatAnalystInputForPrompt states zero whatChanged records plainly (first report / quiet week)", () => {
+  const text = formatAnalystInputForPrompt(baseInput({ whatChanged: [] }));
+  assert.match(text, /exactly 0 record\(s\) supplied/);
+  assert.match(text, /none supplied this week/);
+});
+
+test("SYSTEM_PROMPT explicitly forbids returning more whatChanged items than supplied change records", () => {
+  assert.match(SYSTEM_PROMPT, /may NEVER return MORE items than the number of change records supplied/);
+  assert.match(SYSTEM_PROMPT, /zero is a valid, expected answer/i);
+});
