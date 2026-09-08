@@ -69,6 +69,27 @@ export function composeMultiItemCommentary(items: WeeklyEvidenceItem[], maxSente
   return items.slice(0, maxSentences).map((item) => (item.period ? `${item.label}: ${item.displayValue} (as of ${item.period}).` : `${item.label}: ${item.displayValue}.`));
 }
 
+/**
+ * Direction-neutral "why this matters to Range" phrasing, one per category
+ * with a near-weekly observation cadence -- added for the "Key Metrics to
+ * Watch Next Week" IR section (2026-09-08). Deliberately a small, separate
+ * map from UP_DOWN_TEMPLATES above rather than stripping the up/down framing
+ * out of those strings at render time: "why it matters" needs to read
+ * sensibly with no known direction yet (next week's value isn't in yet),
+ * while UP_DOWN_TEMPLATES's own strings are written to complete a specific
+ * observed direction.
+ */
+export const CATEGORY_WHY_IT_MATTERS: Partial<Record<EvidenceModuleKey, string>> = {
+  gas_pricing: "Directly drives Range's realized natural gas price.",
+  storage: "The clearest weekly signal for near-term gas pricing direction.",
+  us_gas_supply: "Broader U.S. supply growth/decline shapes the pricing backdrop Range realizes into.",
+  appalachia_supply: "Regional supply growth directly affects Appalachian basis differentials Range realizes.",
+  lng_demand: "The primary structural demand offset to rising domestic gas supply.",
+  power_data_center_demand: "An emerging incremental demand driver for domestic gas pricing.",
+  industrial_demand: "A steady incremental demand driver for domestic gas pricing.",
+  rigs: "A longer-lead-time indicator of future regional supply growth."
+};
+
 const UP_DOWN_TEMPLATES: Partial<Record<EvidenceModuleKey, { up: string; down: string }>> = {
   gas_pricing: {
     up: "Higher Henry Hub pricing is directionally supportive for Range's realized natural gas price.",

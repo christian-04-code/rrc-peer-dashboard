@@ -1,6 +1,14 @@
 # Current Handoff
 
-## PHASE 7 RELEASE REVIEW PASS (2026-09-08) — READ THIS FIRST
+## IR REPORT ENHANCEMENT IN PROGRESS (2026-09-08) — READ THIS FIRST
+
+New work, on a new branch (`feat/ir-report-enhancement`, cut from `main` at `8fff1c9` -- Phase 7's PR #13 merge), **not yet merged, not yet deployed**. Full detail in `docs/IR_REPORT_ENHANCEMENT.md`. Deliberately kept out of Phase 7's own architecture doc and Issue #14 so that release's audit history stays intact and closed -- this is a genuinely separate enhancement (conditional Investor Questions / IR-preparation sections), not a continuation of the Phase 7 release-review fixes below.
+
+Summary: adds "Investor Questions to Prepare For" (the one new AI-synthesized field, riding the existing single weekly-analyst call), "Valuation & Share-Price Context" (market-cap-based, deliberately not a live price feed), "Company-Specific News & Implications" / "Peer Developments That Matter to Range" (both partitioned from the existing News pipeline's own category tags), "Key Metrics to Watch Next Week," "Guidance Watch," and a deliberately minimal "Upcoming Catalysts Calendar" (one line: the next EIA storage release, the only date this codebase can state with confidence). "Investor Sentiment & Narrative Watch" and analyst-consensus comparisons were explicitly NOT built -- no reliable data source exists for either; both are documented gaps, not oversights (see `docs/IR_REPORT_ENHANCEMENT.md`'s own "Data-source gaps" section). Every new section is independently conditional on real evidence existing that week -- none are padded, none have a minimum item count. No new environment variables, external APIs, or dependencies were added. Full suite: 1503 tests, 1422 pass, 0 fail, 81 skipped. Typecheck and build clean.
+
+---
+
+## PHASE 7 RELEASE REVIEW PASS (2026-09-08) — historical; superseded above for read-first purposes, but its own content and Issue #14's audit trail remain unchanged and authoritative for Phase 7 itself
 
 Addresses Issue #14 ("Phase 7 release readiness: PDF content audit and production promotion") against the real published report for storage week ending 2026-08-28. Every finding below was independently reproduced (either by re-downloading the actual published PDF via the already-authenticated Preview session, or by live-checking SEC EDGAR) before being fixed -- nothing here was fixed speculatively. **The already-published report itself was never regenerated or altered** -- every fix here only changes how *future* reports are generated/rendered; no live cron/Anthropic invocation occurred this pass.
 

@@ -123,6 +123,67 @@ test("rejects guarded-text violations inside biggestOpportunity/biggestRisk/what
   );
 });
 
+// --- investorQuestions (IR-report enhancement, 2026-09-08) ---
+
+test("accepts a response with zero investorQuestions -- the normal, expected case for a quiet week", () => {
+  const result = validateWeeklyAnalystAssessment(baseOutput({ investorQuestions: [] }), baseInput());
+  assert.deepEqual(result.investorQuestions, []);
+});
+
+test("accepts a response with no investorQuestions field at all -- treated as an empty array, never a hard failure for an otherwise-sound response", () => {
+  const output = baseOutput();
+  delete output.investorQuestions;
+  const result = validateWeeklyAnalystAssessment(output, baseInput());
+  assert.deepEqual(result.investorQuestions, []);
+});
+
+test("rejects an investorQuestions item with no evidenceIds -- a question must be grounded, never invented", () => {
+  assert.throws(
+    () =>
+      validateWeeklyAnalystAssessment(
+        baseOutput({ investorQuestions: [{ question: "Why did storage build?", whyNow: "Because it did.", evidenceIds: [] }] }),
+        baseInput()
+      ),
+    WeeklyAnalystValidationError
+  );
+});
+
+test("rejects an investorQuestions item citing an evidence id outside the supplied allowlist", () => {
+  assert.throws(
+    () =>
+      validateWeeklyAnalystAssessment(
+        baseOutput({ investorQuestions: [{ question: "Why did storage build?", whyNow: "This week's print.", evidenceIds: ["storage:not_a_real_id"] }] }),
+        baseInput()
+      ),
+    WeeklyAnalystValidationError
+  );
+});
+
+test("rejects more investorQuestions items than the schema ceiling allows", () => {
+  const tooMany = Array.from({ length: 7 }, (_, i) => ({ question: `Question ${i}?`, whyNow: "Reason.", evidenceIds: ["storage:lower48"] }));
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ investorQuestions: tooMany }), baseInput()), WeeklyAnalystValidationError);
+});
+
+test("accepts an investorQuestions item with only question/whyNow/evidenceIds -- context/responseFramework/followUpNeeded are all optional", () => {
+  const result = validateWeeklyAnalystAssessment(
+    baseOutput({ investorQuestions: [{ question: "Why did storage build?", whyNow: "This week's EIA print extended the surplus.", evidenceIds: ["storage:lower48"] }] }),
+    baseInput()
+  );
+  assert.equal(result.investorQuestions.length, 1);
+  assert.equal(result.investorQuestions[0].context, undefined);
+});
+
+test("rejects guaranteed-outcome/forecast-overclaim/filler language inside an investorQuestions field (question, whyNow, context, or responseFramework)", () => {
+  const base = { question: "Why did storage build?", whyNow: "This week's print.", evidenceIds: ["storage:lower48"] };
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ investorQuestions: [{ ...base, question: "Will shares will rise on this?" }] }), baseInput()), WeeklyAnalystValidationError);
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ investorQuestions: [{ ...base, responseFramework: "Price is above the support level." }] }), baseInput()), WeeklyAnalystValidationError);
+});
+
+test("rejects an investorQuestions item where an optional field is present but an empty/non-string value", () => {
+  const base = { question: "Why did storage build?", whyNow: "This week's print.", evidenceIds: ["storage:lower48"] };
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ investorQuestions: [{ ...base, context: "" }] }), baseInput()), WeeklyAnalystValidationError);
+});
+
 test("rejects guarded-text violations inside a managementWatchItems reason", () => {
   assert.throws(
     () =>

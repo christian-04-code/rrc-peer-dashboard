@@ -408,7 +408,7 @@ export const SAMPLE_WEEKLY_REPORT_PAYLOAD: WeeklyReportPayload = {
 };
 
 export const SAMPLE_WEEKLY_ANALYST_ASSESSMENT: WeeklyAnalystAssessment = {
-  schemaVersion: "1.1.0",
+  schemaVersion: "1.2.0",
   aiProvider: "fake",
   aiModel: "fake-model",
   generatedAt: "2026-09-03T19:05:00.000Z",
@@ -453,5 +453,15 @@ Management should watch whether the next several EIA storage releases continue n
     "news:article:1002",
     "rigs:basin_marcellus",
     "rigs:basin_utica"
+  ],
+  investorQuestions: [
+    {
+      question: "With storage 5.7% above its five-year average, how much near-term Henry Hub pricing risk does that surplus actually represent for Range's realized price?",
+      whyNow: "This week's storage print extended the five-year surplus, and it is also this week's top-ranked deterministic risk signal.",
+      evidenceIds: ["deterministic_risk_opportunity:storage_levels", "storage:lower48"],
+      context: "Henry Hub spot still rose 6.5% week over week despite the surplus, so the relationship is not one-directional this week.",
+      responseFramework: "Preparation based on public information only, not an official Range statement: frame the surplus as one input among several (including LNG demand growth and regional basis) rather than a standalone price predictor.",
+      followUpNeeded: "Confirm whether Range's own hedge book already covers the shoulder-season period this surplus could affect."
+    }
   ]
 };

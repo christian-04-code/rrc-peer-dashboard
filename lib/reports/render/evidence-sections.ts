@@ -2,7 +2,7 @@ import type { EvidenceModuleKey, WeeklyEvidenceItem, WeeklyReportPayload } from 
 import { rankEvidenceByMateriality } from "@/lib/reports/materiality";
 import type { ContentBudget } from "@/lib/reports/render/content-budget";
 import { buildActualVsForecastBarChart, buildComparisonBarChart, buildMultiItemBarChart, buildPeerBarChart } from "@/lib/reports/render/chart-selection";
-import { buildNewsTable, buildPeerComparisonTable } from "@/lib/reports/render/table-builder";
+import { buildGuidanceWatchTable, buildKeyMetricsToWatchTable, buildNewsTable, buildPeerComparisonTable, buildValuationComparisonTable } from "@/lib/reports/render/table-builder";
 import { composeEvidenceCommentary, composeMultiItemCommentary, composeRangeImplication } from "@/lib/reports/render/commentary";
 import { formatSignedPct } from "@/lib/reports/render/format";
 import type { EvidenceSection, TablePlan } from "@/lib/reports/render/render-model";
@@ -59,6 +59,42 @@ function newsFactualCommentary(items: WeeklyEvidenceItem[], representative: Week
     sentences.push(`${items.length} analyzed News item${items.length === 1 ? "" : "s"} were retained as material for Range this reporting window.`);
   }
   return sentences;
+}
+
+/**
+ * Splits the one "news" evidence pool into three mutually-exclusive
+ * partitions by News's own existing category classification (never a new
+ * relevance/entity-matching rule) -- added for the IR-report enhancement's
+ * "Company-Specific News & Implications" and "Peer Developments That Matter
+ * to Range" sections (2026-09-08). An article tagged both "range" and
+ * "peers" counts as range-specific (Range's own news takes priority over a
+ * peer mention within it). Every article appears in exactly one section, so
+ * nothing is ever shown twice.
+ */
+function partitionNewsItems(items: WeeklyEvidenceItem[]): { rangeNews: WeeklyEvidenceItem[]; peerNews: WeeklyEvidenceItem[]; otherNews: WeeklyEvidenceItem[] } {
+  const categoriesOf = (item: WeeklyEvidenceItem): string[] => (Array.isArray(item.metadata.category) ? item.metadata.category : []);
+  const rangeNews = items.filter((item) => categoriesOf(item).includes("range"));
+  const peerNews = items.filter((item) => !categoriesOf(item).includes("range") && categoriesOf(item).includes("peers"));
+  const otherNews = items.filter((item) => !categoriesOf(item).includes("range") && !categoriesOf(item).includes("peers"));
+  return { rangeNews, peerNews, otherNews };
+}
+
+function newsSectionCandidate(key: string, heading: string, items: WeeklyEvidenceItem[], budget: ContentBudget): Candidate | null {
+  if (items.length === 0) return null;
+  const representative = rankEvidenceByMateriality(items)[0];
+  return {
+    key,
+    heading,
+    representative,
+    build: () => ({
+      id: `section:${key}`,
+      heading,
+      chart: null,
+      table: buildNewsTable(items, budget, `${key}_table`, heading),
+      commentary: newsFactualCommentary(items, representative),
+      rangeImplication: composeRangeImplication(representative)
+    })
+  };
 }
 
 function steoOutlookTable(items: WeeklyEvidenceItem[], maxRows: number): TablePlan | null {
@@ -213,33 +249,101 @@ export function buildEvidenceSections(payload: WeeklyReportPayload, budget: Cont
     });
   }
 
-  const newsItems = payload.modules.news ?? [];
-  if (newsItems.length > 0) {
-    const representative = rankEvidenceByMateriality(newsItems)[0];
+  // Partitioned by News's own existing category tags -- see
+  // partitionNewsItems's header. Each of the three is its own independent,
+  // conditional candidate: a quiet week with no Range-specific news simply
+  // omits that section without affecting the other two, and no article is
+  // ever shown in more than one of them.
+  const { rangeNews, peerNews, otherNews } = partitionNewsItems(payload.modules.news ?? []);
+  const newsCandidates = [
+    newsSectionCandidate("company_news", "Company-Specific News & Implications", rangeNews, budget),
+    newsSectionCandidate("peer_news", "Peer Developments That Matter to Range", peerNews, budget),
+    newsSectionCandidate("news", "Material News", otherNews, budget)
+  ].filter((c): c is Candidate => c !== null);
+  candidates.push(...newsCandidates);
+
+  const valuationItems = payload.modules.valuation ?? [];
+  if (valuationItems.length > 0) {
+    const rangeValuationItems = valuationItems.filter((item) => item.metadata.isRange === true && item.currentValue !== null);
+    if (rangeValuationItems.length > 0) {
+      const representative = rankEvidenceByMateriality(rangeValuationItems)[0];
+      candidates.push({
+        key: "valuation",
+        heading: "Valuation & Share-Price Context",
+        representative,
+        build: () => ({
+          id: "section:valuation",
+          heading: "Valuation & Share-Price Context",
+          chart: null,
+          table: buildValuationComparisonTable(payload, budget),
+          commentary: composeEvidenceCommentary(representative, budget.maxCommentarySentences),
+          rangeImplication: null
+        })
+      });
+    }
+  }
+
+  // Guidance Watch: reuses the same range_company guidance items already
+  // collected by range-company-adapter.ts (getCompanyGuidanceRecords) --
+  // no new data source. Consensus is deliberately never included (see
+  // buildGuidanceWatchTable's own header) -- this project has no analyst-
+  // consensus data source, so the title/content never implies one exists.
+  const guidanceItems = rangeItems.filter((item) => item.metricKey.startsWith("guidance:"));
+  if (guidanceItems.length > 0) {
+    const representative = rankEvidenceByMateriality(guidanceItems)[0];
     candidates.push({
-      key: "news",
-      heading: "Material News",
+      key: "guidance_watch",
+      heading: "Guidance Watch",
       representative,
       build: () => ({
-        id: "section:news",
-        heading: "Material News",
+        id: "section:guidance_watch",
+        heading: "Guidance Watch",
         chart: null,
-        table: buildNewsTable(payload, budget),
-        // The reported fact (publisher's own excerpt, from News's persisted
-        // analysis -- never re-fetched/re-summarized here) is shown as plain
-        // commentary; rangeImplication below is the system's own grounded
-        // interpretation of it. Keeping these visually distinct is the
-        // "distinguish reported facts from interpretation" requirement.
-        commentary: newsFactualCommentary(newsItems, representative),
-        rangeImplication: composeRangeImplication(representative)
+        table: buildGuidanceWatchTable(payload, budget),
+        commentary: [],
+        rangeImplication: null
       })
     });
   }
 
-  const rankedRepresentatives = rankEvidenceByMateriality(candidates.map((c) => c.representative));
-  const orderedCandidates = rankedRepresentatives
-    .map((representative) => candidates.find((c) => c.representative.evidenceId === representative.evidenceId))
-    .filter((c): c is Candidate => c !== undefined);
+  // Key Metrics to Watch Next Week: a distinct, forward-looking view over
+  // the same near-weekly-cadence evidence already collected above (never a
+  // restatement of the entire Macro dashboard -- limited to categories with
+  // a real next-week observation, see NEXT_WEEK_WATCH_CATEGORIES).
+  const keyMetricsTable = buildKeyMetricsToWatchTable(payload, budget);
+  if (keyMetricsTable && keyMetricsTable.rows.length > 0) {
+    const nextWeekCategories: EvidenceModuleKey[] = ["storage", "gas_pricing", "us_gas_supply", "appalachia_supply", "lng_demand", "power_data_center_demand", "industrial_demand", "rigs"];
+    const nextWeekItems = nextWeekCategories.flatMap((category) => payload.modules[category] ?? []);
+    const representative = rankEvidenceByMateriality(nextWeekItems)[0];
+    candidates.push({
+      key: "key_metrics_to_watch",
+      heading: "Key Metrics to Watch Next Week",
+      representative,
+      build: () => ({
+        id: "section:key_metrics_to_watch",
+        heading: "Key Metrics to Watch Next Week",
+        chart: null,
+        table: keyMetricsTable,
+        commentary: [],
+        rangeImplication: null
+      })
+    });
+  }
+
+  // Two DIFFERENT candidates can legitimately share the exact same
+  // representative evidenceId -- e.g. "Storage" and "Key Metrics to Watch
+  // Next Week" both draw from payload.modules.storage, so storage's own
+  // top item can be the single highest-materiality pick for both. Matching
+  // back by evidenceId (or by object reference to the original, shared
+  // array element) would make BOTH candidates resolve to whichever one
+  // .find() hits first, silently dropping the other. Ranking a shallow
+  // clone per candidate (a distinct object even when content is identical)
+  // and mapping back by clone identity keeps every candidate distinguishable
+  // without duplicating rankEvidenceByMateriality's own scoring rule.
+  const representativeClones = candidates.map((c) => ({ ...c.representative }));
+  const candidateByClone = new Map(representativeClones.map((clone, index) => [clone, candidates[index]]));
+  const rankedRepresentatives = rankEvidenceByMateriality(representativeClones);
+  const orderedCandidates = rankedRepresentatives.map((clone) => candidateByClone.get(clone)!).filter((c): c is Candidate => c !== undefined);
 
   const selected = orderedCandidates.slice(0, budget.maxEvidenceSections);
   const omitted = orderedCandidates.slice(budget.maxEvidenceSections);

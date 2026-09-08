@@ -232,19 +232,21 @@ test("buildNewsTable includes publisher/date/category columns and a combined str
     comparisons: [],
     rangeDrivers: [],
     materialityInputs: { isNewThisWeek: true, changedSincePreviousReport: false, riskSeverityRank: null, riskState: null, rangeImpactDirection: "positive", rangeImpactStrength: "moderate", comparisonMagnitudePct: null },
-    metadata: { publisher: "Test Wire", canonicalUrl: "https://example.com/a", excerpt: "Something happened.", category: "infrastructure" }
+    // category is realistically NewsCategory[] (an article can carry more than
+    // one tag) -- not a plain string; a prior version of this test used a bare
+    // string here and masked the real "typeof === 'string'" bug in production.
+    metadata: { publisher: "Test Wire", canonicalUrl: "https://example.com/a", excerpt: "Something happened.", category: ["infrastructure", "appalachia"] }
   };
-  const payload = { ...SAMPLE_WEEKLY_REPORT_PAYLOAD, modules: { ...SAMPLE_WEEKLY_REPORT_PAYLOAD.modules, news: [newsItem] } };
-  const table = buildNewsTable(payload, STANDARD_BUDGET);
+  const table = buildNewsTable([newsItem], STANDARD_BUDGET, "test_table", "Test News");
   assert.deepEqual(table.columns.map((c) => c.key), ["headline", "publisher", "date", "category", "rangeImpact"]);
   assert.equal(table.rows[0].publisher, "Test Wire");
-  assert.equal(table.rows[0].category, "infrastructure");
+  assert.equal(table.rows[0].category, "infrastructure, appalachia");
   assert.equal(table.rows[0].rangeImpact, "moderate positive");
 });
 
 test("buildNewsTable falls back to '--' for publisher/category when News's own persisted metadata doesn't carry them", () => {
   const { buildNewsTable } = load("lib/reports/render/table-builder.ts");
-  const table = buildNewsTable(SAMPLE_WEEKLY_REPORT_PAYLOAD, STANDARD_BUDGET);
+  const table = buildNewsTable(SAMPLE_WEEKLY_REPORT_PAYLOAD.modules.news, STANDARD_BUDGET, "test_table", "Test News");
   assert.ok(table.rows.length > 0);
   for (const row of table.rows) {
     assert.equal(typeof row.publisher, "string");

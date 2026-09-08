@@ -2,7 +2,7 @@ import type { WeeklyAnalystAssessment } from "@/lib/reports/ai-contract";
 import type { WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
 import { budgetForTier } from "@/lib/reports/render/content-budget";
 import type { RenderBudgetTier, WeeklyReportRenderModel } from "@/lib/reports/render/render-model";
-import { buildAtAGlanceTable, buildRisksOpportunitiesTable, buildSourcesFreshnessTable } from "@/lib/reports/render/table-builder";
+import { buildAtAGlanceTable, buildCatalystsCalendarTable, buildRisksOpportunitiesTable, buildSourcesFreshnessTable } from "@/lib/reports/render/table-builder";
 import { buildEvidenceSections } from "@/lib/reports/render/evidence-sections";
 
 /**
@@ -87,6 +87,14 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
     sourcesFreshnessTable: buildSourcesFreshnessTable(payload, budget),
     generatedAtLabel: formatTimestampLabel(assessment.generatedAt),
     budgetTier: tier,
-    omittedContentLabels: [...new Set(omittedLabels)]
+    omittedContentLabels: [...new Set(omittedLabels)],
+    investorQuestions: (assessment.investorQuestions ?? []).slice(0, budget.maxInvestorQuestions).map((q) => ({
+      question: q.question,
+      whyNow: q.whyNow,
+      context: q.context ?? null,
+      responseFramework: q.responseFramework ?? null,
+      followUpNeeded: q.followUpNeeded ?? null
+    })),
+    catalystsCalendarTable: buildCatalystsCalendarTable(payload)
   };
 }
