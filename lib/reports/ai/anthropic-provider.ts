@@ -28,6 +28,23 @@ const WATCH_ITEM_SCHEMA = {
   required: ["item", "reason", "evidenceIds"]
 };
 
+const INVESTOR_QUESTION_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    question: { type: "string", description: "A specific, credible investor question, only when a real triggering development in the supplied evidence justifies it." },
+    whyNow: { type: "string", description: "The specific development/evidence that makes this question timely right now -- not a generic recurring question." },
+    evidenceIds: { type: "array", items: { type: "string" }, description: "Evidence ids that justify why this question is credible right now, from the supplied allowlist only." },
+    context: { type: "string", description: "Optional additional company/macro context relevant to the question." },
+    responseFramework: {
+      type: "string",
+      description:
+        "Optional concise preparation framework for IR, ONLY if adequately supported by supplied evidence. Must read as preparation based on public information, never as an official Range statement, management position, guidance, or commitment."
+    },
+    followUpNeeded: { type: "string", description: "Optional: specific data IR may need to gather/verify before being ready to answer this well." }
+  },
+  required: ["question", "whyNow", "evidenceIds"]
+};
+
 /**
  * Wired into a future Phase 7F scheduled orchestration (not built in
  * Phase 7C -- see lib/reports/analyst-service.ts's own header). Forces
@@ -77,9 +94,16 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
               },
               managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 6 },
               bottomLine: { type: "string", minLength: 20, description: "1-3 sentence closing synthesis. Required and must not be left empty." },
-              selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." }
+              selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." },
+              investorQuestions: {
+                type: "array",
+                items: INVESTOR_QUESTION_SCHEMA,
+                maxItems: 6,
+                description:
+                  "Investor questions IR should prepare for, ONLY when a real, credible triggering development exists in the supplied evidence. Zero items is correct and expected most weeks -- do not invent a question merely to fill this field, and never force a fixed count."
+              }
             },
-            required: ["executiveAssessment", "biggestRisk", "biggestOpportunity", "whatChanged", "managementWatchItems", "bottomLine", "selectedEvidenceIds"]
+            required: ["executiveAssessment", "biggestRisk", "biggestOpportunity", "whatChanged", "managementWatchItems", "bottomLine", "selectedEvidenceIds", "investorQuestions"]
           }
         }
       ]

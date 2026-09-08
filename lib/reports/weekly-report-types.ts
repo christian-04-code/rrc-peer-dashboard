@@ -213,7 +213,13 @@ export type EvidenceModuleKey =
   // reference to the underlying evidence item), not a duplicate copy of
   // those signals' own metrics -- see comparisons.ts's file header for why.
   | "range_company"
-  | "deterministic_risk_opportunity";
+  | "deterministic_risk_opportunity"
+  // Added for the IR-report enhancement (2026-09-08): RRC + peer valuation
+  // (enterprise value, EV/LTM EBITDAX, LTM FCF yield, market cap), all
+  // derived from the same quarterly fixture "peers"/"range_company" already
+  // read, market-cap-based rather than a live share-price feed -- see
+  // calculated-quarterly.ts's own header note on that decision.
+  | "valuation";
 
 export type ChartKind = "line" | "bar" | "map" | "table";
 

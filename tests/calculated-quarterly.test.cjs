@@ -6,10 +6,16 @@ const {
   daysInQuarter,
   getCapexPerMcfe,
   getLtmAdjustedEbitdax,
+  getLtmFreeCashFlow,
+  getEnterpriseValue,
+  getEvToLtmAdjustedEbitdax,
+  getLtmFcfYield,
   getNetDebtToLtmAdjustedEbitdax,
   getRealizedPricePerMcfe
 } = load("lib/dashboard/calculated-quarterly.ts");
 const { getQuarterlyFinancials, quarters } = load("lib/dashboard/financials-quarterly.ts");
+const { getQuarterlyFreeCashFlow } = load("lib/dashboard/free-cash-flow-quarterly.ts");
+const { getQuarterlyMarketCap } = load("lib/dashboard/market-cap-quarterly.ts");
 
 test("daysInQuarter returns exact calendar days, accounting for leap years", () => {
   assert.equal(daysInQuarter("Q1 2024"), 91); // Jan(31) + Feb(29, leap) + Mar(31)
@@ -117,4 +123,75 @@ test("Realized Price / Mcfe sits within a plausible blended band (between the lo
 test("Net Debt / LTM EBITDAX is unavailable, not fabricated, when net debt or LTM EBITDAX is blank", () => {
   const result = getNetDebtToLtmAdjustedEbitdax("RRC", "Q2 2024");
   assert.equal(result.value, null);
+});
+
+// --- Valuation metrics added for the IR-report enhancement (2026-09-08) ---
+
+test("LTM free cash flow sums exactly four standalone quarters, same windowing convention as LTM Adjusted EBITDAX", () => {
+  const q1 = getQuarterlyFreeCashFlow("RRC", "Q1 2024").value;
+  const q2 = getQuarterlyFreeCashFlow("RRC", "Q2 2024").value;
+  const q3 = getQuarterlyFreeCashFlow("RRC", "Q3 2024").value;
+  const q4 = getQuarterlyFreeCashFlow("RRC", "Q4 2024").value;
+  const ltm = getLtmFreeCashFlow("RRC", "Q4 2024");
+  assert.ok(Math.abs(ltm.value - (q1 + q2 + q3 + q4)) < 1e-6);
+});
+
+test("LTM free cash flow is unavailable, not fabricated, when fewer than four quarters exist", () => {
+  const result = getLtmFreeCashFlow("RRC", "Q1 2024");
+  assert.equal(result.value, null);
+});
+
+test("Enterprise value = quarter-end market cap + quarter-end net debt, for the same quarter-end date", () => {
+  const marketCap = getQuarterlyMarketCap("RRC", "Q2 2026").value;
+  const netDebt = getQuarterlyFinancials("RRC", "Q2 2026").netDebt.value;
+  const ev = getEnterpriseValue("RRC", "Q2 2026");
+  assert.ok(Math.abs(ev.value - (marketCap + netDebt)) < 1e-6);
+});
+
+test("Enterprise value is unavailable, not fabricated, when market cap is blank", () => {
+  // Q1 2024 predates this project's market-cap fixture start for no ticker,
+  // so instead force the blank case via a quarter with a genuinely absent value.
+  for (const ticker of ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
+    for (const quarter of quarters) {
+      if (getQuarterlyMarketCap(ticker, quarter) === undefined) {
+        const ev = getEnterpriseValue(ticker, quarter);
+        assert.equal(ev.value, null);
+        return;
+      }
+    }
+  }
+});
+
+test("EV / LTM Adjusted EBITDAX is calculated metric with an explicit 'not company reported or consensus' note", () => {
+  const result = getEvToLtmAdjustedEbitdax("RRC", "Q4 2024");
+  if (result.value !== null) {
+    assert.match(result.note, /not company reported or consensus/);
+  }
+});
+
+test("EV / LTM Adjusted EBITDAX is unavailable, not fabricated, when LTM Adjusted EBITDAX is blank (fewer than 4 quarters)", () => {
+  const result = getEvToLtmAdjustedEbitdax("RRC", "Q1 2024");
+  assert.equal(result.value, null);
+});
+
+test("LTM FCF yield = LTM free cash flow / quarter-end market cap, expressed as a fraction not a pre-multiplied percentage", () => {
+  const ltmFcf = getLtmFreeCashFlow("RRC", "Q4 2024").value;
+  const marketCap = getQuarterlyMarketCap("RRC", "Q4 2024").value;
+  const yieldResult = getLtmFcfYield("RRC", "Q4 2024");
+  assert.ok(Math.abs(yieldResult.value - ltmFcf / marketCap) < 1e-9);
+});
+
+test("LTM FCF yield is unavailable, not fabricated, when LTM free cash flow is blank", () => {
+  const result = getLtmFcfYield("RRC", "Q1 2024");
+  assert.equal(result.value, null);
+});
+
+test("Every new valuation metric's source/basis is 'codex'/'derived' -- a calculated multiple is never presented as a company-reported or market-data actual", () => {
+  for (const fn of [getLtmFreeCashFlow, getEnterpriseValue, getEvToLtmAdjustedEbitdax, getLtmFcfYield]) {
+    const result = fn("RRC", "Q4 2024");
+    if (result.value !== null) {
+      assert.equal(result.source, "codex");
+      assert.equal(result.basis, "derived");
+    }
+  }
 });

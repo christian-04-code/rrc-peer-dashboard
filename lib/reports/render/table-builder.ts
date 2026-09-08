@@ -1,8 +1,9 @@
-import type { ComparisonResult, WeeklyEvidenceItem, WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
+import type { ComparisonResult, EvidenceModuleKey, WeeklyEvidenceItem, WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
 import { rankEvidenceByMateriality } from "@/lib/reports/materiality";
 import type { ContentBudget } from "@/lib/reports/render/content-budget";
 import type { TablePlan, TableRow } from "@/lib/reports/render/render-model";
 import { formatSignedPct } from "@/lib/reports/render/format";
+import { CATEGORY_WHY_IT_MATTERS } from "@/lib/reports/render/commentary";
 
 /**
  * Phase 7D deterministic table construction -- every function here is a
@@ -133,6 +134,74 @@ export function buildPeerComparisonTable(payload: WeeklyReportPayload, budget: C
   };
 }
 
+const VALUATION_METRIC_COLUMNS: { metricKey: string; label: string }[] = [
+  { metricKey: "market_cap", label: "Market Cap" },
+  { metricKey: "enterprise_value", label: "EV" },
+  { metricKey: "ev_to_ltm_ebitdax", label: "EV/LTM EBITDAX" },
+  { metricKey: "ltm_fcf_yield", label: "LTM FCF Yield" }
+];
+
+/**
+ * Valuation & Share-Price Context (added for the IR-report enhancement,
+ * 2026-09-08). Unlike buildPeerComparisonTable, RRC and peers share one
+ * "valuation" category (see valuation-adapter.ts), distinguished by
+ * `metadata.isRange`/`metadata.ticker` -- not a category split. Returns null
+ * when there is no real valuation data at all, and omits a metric column
+ * entirely (never fills every row with "--") if RRC's own side of that
+ * metric is unavailable, same discipline as buildPeerComparisonTable.
+ */
+export function buildValuationComparisonTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
+  const items = payload.modules.valuation ?? [];
+  if (items.length === 0) return null;
+
+  const rangeByMetric = new Map(items.filter((item) => item.metadata.isRange === true).map((item) => [item.metricKey, item]));
+  const columns = VALUATION_METRIC_COLUMNS.filter((spec) => {
+    const item = rangeByMetric.get(spec.metricKey);
+    return item !== undefined && item.currentValue !== null;
+  });
+  if (columns.length === 0) return null;
+
+  const peerTickers = [...new Set(items.filter((item) => item.metadata.isRange === false).map((item) => item.metadata.ticker).filter((t): t is string => typeof t === "string"))].sort();
+  const { rows: selectedTickers, truncatedCount } = truncate(
+    peerTickers.map((t) => ({ ticker: t })),
+    budget.maxPeerCompanies
+  );
+
+  const byTickerAndMetric = new Map(items.map((item) => [`${item.metadata.ticker}:${item.metricKey}`, item]));
+
+  const rows: TableRow[] = [Object.fromEntries([["company", "RRC"], ...columns.map((spec) => [spec.metricKey, rangeByMetric.get(spec.metricKey)!.displayValue])])];
+  for (const { ticker } of selectedTickers) {
+    rows.push(
+      Object.fromEntries([
+        ["company", ticker],
+        ...columns.map((spec) => {
+          const item = byTickerAndMetric.get(`${ticker}:${spec.metricKey}`);
+          return [spec.metricKey, item && item.currentValue !== null ? item.displayValue : "--"];
+        })
+      ])
+    );
+  }
+
+  const shownSourceLabels = new Set<string>();
+  for (const spec of columns) {
+    const rangeSource = rangeByMetric.get(spec.metricKey)?.metadata.source;
+    if (typeof rangeSource === "string") shownSourceLabels.add(rangeSource);
+    for (const { ticker } of selectedTickers) {
+      const peerSource = byTickerAndMetric.get(`${ticker}:${spec.metricKey}`)?.metadata.source;
+      if (typeof peerSource === "string") shownSourceLabels.add(peerSource);
+    }
+  }
+
+  return {
+    id: "valuation_comparison",
+    title: "Valuation & Share-Price Context",
+    columns: [{ key: "company", label: "Company", align: "left" }, ...columns.map((spec) => ({ key: spec.metricKey, label: spec.label, align: "right" as const }))],
+    rows,
+    sourceLine: shownSourceLabels.size > 0 ? [...shownSourceLabels].join("; ") : null,
+    truncatedCount
+  };
+}
+
 export function buildRisksOpportunitiesTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
   const items = payload.modules.deterministic_risk_opportunity ?? [];
   if (items.length === 0) return null;
@@ -167,22 +236,33 @@ function newsImpactCell(item: WeeklyEvidenceItem): string {
   return strength ? `${strength} ${direction}` : direction;
 }
 
-export function buildNewsTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
-  const items = payload.modules.news ?? [];
+/**
+ * Takes an explicit, already-filtered item list (not the whole payload) so
+ * the three News-derived sections -- generic Material News, Company-Specific
+ * News & Implications, Peer Developments That Matter to Range (see
+ * evidence-sections.ts's partitionNewsItems) -- can each call this once with
+ * their own partition rather than each re-reading and re-filtering
+ * payload.modules.news themselves.
+ */
+export function buildNewsTable(items: WeeklyEvidenceItem[], budget: ContentBudget, id: string, title: string): TablePlan | null {
   if (items.length === 0) return null;
   const { rows, truncatedCount } = truncate(
     items.map((item) => ({
       headline: item.label,
       publisher: typeof item.metadata.publisher === "string" ? item.metadata.publisher : "--",
       date: item.asOfDate ?? "--",
-      category: typeof item.metadata.category === "string" ? item.metadata.category : "--",
+      // metadata.category is NewsCategory[] (an article can carry more than one
+      // tag, e.g. ["range","natural_gas"]) -- a previous version of this table
+      // checked `typeof === "string"`, which is never true for the real shape,
+      // so the column always rendered "--" in production.
+      category: Array.isArray(item.metadata.category) && item.metadata.category.length > 0 ? item.metadata.category.join(", ") : "--",
       rangeImpact: newsImpactCell(item)
     })),
     budget.maxNewsRows
   );
   return {
-    id: "material_news",
-    title: "Material News",
+    id,
+    title,
     columns: [
       { key: "headline", label: "Headline", align: "left" },
       { key: "publisher", label: "Publisher", align: "left" },
@@ -216,5 +296,131 @@ export function buildSourcesFreshnessTable(payload: WeeklyReportPayload, budget:
     rows,
     sourceLine: `Data cutoff: ${payload.dataCutoffAt}`,
     truncatedCount
+  };
+}
+
+/** Categories with a genuinely near-weekly observation cadence -- excludes quarterly-only categories (range_company, peers, valuation, forecast_scenarios) and monthly STEO, none of which have a real "next week" data point, so they'd never belong in a NEXT-WEEK watch list. */
+const NEXT_WEEK_WATCH_CATEGORIES: EvidenceModuleKey[] = ["storage", "gas_pricing", "us_gas_supply", "appalachia_supply", "lng_demand", "power_data_center_demand", "industrial_demand", "rigs"];
+
+/** The next Thursday on/after `fromIso` -- EIA's own weekly storage report release day, the one release date this codebase already has concrete, code-established knowledge of (see docs/PHASE_7_WEEKLY_REPORT_ARCHITECTURE.md's own note on the ~14:30-15:30 ET Thursday window). Every other tracked series' exact next release date is not reliably known here, so this helper is deliberately not reused for them -- they get "--" rather than a guessed date. */
+function nextThursday(fromIso: string): string | null {
+  const from = new Date(fromIso);
+  if (Number.isNaN(from.getTime())) return null;
+  const day = from.getUTCDay(); // 0=Sun..6=Sat, Thursday=4
+  const daysUntilThursday = ((4 - day + 7) % 7) || 7;
+  const next = new Date(from.getTime() + daysUntilThursday * 86_400_000);
+  return next.toISOString().slice(0, 10);
+}
+
+/**
+ * "Key Metrics to Watch Next Week" (IR-report enhancement, 2026-09-08).
+ * Selects the highest-materiality items from categories with a real
+ * near-week observation cadence, never a fixed count (however many clear
+ * the budget's row cap, could be zero). "Next observation" is populated
+ * only for storage (the one release date genuinely known in advance);
+ * every other category gets "--" rather than a guessed date, per the
+ * explicit "do not invent a date" instruction.
+ */
+export function buildKeyMetricsToWatchTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
+  const candidates = NEXT_WEEK_WATCH_CATEGORIES.flatMap((category) => payload.modules[category] ?? []);
+  if (candidates.length === 0) return null;
+
+  const ranked = rankEvidenceByMateriality(candidates);
+  const { rows: selected, truncatedCount } = truncate(
+    ranked.map((item) => ({
+      metric: item.label,
+      value: item.period ? `${item.displayValue} (${item.period})` : item.displayValue,
+      whyItMatters: CATEGORY_WHY_IT_MATTERS[item.category] ?? "Tracked as part of Range's core weekly evidence set.",
+      nextObservation: item.category === "storage" ? nextThursday(payload.dataCutoffAt) ?? "--" : "--"
+    })),
+    budget.maxKeyMetricsToWatch
+  );
+
+  return {
+    id: "key_metrics_to_watch",
+    title: "Key Metrics to Watch Next Week",
+    columns: [
+      { key: "metric", label: "Metric", align: "left" },
+      { key: "value", label: "Latest Value (Period)", align: "left" },
+      { key: "whyItMatters", label: "Why It Matters", align: "left" },
+      { key: "nextObservation", label: "Next Observation", align: "left" }
+    ],
+    rows: selected,
+    sourceLine: null,
+    truncatedCount
+  };
+}
+
+/**
+ * "Guidance & Consensus Watch" (IR-report enhancement, 2026-09-08) --
+ * reuses the existing company-guidance evidence (range-company-adapter.ts's
+ * `guidance:*` metricKeys, already sourced from getCompanyGuidanceRecords)
+ * rather than building a new guidance pipeline. Consensus is deliberately
+ * NOT included: this project has no analyst-consensus data source, and
+ * showing a guidance-only table under a "Guidance & Consensus" heading
+ * without ever implying a consensus comparison exists is exactly the
+ * "do not imply a consensus comparison exists when only guidance is
+ * available" instruction -- so this is titled "Guidance Watch," not
+ * "Guidance & Consensus Watch", whenever consensus data is absent (always,
+ * today).
+ */
+export function buildGuidanceWatchTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
+  const guidanceItems = (payload.modules.range_company ?? []).filter((item) => item.metricKey.startsWith("guidance:"));
+  if (guidanceItems.length === 0) return null;
+
+  const { rows, truncatedCount } = truncate(
+    guidanceItems.map((item) => ({
+      metric: item.label,
+      guidance: item.displayValue,
+      period: item.period ?? "--",
+      source: typeof item.metadata.source === "string" ? item.metadata.source : "--"
+    })),
+    budget.maxGuidanceRows
+  );
+
+  return {
+    id: "guidance_watch",
+    title: "Guidance Watch",
+    columns: [
+      { key: "metric", label: "Metric", align: "left" },
+      { key: "guidance", label: "Company Guidance", align: "left" },
+      { key: "period", label: "Period", align: "left" },
+      { key: "source", label: "Source", align: "left" }
+    ],
+    rows,
+    sourceLine: "Company-reported guidance only -- no analyst-consensus data source exists in this dashboard today; no consensus comparison is implied.",
+    truncatedCount
+  };
+}
+
+/**
+ * "Upcoming Catalysts Calendar" (IR-report enhancement, 2026-09-08).
+ * Deliberately minimal: the only future date this codebase can state with
+ * real confidence is the next EIA weekly storage release (always the
+ * following Thursday). Range/peer earnings dates, STEO's exact release day,
+ * and regulatory/pipeline milestone dates all require a real calendar data
+ * source this project doesn't have -- per the explicit "do not invent an
+ * earnings date... if no reliable date exists, do not place the event on
+ * the calendar" instruction, this function never guesses one. A future
+ * phase could extend this once a real, approved calendar source exists;
+ * until then, returning a single confirmed row (never an empty "no
+ * catalysts" placeholder table, since the section itself is omitted by the
+ * caller when this returns null) is the correct, honest behavior.
+ */
+export function buildCatalystsCalendarTable(payload: WeeklyReportPayload): TablePlan | null {
+  const nextStorageDate = nextThursday(payload.dataCutoffAt);
+  if (!nextStorageDate) return null;
+
+  return {
+    id: "catalysts_calendar",
+    title: "Upcoming Catalysts Calendar",
+    columns: [
+      { key: "date", label: "Date", align: "left" },
+      { key: "event", label: "Event", align: "left" },
+      { key: "confidence", label: "Confidence", align: "left" }
+    ],
+    rows: [{ date: nextStorageDate, event: "EIA Weekly Natural Gas Storage Report", confidence: "Confirmed (recurring weekly release)" }],
+    sourceLine: "Only confirmed, reliably-scheduled events are shown -- Range/peer earnings dates and other project milestones are omitted rather than estimated, since no calendar data source for them exists in this dashboard today.",
+    truncatedCount: 0
   };
 }

@@ -28,6 +28,7 @@ import { collectRangeCompanyEvidence } from "@/lib/reports/adapters/range-compan
 import { collectPeersEvidence } from "@/lib/reports/adapters/peers-adapter";
 import { collectForecastEvidence } from "@/lib/reports/adapters/forecast-adapter";
 import { collectNewsEvidence } from "@/lib/reports/adapters/news-adapter";
+import { collectValuationEvidence } from "@/lib/reports/adapters/valuation-adapter";
 
 /**
  * Phase 7B snapshot builder -- the internal service boundary the phase
@@ -50,6 +51,7 @@ export type CollectedWeeklyInputs = {
   peers: ReturnType<typeof collectPeersEvidence>;
   forecast: ReturnType<typeof collectForecastEvidence>;
   news: Awaited<ReturnType<typeof collectNewsEvidence>>;
+  valuation: ReturnType<typeof collectValuationEvidence>;
 };
 
 export type WeeklyDataCutoff = {
@@ -67,14 +69,15 @@ export type WeeklyDataCutoff = {
  * established `dataCutoffAt`, so they all run concurrently.
  */
 export async function collectWeeklyIntelligenceInputs(pool: Pool | null, cutoff: WeeklyDataCutoff, now: Date = new Date()): Promise<Omit<CollectedWeeklyInputs, "macro">> {
-  const [rigs, rangeCompany, peers, forecast, news] = await Promise.all([
+  const [rigs, rangeCompany, peers, forecast, news, valuation] = await Promise.all([
     Promise.resolve(collectRigsEvidence(now)),
     Promise.resolve(collectRangeCompanyEvidence(now)),
     Promise.resolve(collectPeersEvidence()),
     Promise.resolve(collectForecastEvidence()),
-    collectNewsEvidence(pool, cutoff.previousDataCutoffAt, cutoff.dataCutoffAt)
+    collectNewsEvidence(pool, cutoff.previousDataCutoffAt, cutoff.dataCutoffAt),
+    Promise.resolve(collectValuationEvidence())
   ]);
-  return { rigs, rangeCompany, peers, forecast, news };
+  return { rigs, rangeCompany, peers, forecast, news, valuation };
 }
 
 function mergeModules(collected: CollectedWeeklyInputs): WeeklyReportModules {
@@ -88,6 +91,7 @@ function mergeModules(collected: CollectedWeeklyInputs): WeeklyReportModules {
   addAll("peers", collected.peers.items);
   addAll("forecast_scenarios", collected.forecast.items);
   addAll("news", collected.news.items);
+  addAll("valuation", collected.valuation.items);
   return merged;
 }
 
@@ -99,7 +103,8 @@ export function buildSourceManifest(collected: CollectedWeeklyInputs): SourceFre
       ...collected.rangeCompany.manifestEntries,
       ...collected.peers.manifestEntries,
       ...collected.forecast.manifestEntries,
-      ...collected.news.manifestEntries
+      ...collected.news.manifestEntries,
+      ...collected.valuation.manifestEntries
     ]
   };
 }

@@ -5,6 +5,8 @@ import {
   type Quarter,
   type SourcedValue
 } from "@/lib/dashboard/financials-quarterly";
+import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarterly";
+import { getQuarterlyMarketCap } from "@/lib/dashboard/market-cap-quarterly";
 
 export function getLtmAdjustedEbitdax(ticker: Ticker, quarter: Quarter): SourcedValue {
   const index = quarters.indexOf(quarter);
@@ -165,4 +167,94 @@ export function getRealizedPricePerMcfe(ticker: Ticker, quarter: Quarter): Sourc
 
 function unavailable(note: string): SourcedValue {
   return { value: null, source: "codex", basis: "derived", note };
+}
+
+/**
+ * Added for the IR-report Valuation & Share-Price Context section (2026-09-08).
+ * Deliberately built ONLY from data this dashboard already validates quarter-
+ * end (market cap, net debt, Adjusted EBITDAX, free cash flow) rather than a
+ * live share-price feed: the existing Overview "Share price" card already
+ * shows live Finnhub/FMP quotes are not reliably available server-side (both
+ * are client-only React hooks today, with no existing server-callable
+ * function), and this project's own rule is to omit rather than build a new,
+ * unreliable dependency. Market-cap-based valuation is the more stable
+ * existing alternative -- same convention getNetDebtToLtmAdjustedEbitdax
+ * above already established for leverage.
+ */
+
+/** Sum of the last 4 reported quarters' free cash flow -- same LTM windowing convention as getLtmAdjustedEbitdax/getLtmNetIncome above, not a mix of quarterly and annualized figures. */
+export function getLtmFreeCashFlow(ticker: Ticker, quarter: Quarter): SourcedValue {
+  const index = quarters.indexOf(quarter);
+  if (index < 3) {
+    return unavailable("Four reported quarters are required to calculate LTM free cash flow.");
+  }
+
+  const period = quarters.slice(index - 3, index + 1);
+  const values = period.map((item) => getQuarterlyFreeCashFlow(ticker, item)?.value ?? null);
+  if (values.some((value) => value === null)) {
+    return unavailable("LTM free cash flow is unavailable because at least one underlying quarter is blank.");
+  }
+
+  return {
+    value: (values as number[]).reduce((sum, value) => sum + value, 0),
+    source: "codex",
+    basis: "derived",
+    note: `Calculated as the sum of reported free cash flow for ${period.join(", ")}.`
+  };
+}
+
+/** Enterprise value = quarter-end market capitalization + quarter-end net debt. Both are point-in-time balance-sheet/market figures for the same quarter-end date, not mixed periods. */
+export function getEnterpriseValue(ticker: Ticker, quarter: Quarter): SourcedValue {
+  const marketCap = getQuarterlyMarketCap(ticker, quarter);
+  const netDebt = getQuarterlyFinancials(ticker, quarter).netDebt;
+
+  if (!marketCap || marketCap.value === null) {
+    return unavailable("Enterprise value is unavailable because quarter-end market capitalization is blank.");
+  }
+  if (netDebt.value === null) {
+    return unavailable("Enterprise value is unavailable because quarter-end net debt is blank.");
+  }
+
+  return {
+    value: marketCap.value + netDebt.value,
+    source: "codex",
+    basis: "derived",
+    note: `Calculated as quarter-end market capitalization (source: ${marketCap.source}) + quarter-end net debt (source: ${netDebt.source}), both as of the ${quarter} quarter-end.`
+  };
+}
+
+/** EV / LTM Adjusted EBITDAX -- a calculated multiple, never a company-reported or consensus figure. */
+export function getEvToLtmAdjustedEbitdax(ticker: Ticker, quarter: Quarter): SourcedValue {
+  const ev = getEnterpriseValue(ticker, quarter);
+  const ltmEbitdax = getLtmAdjustedEbitdax(ticker, quarter);
+
+  if (ev.value === null) return unavailable("EV / LTM Adjusted EBITDAX is unavailable because enterprise value is blank.");
+  if (ltmEbitdax.value === null || ltmEbitdax.value === 0) {
+    return unavailable("EV / LTM Adjusted EBITDAX is unavailable because LTM Adjusted EBITDAX is blank or zero.");
+  }
+
+  return {
+    value: ev.value / ltmEbitdax.value,
+    source: "codex",
+    basis: "derived",
+    note: "Calculated as enterprise value (quarter-end market cap + net debt) divided by LTM Adjusted EBITDAX. Calculated metric; not company reported or consensus."
+  };
+}
+
+/** LTM free cash flow / quarter-end market capitalization -- an LTM yield, never a quarterly figure silently annualized. */
+export function getLtmFcfYield(ticker: Ticker, quarter: Quarter): SourcedValue {
+  const ltmFcf = getLtmFreeCashFlow(ticker, quarter);
+  const marketCap = getQuarterlyMarketCap(ticker, quarter);
+
+  if (ltmFcf.value === null) return unavailable("LTM FCF yield is unavailable because LTM free cash flow is blank.");
+  if (!marketCap || marketCap.value === null || marketCap.value === 0) {
+    return unavailable("LTM FCF yield is unavailable because quarter-end market capitalization is blank or zero.");
+  }
+
+  return {
+    value: ltmFcf.value / marketCap.value,
+    source: "codex",
+    basis: "derived",
+    note: `Calculated as LTM free cash flow divided by quarter-end market capitalization (source: ${marketCap.source}), as of the ${quarter} quarter-end. Expressed as a fraction (multiply by 100 for a percentage).`
+  };
 }

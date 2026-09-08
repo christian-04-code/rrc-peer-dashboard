@@ -86,6 +86,28 @@ export type WeeklyAnalystWatchItem = {
   evidenceIds: string[];
 };
 
+/**
+ * "Investor Questions to Prepare For" (IR-report enhancement, 2026-09-08).
+ * The one genuinely new AI-synthesized field this pass adds -- everything
+ * else new in this release (Valuation, Key Metrics to Watch, Guidance
+ * Watch, Catalysts Calendar, Company/Peer News) is deterministic, composed
+ * entirely from already-existing evidence with no new model output. Every
+ * question must cite >=1 evidenceId (validateInvestorQuestion below) --
+ * never a question invented with no grounding in the supplied evidence.
+ * `context`/`responseFramework`/`followUpNeeded` are all optional: a
+ * question can be included with only its `whyNow` reasoning and citations
+ * if that's all the evidence actually supports.
+ */
+export type WeeklyAnalystInvestorQuestion = {
+  question: string;
+  whyNow: string;
+  evidenceIds: string[];
+  context?: string;
+  /** Always rendered with an explicit "preparation based on public information, not an official Range statement" label -- see html-template.ts. Never an invented management position, commitment, or guidance. */
+  responseFramework?: string;
+  followUpNeeded?: string;
+};
+
 export type WeeklyAnalystAssessment = {
   schemaVersion: string;
   aiProvider: string;
@@ -99,9 +121,11 @@ export type WeeklyAnalystAssessment = {
   bottomLine: string;
   /** Every evidence id the assessment relies on, union'd across all fields above -- a convenience summary, still validated as a subset of the allowlist like everything else. */
   selectedEvidenceIds: string[];
+  /** May be empty -- zero is the normal, expected value for a quiet week (see WeeklyAnalystInvestorQuestion's own header). Never padded to a minimum count. */
+  investorQuestions: WeeklyAnalystInvestorQuestion[];
 };
 
-export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.1.0";
+export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.2.0";
 
 export class WeeklyAnalystValidationError extends Error {}
 
@@ -125,6 +149,8 @@ const MIN_BOTTOM_LINE_CHARS = 15;
 const MAX_WHAT_CHANGED_ITEMS = 5;
 const MAX_WATCH_ITEMS = 6;
 const MIN_WATCH_ITEMS = 1;
+/** No minimum -- 0 is the normal, expected value for a quiet week (see WeeklyAnalystInvestorQuestion's own header). This is a safety ceiling only, never a target the model should try to fill. */
+const MAX_INVESTOR_QUESTIONS = 6;
 
 /**
  * Known generic-filler phrasing this project has decided is never an
@@ -233,6 +259,29 @@ function validateWatchItem(value: unknown, index: number): WeeklyAnalystWatchIte
   return record as WeeklyAnalystWatchItem;
 }
 
+function validateInvestorQuestion(value: unknown, index: number): WeeklyAnalystInvestorQuestion {
+  if (typeof value !== "object" || value === null) fail(`Weekly analyst response investorQuestions[${index}] is not an object.`);
+  const record = value as Record<string, unknown>;
+  if (!isNonEmptyString(record.question)) fail(`Weekly analyst response investorQuestions[${index}].question is missing or empty.`);
+  if (!isNonEmptyString(record.whyNow)) fail(`Weekly analyst response investorQuestions[${index}].whyNow is missing or empty.`);
+  if (!isStringArray(record.evidenceIds) || record.evidenceIds.length === 0) {
+    fail(`Weekly analyst response investorQuestions[${index}].evidenceIds must be a non-empty string array -- a question must be grounded in supplied evidence, never invented.`);
+  }
+  for (const [field, val] of [
+    ["context", record.context],
+    ["responseFramework", record.responseFramework],
+    ["followUpNeeded", record.followUpNeeded]
+  ] as const) {
+    if (val !== undefined && !isNonEmptyString(val)) {
+      fail(`Weekly analyst response investorQuestions[${index}].${field}, if present, must be a non-empty string.`);
+    }
+    if (typeof val === "string") checkGuardedText(val, `investorQuestions[${index}].${field}`);
+  }
+  checkGuardedText(record.question as string, `investorQuestions[${index}].question`);
+  checkGuardedText(record.whyNow as string, `investorQuestions[${index}].whyNow`);
+  return record as unknown as WeeklyAnalystInvestorQuestion;
+}
+
 function checkGuardedText(text: string, fieldName: string): void {
   const filler = findPattern(GENERIC_FILLER_PATTERNS, text);
   if (filler) fail(`Weekly analyst response "${fieldName}" uses generic filler language ("${filler}") instead of a grounded assessment.`);
@@ -300,6 +349,16 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
   }
   const managementWatchItems = record.managementWatchItems.map((item, index) => validateWatchItem(item, index));
 
+  // investorQuestions may be genuinely absent from an older/looser response shape
+  // during the transition to this field -- treated as an empty array (0 is always
+  // valid) rather than a hard failure, so this new field can never be the reason
+  // an otherwise-sound response gets rejected.
+  const rawInvestorQuestions = record.investorQuestions === undefined ? [] : record.investorQuestions;
+  if (!Array.isArray(rawInvestorQuestions) || rawInvestorQuestions.length > MAX_INVESTOR_QUESTIONS) {
+    fail(`Weekly analyst response "investorQuestions" must be an array of at most ${MAX_INVESTOR_QUESTIONS} items.`);
+  }
+  const investorQuestions = rawInvestorQuestions.map((item, index) => validateInvestorQuestion(item, index));
+
   if (!isStringArray(record.selectedEvidenceIds)) fail('Weekly analyst response "selectedEvidenceIds" must be a string array.');
   const selectedEvidenceIds = record.selectedEvidenceIds as string[];
   if (new Set(selectedEvidenceIds).size !== selectedEvidenceIds.length) {
@@ -313,6 +372,7 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
     ...biggestOpportunity.evidenceIds,
     ...whatChanged.flatMap((item) => item.evidenceIds),
     ...managementWatchItems.flatMap((item) => item.evidenceIds),
+    ...investorQuestions.flatMap((item) => item.evidenceIds),
     ...selectedEvidenceIds
   ];
   const unknownIds = [...new Set(allCitedIds)].filter((id) => !allowlist.has(id));
@@ -349,6 +409,7 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
     whatChanged,
     managementWatchItems,
     bottomLine: record.bottomLine as string,
-    selectedEvidenceIds
+    selectedEvidenceIds,
+    investorQuestions
   };
 }

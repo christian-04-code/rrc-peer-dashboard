@@ -74,6 +74,23 @@ export type CalloutItem = {
   body: string;
 };
 
+/**
+ * "Investor Questions to Prepare For" (IR-report enhancement, 2026-09-08).
+ * The one AI-synthesized (not deterministic) new section -- every field
+ * still traces to the same evidenceAllowlist every other AI field does (see
+ * ai-contract.ts's WeeklyAnalystInvestorQuestion), and `responseFramework`
+ * is always rendered with an explicit "preparation based on public
+ * information, not an official Range statement" label, never presented as
+ * an actual management position.
+ */
+export type InvestorQuestionItem = {
+  question: string;
+  whyNow: string;
+  context: string | null;
+  responseFramework: string | null;
+  followUpNeeded: string | null;
+};
+
 export type WeeklyReportRenderModel = {
   identity: ReportIdentity;
   /** Already split into paragraphs (Phase 7C.1's 2-3 paragraph executiveAssessment) -- the template renders one <p> per entry, never re-splits prose itself. */
@@ -91,4 +108,8 @@ export type WeeklyReportRenderModel = {
   budgetTier: RenderBudgetTier;
   /** Human-readable labels of candidate content dropped by the content budget (e.g. "News" when no room remained) -- surfaced in a small footer note rather than silently vanishing. Empty when nothing was dropped. */
   omittedContentLabels: string[];
+  /** Empty most weeks by design -- see InvestorQuestionItem's own header. Never padded to a minimum count. */
+  investorQuestions: InvestorQuestionItem[];
+  /** Null whenever no reliably-dated future event exists (see buildCatalystsCalendarTable) -- never an empty placeholder table. */
+  catalystsCalendarTable: TablePlan | null;
 };

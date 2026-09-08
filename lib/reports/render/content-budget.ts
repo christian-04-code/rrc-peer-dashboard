@@ -26,6 +26,10 @@ export type ContentBudget = {
   maxWhatChangedItems: number;
   maxWatchItems: number;
   maxCommentarySentences: number;
+  /** Added for the IR-report enhancement (2026-09-08). Every cap below is a safety CEILING, never a target -- each underlying section is independently gated on real evidence existing at all (see evidence-sections.ts/ai-contract.ts), so 0 is the normal, expected value most weeks for at least one of these. */
+  maxKeyMetricsToWatch: number;
+  maxGuidanceRows: number;
+  maxInvestorQuestions: number;
 };
 
 export const STANDARD_BUDGET: ContentBudget = {
@@ -44,7 +48,10 @@ export const STANDARD_BUDGET: ContentBudget = {
   maxSourceRows: 20,
   maxWhatChangedItems: 5,
   maxWatchItems: 6,
-  maxCommentarySentences: 3
+  maxCommentarySentences: 3,
+  maxKeyMetricsToWatch: 6,
+  maxGuidanceRows: 8,
+  maxInvestorQuestions: 5
 };
 
 /**
@@ -71,7 +78,10 @@ export const REDUCED_BUDGET: ContentBudget = {
   maxSourceRows: 20,
   maxWhatChangedItems: 4,
   maxWatchItems: 4,
-  maxCommentarySentences: 2
+  maxCommentarySentences: 2,
+  maxKeyMetricsToWatch: 5,
+  maxGuidanceRows: 6,
+  maxInvestorQuestions: 4
 };
 
 export function budgetForTier(tier: RenderBudgetTier): ContentBudget {

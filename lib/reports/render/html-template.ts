@@ -184,6 +184,39 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
     </div>`
       : "";
 
+  // "Investor Questions to Prepare For" (IR-report enhancement, 2026-09-08) --
+  // empty most weeks by design (see InvestorQuestionItem's own header); the
+  // whole block is omitted rather than rendering an empty heading. Every
+  // responseFramework carries an explicit, un-skippable label that it is IR
+  // preparation based on public information, never an official Range
+  // statement -- this label is not optional/conditional, it always renders
+  // whenever responseFramework itself is present.
+  const investorQuestions =
+    model.investorQuestions.length > 0
+      ? `
+    <div class="closing-block investor-questions-block">
+      <h3>Investor Questions to Prepare For</h3>
+      ${model.investorQuestions
+        .map(
+          (q) => `
+      <div class="investor-question">
+        <div class="investor-question-text">${escapeHtml(q.question)}</div>
+        <div class="investor-question-line"><span class="investor-question-label">Why Now</span>${escapeHtml(q.whyNow)}</div>
+        ${q.context ? `<div class="investor-question-line"><span class="investor-question-label">Context</span>${escapeHtml(q.context)}</div>` : ""}
+        ${
+          q.responseFramework
+            ? `<div class="investor-question-framework"><span class="framework-label">Preparation Note &mdash; based on public information only, not an official Range statement</span>${escapeHtml(q.responseFramework)}</div>`
+            : ""
+        }
+        ${q.followUpNeeded ? `<div class="investor-question-line"><span class="investor-question-label">Follow-Up for IR</span>${escapeHtml(q.followUpNeeded)}</div>` : ""}
+      </div>`
+        )
+        .join("")}
+    </div>`
+      : "";
+
+  const catalystsCalendar = model.catalystsCalendarTable ? renderTable(model.catalystsCalendarTable) : "";
+
   const sourcesTable = renderTable(model.sourcesFreshnessTable);
 
   const omittedNote =
@@ -274,6 +307,13 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .closing-block { margin-bottom: 12px; break-inside: avoid; }
   .closing-block h3 { font-size: 11pt; border-bottom: 2px solid ${ACCENT}; padding-bottom: 3px; }
   .bottom-line { background: ${NAVY}; color: #fff; padding: 9px 11px; font-size: 10pt; font-weight: 600; font-family: ${SERIF}; }
+
+  .investor-question { border: 1px solid ${BORDER}; border-left: 3px solid ${ACCENT}; border-radius: 2px; padding: 7px 9px; margin-top: 8px; break-inside: avoid; }
+  .investor-question-text { font-size: 9.5pt; font-weight: 700; font-family: ${SERIF}; margin-bottom: 4px; }
+  .investor-question-line { font-size: 9pt; margin-top: 3px; }
+  .investor-question-label { display: inline-block; font-size: 7.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: ${ACCENT}; margin-right: 5px; }
+  .investor-question-framework { background: ${CALLOUT_BG}; border-left: 3px solid ${ACCENT}; padding: 5px 8px; font-size: 9pt; margin-top: 5px; }
+  .framework-label { display: block; font-size: 7pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: ${ACCENT}; margin-bottom: 2px; }
 </style>
 </head>
 <body>
@@ -315,6 +355,7 @@ ${evidenceSections}
 
 ${risksOpportunitiesTable}
 ${watchItems}
+${investorQuestions}
 
 <div class="closing-block">
   <h3>Bottom Line</h3>
@@ -322,6 +363,7 @@ ${watchItems}
 </div>
 
 ${sourcesTable}
+${catalystsCalendar}
 ${omittedNote}
 <div class="footnote">Generated ${escapeHtml(model.generatedAtLabel)}.</div>
 
