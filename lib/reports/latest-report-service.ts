@@ -59,6 +59,6 @@ export async function getLatestWeeklyReportDownload(pool: Pool, artifactStorage:
     available: true,
     bytes,
     contentType: snapshot.artifactContentType ?? "application/pdf",
-    filename: `Weekly-Range-Resources-AI-Intelligence-Report-${snapshot.storageWeekEnding}.pdf`
+    filename: `Weekly-Range-Resources-AI-Report-${snapshot.storageWeekEnding}.pdf`
   };
 }

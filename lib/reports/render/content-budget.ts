@@ -35,21 +35,40 @@ export const STANDARD_BUDGET: ContentBudget = {
   maxPeerCompanies: 6,
   maxRisksOpportunitiesRows: 8,
   maxNewsRows: 5,
-  maxSourceRows: 10,
+  // A source row is compact (one line each) and is exactly the traceability
+  // information a management-facing IR document should never hide -- a real
+  // Preview PDF still truncated this table (13-14 real sources, only 7-8
+  // shown) even though the page had visible unused white space. Raised well
+  // above the realistic total source count so this table is effectively
+  // never truncated in practice; still a real, documented cap, not removed.
+  maxSourceRows: 20,
   maxWhatChangedItems: 5,
   maxWatchItems: 6,
   maxCommentarySentences: 3
 };
 
-/** Every cap tightened for the one allowed reduced-content retry pass -- never a third, smaller tier (see this file's header). */
+/**
+ * Every cap tightened for the one allowed reduced-content retry pass --
+ * never a third, smaller tier (see this file's header). A real Preview PDF's
+ * first-ever report fell back to this tier and still rendered with a mostly-
+ * empty final page while omitting 7 of 11 candidate evidence sections
+ * (including Natural Gas Pricing and Storage) -- both maxEvidenceSections
+ * and maxPeerCompanies were tightened well past what the actual per-item
+ * vertical space consumption required. Raised modestly (still meaningfully
+ * below STANDARD) and re-validated against the 5-page hard maximum using the
+ * project's sample fixture rather than guessed blindly.
+ */
 export const REDUCED_BUDGET: ContentBudget = {
   tier: "reduced",
-  maxEvidenceSections: 4,
+  maxEvidenceSections: 5,
   maxAtAGlanceMetrics: 5,
-  maxPeerCompanies: 4,
+  // A peer-table row is one compact table line, not a paragraph -- showing
+  // all 6 tracked peers instead of 4 costs almost no vertical space, and a
+  // truncated "Range vs. Peers" table was an explicit review finding.
+  maxPeerCompanies: 6,
   maxRisksOpportunitiesRows: 6,
   maxNewsRows: 3,
-  maxSourceRows: 8,
+  maxSourceRows: 20,
   maxWhatChangedItems: 4,
   maxWatchItems: 4,
   maxCommentarySentences: 2

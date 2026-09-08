@@ -162,6 +162,25 @@ const GUARANTEED_LANGUAGE_PATTERNS = [
   /\bis certain\b/i
 ];
 
+/**
+ * A real Preview PDF's first-ever report characterized an EIA STEO forecast
+ * value as a "$3.00/Mcf forecast floor" (and, inconsistently, a "forecast
+ * midpoint" elsewhere in the same report) -- treating a projection as if it
+ * were a price support level or trading threshold (Phase 7 release review
+ * finding). Same denylist discipline as GENERIC_FILLER_PATTERNS/
+ * GUARANTEED_LANGUAGE_PATTERNS above: a small, cheap, deterministic backstop
+ * for a specific known failure mode, not a general claims-checker.
+ */
+const FORECAST_OVERCLAIM_PATTERNS = [
+  /forecast floor/i,
+  /forecast ceiling/i,
+  /price floor/i,
+  /support level/i,
+  /resistance level/i,
+  /investment threshold/i,
+  /trading threshold/i
+];
+
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -194,6 +213,11 @@ function validateNarrativeItem(value: unknown, fieldName: string): WeeklyAnalyst
   if (!isStringArray(record.evidenceIds) || record.evidenceIds.length === 0) {
     fail(`Weekly analyst response "${fieldName}.evidenceIds" must be a non-empty string array.`);
   }
+  // Every narrative item gets the same guarded-text check as executiveAssessment/
+  // bottomLine -- a real Preview PDF's overclaim ("storage normality that would
+  // otherwise suppress Henry Hub prices") appeared in biggestOpportunity, which
+  // this check did not previously cover at all.
+  checkGuardedText(record.assessment as string, `${fieldName}.assessment`);
   return record as WeeklyAnalystNarrativeItem;
 }
 
@@ -205,6 +229,7 @@ function validateWatchItem(value: unknown, index: number): WeeklyAnalystWatchIte
   if (!isStringArray(record.evidenceIds) || record.evidenceIds.length === 0) {
     fail(`Weekly analyst response managementWatchItems[${index}].evidenceIds must be a non-empty string array -- a watch item must be grounded in supplied evidence, never a fabricated forecast.`);
   }
+  checkGuardedText(record.reason as string, `managementWatchItems[${index}].reason`);
   return record as WeeklyAnalystWatchItem;
 }
 
@@ -213,6 +238,8 @@ function checkGuardedText(text: string, fieldName: string): void {
   if (filler) fail(`Weekly analyst response "${fieldName}" uses generic filler language ("${filler}") instead of a grounded assessment.`);
   const guaranteed = findPattern(GUARANTEED_LANGUAGE_PATTERNS, text);
   if (guaranteed) fail(`Weekly analyst response "${fieldName}" uses guaranteed-outcome language ("${guaranteed}") instead of conditional language.`);
+  const overclaim = findPattern(FORECAST_OVERCLAIM_PATTERNS, text);
+  if (overclaim) fail(`Weekly analyst response "${fieldName}" mischaracterizes a forecast/price level as a threshold ("${overclaim}") -- a forecast is a projection, never a floor/ceiling/support/resistance/investment threshold.`);
 }
 
 /**

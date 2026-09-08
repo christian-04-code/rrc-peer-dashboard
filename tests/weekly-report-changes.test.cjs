@@ -25,12 +25,16 @@ function evidenceItem(overrides) {
   };
 }
 
-test("computeWeeklyChanges: with no previous published snapshot (the very first report), every item is honestly reported as new_observation rather than silently producing no change entries", () => {
+test("computeWeeklyChanges: with no previous published snapshot at all (the true first-ever report), returns zero changes rather than flooding every current item as new_observation", () => {
+  // Reversed from the original Phase 7B decision after a real Preview PDF showed the
+  // flood produced a "What Changed" section whose only content was the deterministic
+  // risk engine's initial ranking, narrated as if it were a real week-over-week change
+  // (Phase 7 release review finding). "Changed since the previous report" is undefined
+  // without a baseline -- the correct disclosure is the AI prompt's existing
+  // "no previous published report exists" context, not a manufactured change list.
   const current = { storage: [evidenceItem({ evidenceId: "storage:lower48", displayValue: "3000 Bcf" })] };
   const changes = computeWeeklyChanges(current, null);
-  assert.equal(changes.length, 1);
-  assert.equal(changes[0].kind, "new_observation");
-  assert.equal(changes[0].fromValue, null);
+  assert.deepEqual(changes, []);
 });
 
 test("computeWeeklyChanges: a genuinely new evidenceId produces a new_observation change", () => {

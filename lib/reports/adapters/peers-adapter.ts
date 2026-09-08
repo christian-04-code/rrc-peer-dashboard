@@ -4,6 +4,8 @@ import { getNetDebtToLtmAdjustedEbitdax } from "@/lib/dashboard/calculated-quart
 import { getQuarterlyMarketCap } from "@/lib/dashboard/market-cap-quarterly";
 import type { Ticker } from "@/lib/dashboard/company-registry";
 import { compareQuarterly } from "@/lib/reports/comparisons";
+import { describeFinancialSource, describeMarketDataSource } from "@/lib/reports/adapters/source-labels";
+import { moneyDisplay } from "@/lib/reports/adapters/format";
 import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/weekly-report-types";
 
 /**
@@ -22,9 +24,6 @@ import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/week
 const PEER_TICKERS: Ticker[] = ["AR", "CNX", "CRK", "EQT", "EXE", "GPOR"];
 const LATEST_QUARTER: Quarter = quarters[quarters.length - 1];
 
-function moneyDisplay(value: number | null): string {
-  return value === null ? "--" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}MM`;
-}
 function productionDisplay(value: number | null): string {
   return value === null ? "--" : `${value.toLocaleString("en-US", { maximumFractionDigits: 0 })} MMcfe/d`;
 }
@@ -36,17 +35,19 @@ type PeerMetricSpec = {
   metricKey: string;
   labelSuffix: string;
   unit: string;
-  getValue: (ticker: Ticker, quarter: Quarter) => { value: number | null } | undefined;
+  getValue: (ticker: Ticker, quarter: Quarter) => { value: number | null; source: string; basis?: string } | undefined;
   displayValue: (value: number | null) => string;
+  /** market_cap's SourceTag domain is disjoint from every other metric's (market data, not a filing) -- kept distinct so it is never described as filing-sourced. */
+  describeSource: (rawSource: string) => string;
 };
 
 const METRICS: PeerMetricSpec[] = [
-  { metricKey: "production", labelSuffix: "Production", unit: "MMcfe/d", getValue: (t, q) => getQuarterlyFinancials(t, q).production.total, displayValue: productionDisplay },
-  { metricKey: "revenue", labelSuffix: "Revenue", unit: "$MM", getValue: (t, q) => getQuarterlyFinancials(t, q).revenue, displayValue: moneyDisplay },
-  { metricKey: "ebitdax", labelSuffix: "Adjusted EBITDAX", unit: "$MM", getValue: (t, q) => getQuarterlyFinancials(t, q).adjustedEbitdax, displayValue: moneyDisplay },
-  { metricKey: "fcf", labelSuffix: "Free Cash Flow", unit: "$MM", getValue: (t, q) => getQuarterlyFreeCashFlow(t, q), displayValue: moneyDisplay },
-  { metricKey: "net_debt_to_ebitdax", labelSuffix: "Net Debt / LTM EBITDAX", unit: "x", getValue: (t, q) => getNetDebtToLtmAdjustedEbitdax(t, q), displayValue: multipleDisplay },
-  { metricKey: "market_cap", labelSuffix: "Market Cap", unit: "$MM", getValue: (t, q) => getQuarterlyMarketCap(t, q), displayValue: moneyDisplay }
+  { metricKey: "production", labelSuffix: "Production", unit: "MMcfe/d", getValue: (t, q) => getQuarterlyFinancials(t, q).production.total, displayValue: productionDisplay, describeSource: (s) => describeFinancialSource(s as Parameters<typeof describeFinancialSource>[0]) },
+  { metricKey: "revenue", labelSuffix: "Revenue", unit: "$MM", getValue: (t, q) => getQuarterlyFinancials(t, q).revenue, displayValue: moneyDisplay, describeSource: (s) => describeFinancialSource(s as Parameters<typeof describeFinancialSource>[0]) },
+  { metricKey: "ebitdax", labelSuffix: "Adjusted EBITDAX", unit: "$MM", getValue: (t, q) => getQuarterlyFinancials(t, q).adjustedEbitdax, displayValue: moneyDisplay, describeSource: (s) => describeFinancialSource(s as Parameters<typeof describeFinancialSource>[0]) },
+  { metricKey: "fcf", labelSuffix: "Free Cash Flow", unit: "$MM", getValue: (t, q) => getQuarterlyFreeCashFlow(t, q), displayValue: moneyDisplay, describeSource: (s) => describeFinancialSource(s as Parameters<typeof describeFinancialSource>[0]) },
+  { metricKey: "net_debt_to_ebitdax", labelSuffix: "Net Debt / LTM EBITDAX", unit: "x", getValue: (t, q) => getNetDebtToLtmAdjustedEbitdax(t, q), displayValue: multipleDisplay, describeSource: (s) => describeFinancialSource(s as Parameters<typeof describeFinancialSource>[0]) },
+  { metricKey: "market_cap", labelSuffix: "Market Cap", unit: "$MM", getValue: (t, q) => getQuarterlyMarketCap(t, q), displayValue: moneyDisplay, describeSource: (s) => describeMarketDataSource(s as Parameters<typeof describeMarketDataSource>[0]) }
 ];
 
 export type PeersCollection = {
@@ -77,13 +78,13 @@ export function collectPeersEvidence(): PeersCollection {
         comparisons: value === null ? [] : compareQuarterly(spec.metricKey, `${ticker} ${spec.labelSuffix}`, LATEST_QUARTER, (q) => spec.getValue(ticker, q)),
         rangeDrivers: ["gas_pricing"],
         materialityInputs: { isNewThisWeek: false, changedSincePreviousReport: false, riskSeverityRank: null, riskState: null, rangeImpactDirection: null, rangeImpactStrength: null, comparisonMagnitudePct: null },
-        metadata: { ticker }
+        metadata: { ticker, source: sourced ? `${spec.describeSource(sourced.source)}${sourced.basis ? ` (${sourced.basis})` : ""}` : null }
       });
     }
   }
 
   const manifestEntries: SourceManifestEntry[] = [
-    { key: "peer_financials", label: "Peer quarterly financials (Codex/FactSet/SEC-direct extraction)", period: LATEST_QUARTER, freshness: "current", included: true }
+    { key: "peer_financials", label: "Peer quarterly financials (SEC filings, earnings materials & FactSet)", period: LATEST_QUARTER, freshness: "current", included: true }
   ];
 
   return { items, manifestEntries, present: items.length > 0 };

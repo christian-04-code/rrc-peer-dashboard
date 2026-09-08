@@ -70,7 +70,7 @@ export function countPdfPages(pdf: Buffer): number {
 
 export const PDF_FOOTER_TEMPLATE = `
   <div style="width:100%; font-size:8px; font-family:Arial,Helvetica,sans-serif; color:#5b7288; text-align:center; padding:0 0.6in;">
-    Weekly Range Resources AI Intelligence Report &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+    Weekly Range Resources AI Report &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span>
   </div>`;
 
 export type ChromiumPdfRendererOptions = {

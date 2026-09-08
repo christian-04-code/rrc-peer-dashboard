@@ -13,7 +13,8 @@ test("renderReportHtml produces a complete, self-contained HTML document", () =>
   const html = renderReportHtml(model, null);
   assert.match(html, /^<!doctype html>/);
   assert.match(html, /<\/html>$/);
-  assert.match(html, /WEEKLY RANGE RESOURCES AI INTELLIGENCE REPORT/);
+  assert.match(html, /WEEKLY RANGE RESOURCES AI REPORT/);
+  assert.doesNotMatch(html, /Intelligence/);
   assert.match(html, /Week Ending August 28, 2026/);
 });
 

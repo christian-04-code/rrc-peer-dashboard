@@ -1015,3 +1015,47 @@ Full JS suite after this correction: **1422 tests, 1341 pass, 0 fail, 81 skipped
 
 No live Anthropic call and no live Vercel Preview invocation have been made for this phase, per its own explicit "implementation and tests only, one controlled Preview call after deploy" requirement. Once this branch is pushed and a fresh Preview deployment exists, the one remaining step is a single, user-run, authenticated invocation of `/api/cron/reports` on that Preview URL (hidden-input `x-vercel-protection-bypass` + `CRON_SECRET`, exactly the pattern established in Phase 6 and reused in Phase 7D.2) -- confirming, for the first time, the real end-to-end pipeline: a real Anthropic call, a real Chromium render, a real Blob upload, and a real publish, all through the new orchestration path. After that single controlled call is confirmed, Phase 7G (a real generated report, human-reviewed against the 5-page/visual-grammar requirements, before any production exposure) is the only work left in Phase 7.
 - No Previous Reports UI, no historical-report browsing, no admin/audit view were built -- explicitly out of scope per this phase's brief; `weekly_report_snapshots`' own history (every attempt, every status) remains queryable directly for audit/debugging purposes without any new UI for it.
+
+## 32. Release review pass — SEC-native sourcing, News density, content-quality guardrails (2026-09-08)
+
+Full detail and rationale in `docs/CURRENT_HANDOFF.md`'s "PHASE 7 RELEASE REVIEW PASS" section -- this section records the resulting architectural additions/changes only. Every finding addressed here was reproduced against the real published report (storage week 2026-08-28) before being fixed; the published artifact itself was never regenerated.
+
+### 32.1 SEC-native financial sourcing
+
+- `lib/dashboard/financials-quarterly.ts`'s `SourceTag` gained a fourth value, `"sec-xbrl"`, distinct from the pre-existing `"codex"`/`"factset"`/`"sec-direct"`. Set only on a cell independently cross-checked, read-only, against the live SEC EDGAR/XBRL company-facts API and found to match the existing value exactly -- never a new value, never a re-derivation. Applied to Q2 2026 revenue for 6 of 7 tracked tickers (RRC, AR, CNX, CRK, EQT, GPOR); EXE's remains `"codex"` with its own note documenting that SEC's XBRL API had not yet indexed that filing as of the check date.
+- New `lib/reports/adapters/source-labels.ts`: `describeFinancialSource(tag: SourceTag)` / `describeMarketDataSource(tag)` -- the one place an internal source tag is translated into a human-readable provenance description for anything that reaches the report. `range-company-adapter.ts` and `peers-adapter.ts` (which previously carried no per-item source metadata at all) both now call this; no other adapter or dashboard component needed to change, since none of them display a source tag directly (confirmed by search before writing this).
+- `table-builder.ts`'s `buildPeerComparisonTable` composes its `sourceLine` from the deduplicated set of actual sources behind the columns/companies shown in that specific render, not from a single representative item.
+
+### 32.2 News section density
+
+`buildNewsTable` (table-builder.ts) now includes Publisher and Category columns and a combined direction+strength Range Impact cell; `evidence-sections.ts`'s Material News commentary surfaces the top article's own persisted excerpt (a reported fact) ahead of the existing `rangeImplication` callout (the system's interpretation) -- the same "reported fact directly above/beside its own interpretation" pattern every other evidence section already uses via `commentary` + `rangeImplication`, just not previously applied to News's own commentary line.
+
+### 32.3 AI content guardrails
+
+`lib/reports/ai-contract.ts`'s `checkGuardedText()` (previously applied only to `executiveAssessment`/`bottomLine`) is now also applied inside `validateNarrativeItem()` (covers `biggestRisk`/`biggestOpportunity`/every `whatChanged[]` item) and `validateWatchItem()` (covers every `managementWatchItems[].reason`) -- closing a real coverage gap a live-generated report's `biggestOpportunity` fell through. A new denylist, `FORECAST_OVERCLAIM_PATTERNS` ("forecast floor/ceiling," "price floor," "support/resistance level," "investment/trading threshold"), joins the existing `GENERIC_FILLER_PATTERNS`/`GUARANTEED_LANGUAGE_PATTERNS` at every one of those call sites. `lib/reports/ai/prompt.ts`'s `SYSTEM_PROMPT` gained rules 13-15 (forecast-as-threshold prohibition + spot/realized/forecast terminology discipline; hedged, non-certain language for directional relationships; keep a News article's reported fact separate from the model's own impact assessment).
+
+### 32.4 First-report "What Changed" semantics
+
+`lib/reports/changes.ts`'s `computeWeeklyChanges(currentModules, previousModules)`: when `previousModules === null` (no previous PUBLISHED report exists at all -- the true first-ever report), now returns `[]` instead of treating every current evidence item as an individually "new" change. This reverses the original Phase 7B decision (§20) after a real first-ever report showed the actual consequence: dozens of trivial "new_observation" records that the AI then narrated as a single confusing "framework initialized" bullet, rather than the honest "no previous report exists" disclosure the AI prompt already supports once `whatChanged` is genuinely empty. `previousModules` being a real (possibly partial) snapshot -- e.g. `{}` -- is unaffected; a new item relative to a real prior snapshot is still correctly flagged as new.
+
+### 32.5 Rendering fixes
+
+- New `lib/reports/render/format.ts` (`formatSignedPct`) and consolidated `lib/reports/adapters/format.ts` (`moneyDisplay`, deduplicated from three byte-identical copies) replace every Unicode arrow (↑/↓/→) used for a comparison annotation with a leading ASCII sign ("+3.6%"/"-72.7%"/"flat"). Root cause: `@sparticuz/chromium`'s bundled Linux fonts don't cover those code points, so every arrow rendered as a blank gap in the real published PDF -- a rendering-environment bug, not a logic bug. `moneyDisplay` also now places a negative sign before the currency symbol ("-$211MM", not "$-211MM").
+- `.stat-strip` (html-template.ts, At a Glance) changed from a fixed 3-column CSS grid to `flex-wrap`, so an item count that isn't a multiple of 3 never leaves a visible empty trailing cell.
+- `content-budget.ts`: `maxSourceRows` raised to 20 for both tiers (a source row is cheap; traceability should not be truncated in practice); `REDUCED_BUDGET.maxPeerCompanies` raised to 6 (all tracked peers -- a peer-table row is cheap); `REDUCED_BUDGET.maxEvidenceSections` raised from 4 to 5. Re-validated against the real render pipeline (the project's sample fixture) rather than guessed: still exactly within the 5-page hard maximum under `STANDARD_BUDGET`, with slack under `REDUCED_BUDGET`.
+
+### 32.6 Report branding
+
+`REPORT_TITLE`/`REPORT_SUBTITLE` (render-model-builder.ts) changed to "WEEKLY RANGE RESOURCES AI REPORT" / "Market, Company & Peer Analysis" (was "...AI INTELLIGENCE REPORT" / "...Peer Intelligence"); the body's "Executive Assessment" heading (html-template.ts) replaces the old "Weekly Range Resources Intelligence Assessment"; the PDF footer template (pdf-renderer.ts) and download filename (`latest-report-service.ts`) both updated to match. "AI" is preserved everywhere for attribution transparency -- only "Intelligence" was removed. This is a deliberate, more recent product decision (Issue #14) superseding the earlier Phase 7F-era instruction to leave the PDF's own title unchanged.
+
+### 32.7 Security/config
+
+Removed the temporary `app/api/diag/cron-secret/route.ts` (Phase 7F-era diagnostic route, its own hardcoded gating token now moot since the route it gated no longer exists). Confirmed via `vercel env ls` that `CRON_SECRET` still has **no Production scope** -- a genuine, currently-live problem for Production's existing `/api/cron/macro`/`/api/cron/news`, not merely a future risk. This is an account-level Vercel action left to the project owner, as with every prior Phase 7 finding of this kind.
+
+### 32.8 Tests / validation
+
+Targeted: 211 tests across every changed subsystem, all pass. Full suite: **1465 tests, 1384 pass, 0 fail, 81 skipped** (unchanged DB-gated standing limitation). `npm run typecheck`: clean. `npm run build`: clean; route table confirms the diagnostic route's removal and no unintended new routes. Every layout-sensitive fix (arrows, stat-strip grid, content-budget tuning, cover/branding) was additionally re-verified by rendering the project's own sample fixture through the real `html-template.ts` + a local headless Chrome PDF pass, not asserted from source alone.
+
+### 32.9 Release status
+
+Not yet promoted. Two independent blockers, both requiring the project owner's own action (see `docs/CURRENT_HANDOFF.md` for full detail): `CRON_SECRET`'s missing Production scope, and PR #13's own draft status / explicit "do not merge automatically" instruction combined with its now heavily stale (Phase 5.1-era) description against a 52-commit, 27k+-line diff.

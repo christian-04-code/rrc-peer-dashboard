@@ -3,6 +3,8 @@ import { getQuarterlyFreeCashFlow } from "@/lib/dashboard/free-cash-flow-quarter
 import { getNetDebtToLtmAdjustedEbitdax, getRealizedPricePerMcfe, getCapexPerMcfe } from "@/lib/dashboard/calculated-quarterly";
 import { getCompanyGuidanceRecords, type GuidanceRecord } from "@/lib/dashboard/guidance";
 import { compareQuarterly } from "@/lib/reports/comparisons";
+import { describeFinancialSource } from "@/lib/reports/adapters/source-labels";
+import { moneyDisplay } from "@/lib/reports/adapters/format";
 import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/weekly-report-types";
 
 /**
@@ -48,7 +50,7 @@ function quarterFreshness(quarter: Quarter, now: Date): "current" | "lagged" | "
 }
 
 function sourceLabel(value: SourcedValue): string {
-  return `${value.source} (${value.basis})`;
+  return `${describeFinancialSource(value.source)} (${value.basis})`;
 }
 
 type MetricSpec = {
@@ -60,9 +62,6 @@ type MetricSpec = {
   displayValue: (value: number | null) => string;
 };
 
-function moneyDisplay(value: number | null): string {
-  return value === null ? "--" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}MM`;
-}
 function countDisplay(unit: string) {
   return (value: number | null) => (value === null ? "--" : `${value.toLocaleString("en-US", { maximumFractionDigits: 0 })} ${unit}`);
 }
@@ -143,7 +142,7 @@ export function collectRangeCompanyEvidence(now = new Date()): RangeCompanyColle
   }
 
   const manifestEntries: SourceManifestEntry[] = [
-    { key: "range_company_financials", label: "RRC quarterly financials (Codex/FactSet/SEC-direct extraction)", period: LATEST_QUARTER, freshness, included: true },
+    { key: "range_company_financials", label: "RRC quarterly financials (SEC filings, earnings materials & FactSet)", period: LATEST_QUARTER, freshness, included: true },
     { key: "range_company_guidance", label: "RRC management guidance", period: guidanceRecords[0]?.reportingCycle ?? null, freshness: guidanceRecords.length > 0 ? "current" : "unavailable", included: guidanceRecords.length > 0 }
   ];
 

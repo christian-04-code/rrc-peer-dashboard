@@ -34,7 +34,22 @@
  *   - value: the number as it appears in the source workbook, or null when the
  *     source workbook itself is blank / "#N/A" / "Not disclosed". Never 0, never
  *     interpolated.
- *   - source: "codex" | "factset" | "sec-direct" -- which source the cell came from.
+ *   - source: "codex" | "factset" | "sec-direct" | "sec-xbrl" -- which source the cell came from.
+ *     "sec-xbrl" (added for the Phase 7 release review's SEC-native sourcing pass,
+ *     2026-09-08) marks a cell independently cross-checked, read-only, against the
+ *     live SEC EDGAR company-facts XBRL API (data.sec.gov/api/xbrl/companyconcept)
+ *     AFTER this fixture's own "codex" value was already recorded -- the underlying
+ *     number is unchanged (it already matched exactly), only the source tag and note
+ *     were upgraded, to the concept/accession/filing-date/form the live API itself
+ *     returned. Only revenue for RRC/AR/CNX/CRK/EQT/GPOR Q2 2026 has been verified
+ *     this way so far (see each cell's own note for the accession number); EXE's Q2
+ *     2026 10-Q had not yet been indexed into SEC's companyfacts API as of the
+ *     verification date (2026-09-08) despite the filing itself existing on EDGAR, so
+ *     it remains "codex" with that limitation documented in its own note rather than
+ *     claiming a verification that could not actually be performed. This does NOT
+ *     apply to non-GAAP/operating fields (Adjusted EBITDAX, FCF, production, unit
+ *     costs, etc.) -- those are not standardized XBRL concepts and stay "codex"/
+ *     "sec-direct" as extracted, per the project's SEC-native-where-available rule.
  *     Almost every cell in this fixture is "codex"; the tag is kept per-cell (not
  *     file-level) so a future FactSet or Codex backfill can be merged in without
  *     silently blending series. The netIncome is "factset" (E&P_Facset_Company_Model.xlsx,
@@ -89,7 +104,7 @@ export const quarters: Quarter[] = [
   "Q1 2026", "Q2 2026"
 ];
 
-export type SourceTag = "codex" | "factset" | "sec-direct";
+export type SourceTag = "codex" | "factset" | "sec-direct" | "sec-xbrl";
 export type ValueBasis = "actual" | "derived" | "guidance";
 
 export type SourcedValue = {
@@ -171,10 +186,14 @@ type AuditedPeerQ2Detail = {
   ducInventory?: PeerQ2DetailField;
 };
 
+/** Set only when `revenue` was independently cross-checked, read-only, against the live SEC EDGAR/XBRL companyconcept API on the date below and found to match exactly -- see the "sec-xbrl" SourceTag note in this file's header. Omitted (not guessed) for a ticker whose Q2 2026 10-Q had not yet been indexed into that API. `verifiedUsd` is the API's own raw USD `val`, quoted verbatim rather than recomputed from the $MM float to avoid a floating-point artifact in the note text. */
+type RevenueXbrlVerification = { concept: string; verifiedUsd: number; accessionNumber: string; filedDate: string; verifiedOn: string };
+
 type AuditedPeerQ2Actual = {
   ticker: Exclude<Ticker, "RRC">;
   production: number;
   revenue: number;
+  revenueXbrlVerification?: RevenueXbrlVerification;
   adjustedEbitdax: number;
   capitalExpenditures: number;
   capitalExpendituresBasis?: ValueBasis;
@@ -186,6 +205,7 @@ function auditedPeerQ2Actual({
   ticker,
   production,
   revenue,
+  revenueXbrlVerification,
   adjustedEbitdax,
   capitalExpenditures,
   capitalExpendituresBasis = "actual",
@@ -232,7 +252,22 @@ function auditedPeerQ2Actual({
   return {
     ticker,
     quarter: "Q2 2026",
-    revenue: { value: revenue, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 revenue for the three months ended June 30, 2026.` },
+    revenue: revenueXbrlVerification
+      ? {
+          value: revenue,
+          source: "sec-xbrl",
+          basis: "actual",
+          note: `Verified ${revenueXbrlVerification.verifiedOn} against SEC EDGAR/XBRL company facts (us-gaap:${revenueXbrlVerification.concept}, unit USD, period 2026-04-01 to 2026-06-30): $${revenueXbrlVerification.verifiedUsd.toLocaleString("en-US")}, exactly matching this cell's existing value. Form 10-Q, accession ${revenueXbrlVerification.accessionNumber}, filed ${revenueXbrlVerification.filedDate}.`
+        }
+      : {
+          value: revenue,
+          source: "codex",
+          basis: "actual",
+          note:
+            ticker === "EXE"
+              ? "Approved audited EXE standalone Q2 2026 revenue for the three months ended June 30, 2026. SEC-native cross-check attempted 2026-09-08: EXE's Q2 2026 Form 10-Q (filed 2026-07-28) exists on EDGAR, but SEC's XBRL company-facts API had not yet indexed any fact from that filing as of the verification date, so this value could not be independently verified against it and remains as originally extracted rather than claiming a check that did not occur."
+              : `Approved audited ${ticker} standalone Q2 2026 revenue for the three months ended June 30, 2026.`
+        },
     adjustedEbitdax: { value: adjustedEbitdax, source: "codex", basis: "actual", note: `Approved audited ${ticker} standalone Q2 2026 Adjusted EBITDAX or existing dashboard equivalent.` },
     capitalExpenditures: { value: capitalExpenditures, source: "codex", basis: capitalExpendituresBasis, note: `Approved audited ${ticker} standalone Q2 2026 capital expenditures under the existing live-series definition.` },
     netDebt: { value: netDebt, source: "codex", basis: "derived", note: `Approved audited ${ticker} quarter-end net debt as of June 30, 2026, under the existing live-series definition.` },
@@ -622,7 +657,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
     "Q2 2026": {
       ticker: "RRC",
       quarter: "Q2 2026",
-      revenue: { value: 833.571, source: "codex", basis: "actual", note: "Direct GAAP total revenues and other income for the three months ended June 30, 2026." },
+      revenue: { value: 833.571, source: "sec-xbrl", basis: "actual", note: "Verified 2026-09-08 against SEC EDGAR/XBRL company facts (us-gaap:Revenues, unit USD, period 2026-04-01 to 2026-06-30): $833,571,000, exactly matching this cell's existing value. Form 10-Q, accession 0001193125-26-310446, filed 2026-07-21." },
       adjustedEbitdax: { value: 349.059, source: "codex", basis: "actual", note: "RRC historical-series convention: company-reported cash margin plus cash interest expense less interest income; standalone quarter in $MM." },
       capitalExpenditures: { value: 222.0, source: "codex", basis: "actual", note: RRC_CAPEX_NOTE },
       netDebt: { value: 880.753, source: "codex", basis: "derived", note: "Quarter-end face-value debt less cash and cash equivalents as of June 30, 2026, in $MM." },
@@ -975,6 +1010,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       ticker: "AR",
       production: 4144.0,
       revenue: 1559.842,
+      revenueXbrlVerification: { concept: "Revenues", verifiedUsd: 1559842000, accessionNumber: "0001104659-26-088153", filedDate: "2026-07-29", verifiedOn: "2026-09-08" },
       adjustedEbitdax: 595.437,
       capitalExpenditures: 326.0,
       capitalExpendituresBasis: "derived",
@@ -1316,6 +1352,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       ticker: "CNX",
       production: 1664.8,
       revenue: 618.484,
+      revenueXbrlVerification: { concept: "Revenues", verifiedUsd: 618484000, accessionNumber: "0001070412-26-000058", filedDate: "2026-07-30", verifiedOn: "2026-09-08" },
       adjustedEbitdax: 290.0,
       capitalExpenditures: 142.0,
       netDebt: 2239.488,
@@ -1667,6 +1704,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       // cross-checking the Q2 2025 entry above, which independently stores
       // 470.262 for that quarter, matching this same 10-Q line).
       revenue: 353.282,
+      revenueXbrlVerification: { concept: "RevenueFromContractWithCustomerExcludingAssessedTax", verifiedUsd: 353282000, accessionNumber: "0001193125-26-326260", filedDate: "2026-07-30", verifiedOn: "2026-09-08" },
       adjustedEbitdax: 244.811,
       capitalExpenditures: 446.869,
       netDebt: 3088.872,
@@ -2007,6 +2045,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       ticker: "EQT",
       production: 6972.242,
       revenue: 1809.94,
+      revenueXbrlVerification: { concept: "Revenues", verifiedUsd: 1809940000, accessionNumber: "0000033213-26-000043", filedDate: "2026-07-22", verifiedOn: "2026-09-08" },
       adjustedEbitdax: 1202.99,
       capitalExpenditures: 666.258,
       netDebt: 5542.851,
@@ -2690,6 +2729,7 @@ const data: Record<Ticker, Partial<Record<Quarter, QuarterlyFinancials>>> = {
       ticker: "GPOR",
       production: 962.8,
       revenue: 323.228,
+      revenueXbrlVerification: { concept: "Revenues", verifiedUsd: 323228000, accessionNumber: "0001628280-26-052313", filedDate: "2026-08-04", verifiedOn: "2026-09-08" },
       adjustedEbitdax: 179.1,
       capitalExpenditures: 148.6,
       netDebt: 928.946,

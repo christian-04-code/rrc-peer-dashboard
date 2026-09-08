@@ -17,8 +17,12 @@ import { buildEvidenceSections } from "@/lib/reports/render/evidence-sections";
  * inputs always produce the same render model, byte for byte.
  */
 
-const REPORT_TITLE = "WEEKLY RANGE RESOURCES AI INTELLIGENCE REPORT";
-const REPORT_SUBTITLE = "Market, Company & Peer Intelligence";
+// Renamed for the Phase 7 release review's product-naming decision
+// (2026-09-08): "Intelligence" removed from user-facing report branding
+// everywhere, while keeping "AI" for attribution transparency -- matching
+// the Overview UI's own "Weekly AI Report" control name.
+const REPORT_TITLE = "WEEKLY RANGE RESOURCES AI REPORT";
+const REPORT_SUBTITLE = "Market, Company & Peer Analysis";
 
 function formatDateLabel(isoDate: string): string {
   const date = new Date(`${isoDate}T00:00:00Z`);

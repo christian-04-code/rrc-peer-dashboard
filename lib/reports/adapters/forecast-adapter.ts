@@ -1,5 +1,6 @@
 import { getCompanyForecast } from "@/lib/forecast/api";
 import type { AnnualForecastResult } from "@/lib/forecast/scenarios/annual-shared";
+import { moneyDisplay } from "@/lib/reports/adapters/format";
 import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/weekly-report-types";
 
 /**
@@ -28,10 +29,6 @@ import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/week
  */
 
 const TICKER = "RRC";
-
-function moneyDisplay(value: number | null): string {
-  return value === null ? "--" : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}MM`;
-}
 
 export type ForecastCollection = {
   items: WeeklyEvidenceItem[];

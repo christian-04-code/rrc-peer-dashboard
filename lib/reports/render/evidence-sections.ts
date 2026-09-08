@@ -4,6 +4,7 @@ import type { ContentBudget } from "@/lib/reports/render/content-budget";
 import { buildActualVsForecastBarChart, buildComparisonBarChart, buildMultiItemBarChart, buildPeerBarChart } from "@/lib/reports/render/chart-selection";
 import { buildNewsTable, buildPeerComparisonTable } from "@/lib/reports/render/table-builder";
 import { composeEvidenceCommentary, composeMultiItemCommentary, composeRangeImplication } from "@/lib/reports/render/commentary";
+import { formatSignedPct } from "@/lib/reports/render/format";
 import type { EvidenceSection, TablePlan } from "@/lib/reports/render/render-model";
 
 /**
@@ -38,6 +39,28 @@ const ACTUAL_VS_FORECAST_METRICS: { rangeMetricKey: string; forecastMetricKey: s
   { rangeMetricKey: "free_cash_flow", forecastMetricKey: "default_scenario_fcf", label: "Free Cash Flow" }
 ];
 
+/**
+ * The single most material article's own persisted excerpt (a reported
+ * fact, from News's existing AI analysis -- never re-summarized here),
+ * plus a plain count of the rest. Replaces a prior generic
+ * "N items were retained" sentence that carried no actual news content.
+ */
+function newsFactualCommentary(items: WeeklyEvidenceItem[], representative: WeeklyEvidenceItem): string[] {
+  const excerpt = typeof representative.metadata.excerpt === "string" ? representative.metadata.excerpt.trim() : "";
+  const publisher = typeof representative.metadata.publisher === "string" ? representative.metadata.publisher : null;
+  const sentences: string[] = [];
+  if (excerpt) {
+    sentences.push(publisher ? `${publisher}: ${excerpt}` : excerpt);
+  }
+  const remaining = items.length - 1;
+  if (remaining > 0) {
+    sentences.push(`${remaining} additional analyzed News item${remaining === 1 ? "" : "s"} ${remaining === 1 ? "was" : "were"} also retained as material this reporting window; see the table below.`);
+  } else if (sentences.length === 0) {
+    sentences.push(`${items.length} analyzed News item${items.length === 1 ? "" : "s"} were retained as material for Range this reporting window.`);
+  }
+  return sentences;
+}
+
 function steoOutlookTable(items: WeeklyEvidenceItem[], maxRows: number): TablePlan | null {
   if (items.length === 0) return null;
   const ranked = rankEvidenceByMateriality(items).slice(0, maxRows);
@@ -54,7 +77,7 @@ function steoOutlookTable(items: WeeklyEvidenceItem[], maxRows: number): TablePl
       return {
         series: item.label,
         value: item.displayValue,
-        vintage: vintage && vintage.deltaPct !== null ? `${vintage.direction === "up" ? "↑" : vintage.direction === "down" ? "↓" : "→"} ${Math.abs(vintage.deltaPct).toFixed(1)}%` : "--"
+        vintage: vintage && vintage.deltaPct !== null ? formatSignedPct(vintage.deltaPct, vintage.direction as Exclude<typeof vintage.direction, "unavailable">) : "--"
       };
     }),
     sourceLine: null,
@@ -202,7 +225,12 @@ export function buildEvidenceSections(payload: WeeklyReportPayload, budget: Cont
         heading: "Material News",
         chart: null,
         table: buildNewsTable(payload, budget),
-        commentary: [`${newsItems.length} analyzed News item${newsItems.length === 1 ? "" : "s"} were retained as material for Range this reporting window.`],
+        // The reported fact (publisher's own excerpt, from News's persisted
+        // analysis -- never re-fetched/re-summarized here) is shown as plain
+        // commentary; rangeImplication below is the system's own grounded
+        // interpretation of it. Keeping these visually distinct is the
+        // "distinguish reported facts from interpretation" requirement.
+        commentary: newsFactualCommentary(newsItems, representative),
         rangeImplication: composeRangeImplication(representative)
       })
     });

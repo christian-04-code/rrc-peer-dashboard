@@ -99,6 +99,41 @@ test("rejects a bottomLine that is technically non-empty but too short to be a m
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "." }), baseInput()), WeeklyAnalystValidationError);
 });
 
+test("rejects a forecast mischaracterized as a price floor/ceiling/threshold in the executive assessment (real Preview PDF finding: '$3.00/Mcf forecast floor')", () => {
+  const overclaim = `${words(190)} Henry Hub remains below the EIA's $3.00/Mcf forecast floor this week.`;
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: overclaim }), baseInput()), WeeklyAnalystValidationError);
+});
+
+test("rejects the same forecast-overclaim language in bottomLine", () => {
+  assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "Price sits below the forecast floor for now." }), baseInput()), WeeklyAnalystValidationError);
+});
+
+test("rejects guarded-text violations inside biggestOpportunity/biggestRisk/whatChanged narrative items, not just the two top-level fields (real Preview PDF finding: overclaim language appeared in biggestOpportunity, which this check did not previously cover)", () => {
+  assert.throws(
+    () => validateWeeklyAnalystAssessment(baseOutput({ biggestOpportunity: { title: "LNG demand growth", assessment: "Storage normality means no meaningful downward price pressure and shares will outperform.", evidenceIds: ["deterministic_risk_opportunity:lng_demand"] } }), baseInput()),
+    WeeklyAnalystValidationError
+  );
+  assert.throws(
+    () => validateWeeklyAnalystAssessment(baseOutput({ biggestRisk: { title: "Storage surplus", assessment: "Market conditions remain dynamic for storage.", evidenceIds: ["deterministic_risk_opportunity:storage_levels"] } }), baseInput()),
+    WeeklyAnalystValidationError
+  );
+  assert.throws(
+    () => validateWeeklyAnalystAssessment(baseOutput({ whatChanged: [{ title: "Storage rose", assessment: "Storage is certain to keep rising.", evidenceIds: ["storage:lower48"] }] }), baseInput()),
+    WeeklyAnalystValidationError
+  );
+});
+
+test("rejects guarded-text violations inside a managementWatchItems reason", () => {
+  assert.throws(
+    () =>
+      validateWeeklyAnalystAssessment(
+        baseOutput({ managementWatchItems: [{ item: "Watch Henry Hub", reason: "Price is above the support level, shares will rise.", evidenceIds: ["storage:lower48"] }] }),
+        baseInput()
+      ),
+    WeeklyAnalystValidationError
+  );
+});
+
 test("rejects an empty or whitespace-only bottomLine (the exact truncated-response failure seen in the first live Preview invocation)", () => {
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "" }), baseInput()), WeeklyAnalystValidationError);
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ bottomLine: "   " }), baseInput()), WeeklyAnalystValidationError);

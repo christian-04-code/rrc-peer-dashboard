@@ -230,8 +230,13 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .block-title { font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: ${ACCENT}; margin-bottom: 5px; }
 
   .stat-strip-block { margin: 12px 0 10px; }
-  .stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: ${BORDER}; border: 1px solid ${BORDER}; }
-  .stat-tile { background: #fff; padding: 7px 9px 7px 8px; border-left: 2px solid ${ACCENT}; }
+  /* flex-wrap (not a 3-column grid) so a non-multiple-of-3 item count -- the
+     common case, since At a Glance picks one representative per backdrop
+     category and a quiet week rarely has exactly 3/6/9 -- never leaves a
+     dangling empty, background-colored trailing cell (a real Preview PDF
+     showed exactly this: 5 items in a 6-cell grid). */
+  .stat-strip { display: flex; flex-wrap: wrap; gap: 1px; background: ${BORDER}; border: 1px solid ${BORDER}; }
+  .stat-tile { background: #fff; padding: 7px 9px 7px 8px; border-left: 2px solid ${ACCENT}; flex: 1 1 32%; min-width: 32%; }
   .stat-label { font-size: 7.5pt; color: ${MUTED}; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
   .stat-value { font-size: 10.5pt; font-weight: 700; color: ${NAVY}; }
 
@@ -296,7 +301,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
 <div class="page-break"></div>
 
 <div class="assessment-block">
-  <div class="assessment-heading">Weekly Range Resources Intelligence Assessment</div>
+  <div class="assessment-heading">Executive Assessment</div>
   <div class="assessment">${executiveParagraphs}</div>
 
   ${renderStatTiles(model.atAGlanceTable)}

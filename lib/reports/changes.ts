@@ -137,9 +137,30 @@ function riskChangesFor(current: WeeklyEvidenceItem, prior: WeeklyEvidenceItem |
   return changes;
 }
 
+/**
+ * `previousModules === null` means no previous PUBLISHED report exists at
+ * all (the true first-ever report) -- "changed since the previous report"
+ * is undefined without a baseline, so this returns [] rather than treating
+ * every current item as individually "new." A real Preview PDF's first-ever
+ * report showed exactly what flooding the diff produces: a "What Changed"
+ * section whose only content was the deterministic risk engine's own
+ * initial ranking, narrated by the AI as if it were a real week-over-week
+ * change. The already-correct downstream handling of a true baseline
+ * (`previousReportContext: null` in the AI prompt, "zero whatChanged items
+ * is valid and expected for the first-ever report") only works if this
+ * function actually supplies zero records for that case.
+ *
+ * This is distinct from `previousModules` being a real (possibly partial)
+ * previous snapshot -- e.g. `{}` when a previous report existed but simply
+ * had no items in some category. There, an item with no `priorItem` match
+ * IS a genuinely new observation worth flagging, and still falls through to
+ * the loop below unchanged.
+ */
 export function computeWeeklyChanges(currentModules: WeeklyReportModules, previousModules: WeeklyReportModules | null): WeeklyChange[] {
+  if (previousModules === null) return [];
+
   const changes: WeeklyChange[] = [];
-  const previous = previousModules ? flattenModules(previousModules) : new Map<string, WeeklyEvidenceItem>();
+  const previous = flattenModules(previousModules);
 
   for (const items of Object.values(currentModules)) {
     for (const item of items ?? []) {

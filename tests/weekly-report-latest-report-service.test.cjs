@@ -73,7 +73,7 @@ test("getLatestWeeklyReportDownload: returns the real stored bytes, content type
   assert.equal(result.available, true);
   assert.deepEqual(result.bytes, pdfBytes);
   assert.equal(result.contentType, "application/pdf");
-  assert.equal(result.filename, "Weekly-Range-Resources-AI-Intelligence-Report-2026-08-28.pdf");
+  assert.equal(result.filename, "Weekly-Range-Resources-AI-Report-2026-08-28.pdf");
 });
 
 test("getLatestWeeklyReportDownload: unavailable when nothing has ever been published", async () => {

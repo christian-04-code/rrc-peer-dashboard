@@ -92,3 +92,16 @@ test("SYSTEM_PROMPT explicitly forbids returning more whatChanged items than sup
   assert.match(SYSTEM_PROMPT, /may NEVER return MORE items than the number of change records supplied/);
   assert.match(SYSTEM_PROMPT, /zero is a valid, expected answer/i);
 });
+
+test("SYSTEM_PROMPT forbids characterizing a forecast value as a price floor/ceiling/threshold (real Preview PDF finding: '$3.00/Mcf forecast floor')", () => {
+  assert.match(SYSTEM_PROMPT, /never a "floor," "ceiling," "support level," "resistance level," or investment\/trading threshold/i);
+});
+
+test("SYSTEM_PROMPT requires hedged (not unconditional-certainty) language for directional relationships like storage vs. its five-year average", () => {
+  assert.match(SYSTEM_PROMPT, /historical tendency, not a certainty/i);
+  assert.match(SYSTEM_PROMPT, /Never state that a factor "imposes no pressure," is "normal," or is otherwise benign as an unconditional fact/);
+});
+
+test("SYSTEM_PROMPT instructs keeping a News article's reported fact separate from the model's own impact assessment", () => {
+  assert.match(SYSTEM_PROMPT, /keep the article's own reported fact.*separate from your own assessment/i);
+});

@@ -2,6 +2,7 @@ import type { ComparisonResult, WeeklyEvidenceItem, WeeklyReportPayload } from "
 import { rankEvidenceByMateriality } from "@/lib/reports/materiality";
 import type { ContentBudget } from "@/lib/reports/render/content-budget";
 import type { TablePlan, TableRow } from "@/lib/reports/render/render-model";
+import { formatSignedPct } from "@/lib/reports/render/format";
 
 /**
  * Phase 7D deterministic table construction -- every function here is a
@@ -28,8 +29,7 @@ const COMPARISON_PERIOD_SHORT_LABEL: Record<ComparisonResult["period"], string> 
 function firstComparisonAnnotation(item: WeeklyEvidenceItem): string | null {
   const cmp = item.comparisons.find((c) => c.direction !== "unavailable" && c.deltaPct !== null);
   if (!cmp || cmp.deltaPct === null) return null;
-  const arrow = cmp.direction === "up" ? "↑" : cmp.direction === "down" ? "↓" : "→";
-  return `${arrow} ${Math.abs(cmp.deltaPct).toFixed(1)}% ${COMPARISON_PERIOD_SHORT_LABEL[cmp.period]}`;
+  return `${formatSignedPct(cmp.deltaPct, cmp.direction as Exclude<typeof cmp.direction, "unavailable">)} ${COMPARISON_PERIOD_SHORT_LABEL[cmp.period]}`;
 }
 
 function truncate(rows: TableRow[], max: number): { rows: TableRow[]; truncatedCount: number } {
@@ -107,12 +107,28 @@ export function buildPeerComparisonTable(payload: WeeklyReportPayload, budget: C
     );
   }
 
+  // Built from the ACTUAL per-column sources of the metrics/companies shown in
+  // this specific table, deduped -- not assumed from one representative item.
+  // A real Preview PDF showed this line read "codex (actual); peer quarterly
+  // financials" for every column regardless of what each column's own metric
+  // was actually sourced from (the prior code only ever read rangeItems[0]'s
+  // metadata, i.e. whichever range_company item happened to be first).
+  const shownSourceLabels = new Set<string>();
+  for (const spec of metrics) {
+    const rangeSource = rangeByMetric.get(spec.rangeMetricKey)?.metadata.source;
+    if (typeof rangeSource === "string") shownSourceLabels.add(rangeSource);
+    for (const { ticker } of selectedTickers) {
+      const peerSource = peerByTickerAndMetric.get(`${ticker}:${spec.peerMetricKey}`)?.metadata.source;
+      if (typeof peerSource === "string") shownSourceLabels.add(peerSource);
+    }
+  }
+
   return {
     id: "peer_comparison",
     title: "Range vs. Peers",
     columns: [{ key: "company", label: "Company", align: "left" }, ...metrics.map((spec) => ({ key: spec.rangeMetricKey, label: spec.label, align: "right" as const }))],
     rows,
-    sourceLine: `${rangeItems[0]?.metadata.source ?? "RRC quarterly financials"}; peer quarterly financials`,
+    sourceLine: shownSourceLabels.size > 0 ? [...shownSourceLabels].join("; ") : "RRC & peer quarterly financials",
     truncatedCount
   };
 }
@@ -143,14 +159,24 @@ export function buildRisksOpportunitiesTable(payload: WeeklyReportPayload, budge
   };
 }
 
+/** Combines News's own persisted direction + strength into one compact cell (e.g. "moderate positive") -- both are already real, grounded facts from News's own AI analysis (see news-adapter.ts), never re-derived here. Same "strength direction" word order as commentary.ts's newsRangeImplication() sentence, so the table and the callout below it read consistently. */
+function newsImpactCell(item: WeeklyEvidenceItem): string {
+  const direction = item.materialityInputs.rangeImpactDirection;
+  const strength = item.materialityInputs.rangeImpactStrength;
+  if (!direction) return item.displayValue;
+  return strength ? `${strength} ${direction}` : direction;
+}
+
 export function buildNewsTable(payload: WeeklyReportPayload, budget: ContentBudget): TablePlan | null {
   const items = payload.modules.news ?? [];
   if (items.length === 0) return null;
   const { rows, truncatedCount } = truncate(
     items.map((item) => ({
       headline: item.label,
+      publisher: typeof item.metadata.publisher === "string" ? item.metadata.publisher : "--",
       date: item.asOfDate ?? "--",
-      rangeImpact: item.displayValue
+      category: typeof item.metadata.category === "string" ? item.metadata.category : "--",
+      rangeImpact: newsImpactCell(item)
     })),
     budget.maxNewsRows
   );
@@ -159,11 +185,13 @@ export function buildNewsTable(payload: WeeklyReportPayload, budget: ContentBudg
     title: "Material News",
     columns: [
       { key: "headline", label: "Headline", align: "left" },
+      { key: "publisher", label: "Publisher", align: "left" },
       { key: "date", label: "Date", align: "left" },
+      { key: "category", label: "Category", align: "left" },
       { key: "rangeImpact", label: "Range Impact", align: "left" }
     ],
     rows,
-    sourceLine: null,
+    sourceLine: "Persisted, analyzed News articles -- not re-fetched or re-analyzed for this report.",
     truncatedCount
   };
 }

@@ -57,7 +57,7 @@ test("WeeklyReportDownloadButton has a loading state distinct from the unavailab
   assert.match(source, /Checking/i);
 });
 
-test("WeeklyReportDownloadButton's user-facing labels say 'Weekly AI Report', never 'Intelligence' -- that wording is reserved for the PDF's own title", () => {
+test("WeeklyReportDownloadButton's user-facing labels say 'Weekly AI Report', never 'Intelligence' (the PDF's own title dropped 'Intelligence' too as of the Phase 7 release review, so this is now consistent everywhere, not a narrower UI-only rule)", () => {
   const source = readSource("../components/dashboard/WeeklyReportDownloadButton.tsx");
   assert.doesNotMatch(source, /intelligence/i, "the Overview control's own labels must not say Intelligence");
   assert.match(source, /Download Weekly AI Report/);

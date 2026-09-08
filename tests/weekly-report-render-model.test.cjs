@@ -22,8 +22,8 @@ function clone(value) {
 
 test("buildWeeklyReportRenderModel produces the expected identity fields", () => {
   const model = buildWeeklyReportRenderModel(SAMPLE_WEEKLY_REPORT_PAYLOAD, SAMPLE_WEEKLY_ANALYST_ASSESSMENT);
-  assert.equal(model.identity.title, "WEEKLY RANGE RESOURCES AI INTELLIGENCE REPORT");
-  assert.equal(model.identity.subtitle, "Market, Company & Peer Intelligence");
+  assert.equal(model.identity.title, "WEEKLY RANGE RESOURCES AI REPORT");
+  assert.equal(model.identity.subtitle, "Market, Company & Peer Analysis");
   assert.match(model.identity.weekEndingLabel, /August 28, 2026/);
   assert.match(model.identity.dataCutoffLabel, /September 3, 2026/);
 });
@@ -197,10 +197,59 @@ test("buildPeerComparisonTable caps peer rows at budget.maxPeerCompanies and rep
   assert.ok(table.truncatedCount > 0);
 });
 
+test("buildPeerComparisonTable's sourceLine reflects the ACTUAL sources of the columns/companies shown, not just the first range_company item (real Preview PDF finding: it always read 'codex (actual); peer quarterly financials' regardless of what each column was really sourced from)", () => {
+  const rangeItems = SAMPLE_WEEKLY_REPORT_PAYLOAD.modules.range_company.map((item) =>
+    item.metricKey === "revenue" ? { ...item, metadata: { ...item.metadata, source: "SEC EDGAR/XBRL company facts API (verified) (actual)" } } : item
+  );
+  const peerItems = SAMPLE_WEEKLY_REPORT_PAYLOAD.modules.peers.map((item) => ({ ...item, metadata: { ...item.metadata, source: "Company SEC filings & earnings materials (extracted) (actual)" } }));
+  const payload = { ...SAMPLE_WEEKLY_REPORT_PAYLOAD, modules: { ...SAMPLE_WEEKLY_REPORT_PAYLOAD.modules, range_company: rangeItems, peers: peerItems } };
+  const table = buildPeerComparisonTable(payload, STANDARD_BUDGET);
+  assert.doesNotMatch(table.sourceLine, /^codex \(actual\); peer quarterly financials$/);
+  assert.match(table.sourceLine, /SEC EDGAR\/XBRL company facts API/);
+  assert.match(table.sourceLine, /Company SEC filings & earnings materials/);
+});
+
 test("buildRisksOpportunitiesTable sorts by the deterministic risk engine's own rank", () => {
   const table = buildRisksOpportunitiesTable(SAMPLE_WEEKLY_REPORT_PAYLOAD, STANDARD_BUDGET);
   const ranks = table.rows.map((r) => Number(r.rank));
   assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
+});
+
+test("buildNewsTable includes publisher/date/category columns and a combined strength+direction Range Impact cell, all traced to News's own persisted metadata", () => {
+  const { buildNewsTable } = load("lib/reports/render/table-builder.ts");
+  const newsItem = {
+    evidenceId: "news:article:9001",
+    category: "news",
+    metricKey: "article",
+    label: "Test headline",
+    currentValue: null,
+    displayValue: "positive",
+    unit: null,
+    period: "2026-08-30T14:00:00.000Z",
+    asOfDate: "2026-08-30",
+    sourceIds: ["news_articles"],
+    freshness: "current",
+    comparisons: [],
+    rangeDrivers: [],
+    materialityInputs: { isNewThisWeek: true, changedSincePreviousReport: false, riskSeverityRank: null, riskState: null, rangeImpactDirection: "positive", rangeImpactStrength: "moderate", comparisonMagnitudePct: null },
+    metadata: { publisher: "Test Wire", canonicalUrl: "https://example.com/a", excerpt: "Something happened.", category: "infrastructure" }
+  };
+  const payload = { ...SAMPLE_WEEKLY_REPORT_PAYLOAD, modules: { ...SAMPLE_WEEKLY_REPORT_PAYLOAD.modules, news: [newsItem] } };
+  const table = buildNewsTable(payload, STANDARD_BUDGET);
+  assert.deepEqual(table.columns.map((c) => c.key), ["headline", "publisher", "date", "category", "rangeImpact"]);
+  assert.equal(table.rows[0].publisher, "Test Wire");
+  assert.equal(table.rows[0].category, "infrastructure");
+  assert.equal(table.rows[0].rangeImpact, "moderate positive");
+});
+
+test("buildNewsTable falls back to '--' for publisher/category when News's own persisted metadata doesn't carry them", () => {
+  const { buildNewsTable } = load("lib/reports/render/table-builder.ts");
+  const table = buildNewsTable(SAMPLE_WEEKLY_REPORT_PAYLOAD, STANDARD_BUDGET);
+  assert.ok(table.rows.length > 0);
+  for (const row of table.rows) {
+    assert.equal(typeof row.publisher, "string");
+    assert.equal(typeof row.category, "string");
+  }
 });
 
 test("buildSourcesFreshnessTable truncates deterministically and reports what was dropped", () => {

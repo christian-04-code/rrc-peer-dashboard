@@ -70,12 +70,17 @@ test("peer tickers unsupported by the forecast engine return an empty forecast s
 });
 
 test("Q1 and Q2 2026 stay historical actuals for every peer and neither can appear in a forecast series", () => {
+  // Q2 2026 revenue's source tag was upgraded to "sec-xbrl" for every ticker except
+  // EXE after an independent live SEC EDGAR/XBRL cross-check (Phase 7 release
+  // review, 2026-09-08) found it matched exactly -- see financials-quarterly.ts's
+  // own "sec-xbrl" SourceTag note. Q1 2026 (not part of that check) stays "codex".
+  const q2RevenueSourceByTicker = { RRC: "sec-xbrl", AR: "sec-xbrl", CNX: "sec-xbrl", CRK: "sec-xbrl", EQT: "sec-xbrl", EXE: "codex", GPOR: "sec-xbrl" };
   for (const ticker of ["RRC", "AR", "CNX", "CRK", "EQT", "EXE", "GPOR"]) {
     const reportedQ1_2026 = getAllQuartersForTicker(ticker).find((row) => row.quarter === "Q1 2026");
     const reportedQ2_2026 = getAllQuartersForTicker(ticker).find((row) => row.quarter === "Q2 2026");
     assert.equal(reportedQ1_2026.revenue.source, "codex");
     assert.equal(reportedQ1_2026.revenue.basis, "actual");
-    assert.equal(reportedQ2_2026.revenue.source, "codex");
+    assert.equal(reportedQ2_2026.revenue.source, q2RevenueSourceByTicker[ticker], `${ticker} Q2 2026 revenue source`);
     assert.equal(reportedQ2_2026.revenue.basis, "actual");
   }
   // The forecast series intentionally excludes both reported quarters so it can never overwrite either actual.
