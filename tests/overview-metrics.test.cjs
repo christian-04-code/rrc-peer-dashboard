@@ -190,5 +190,6 @@ test("removed Overview copy is absent from rendered components", () => {
     "— dashed",
     "Market prices reflect current provider observations where available."
   ]) assert.doesNotMatch(source, new RegExp(removed));
-  assert.match(source, /Interactive Peer Dashboard/);
+  assert.match(source, /Range Resources Market &amp; Peer Dashboard/);
+  assert.match(source, /Company, Market &amp; Peer Analytics/);
 });

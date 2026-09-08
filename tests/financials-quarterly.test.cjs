@@ -72,12 +72,22 @@ test("remaining priority peers add only the approved Q2 2026 actuals and preserv
     row.adjustedEbitdax.value
   ];
 
+  // Q2 2026 revenue was independently cross-checked against live SEC EDGAR/XBRL
+  // company facts (Phase 7 release review, 2026-09-08) for every peer except EXE,
+  // whose Q2 2026 10-Q had not yet been indexed into that API as of the check --
+  // see financials-quarterly.ts's own "sec-xbrl" SourceTag note. The value itself
+  // is unchanged for all six (it already matched exactly); only revenue's source
+  // tag was upgraded for the five verified tickers, so it's asserted separately
+  // from the other fields below, which remain "codex" as extracted.
+  const revenueSourceByTicker = { AR: "sec-xbrl", CNX: "sec-xbrl", CRK: "sec-xbrl", EQT: "sec-xbrl", EXE: "codex", GPOR: "sec-xbrl" };
+
   for (const [ticker, expected] of Object.entries(approved)) {
     const q1 = getQuarterlyFinancials(ticker, "Q1 2026");
     const q2 = getQuarterlyFinancials(ticker, "Q2 2026");
     assert.deepEqual(values(q1), expected.q1, `${ticker} Q1 2026 must remain unchanged`);
     assert.deepEqual(values(q2), expected.q2, `${ticker} Q2 2026 must match the approved audit`);
-    for (const field of [q2.production.total, q2.revenue, q2.capitalExpenditures, q2.netDebt, q2.adjustedEbitdax]) {
+    assert.equal(q2.revenue.source, revenueSourceByTicker[ticker], `${ticker} Q2 2026 revenue source`);
+    for (const field of [q2.production.total, q2.capitalExpenditures, q2.netDebt, q2.adjustedEbitdax]) {
       assert.notEqual(field.basis, "guidance", `${ticker} Q2 2026 must be historical, not guidance`);
       assert.equal(field.source, "codex");
     }

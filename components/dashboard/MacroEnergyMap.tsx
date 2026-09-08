@@ -6,6 +6,7 @@ import type { GeometryCollection, Topology } from "topojson-specification";
 import statesAtlas from "us-atlas/states-albers-10m.json";
 import type { MacroFundamentalsResponse, StorageRegionId } from "@/lib/market/macro-types";
 import { formatPct } from "@/lib/market/macro-analytics";
+import { formatDataDate, formatRefreshTimestamp, formatWeekEnding } from "@/lib/market/format-dates";
 import { getStateCode, getStateName, getStorageRegionForState } from "@/lib/market/storage-regions";
 import { HistoricalLineChart } from "@/components/dashboard/MacroVisuals";
 import { getRigDataset, getRigState, getRigStateMax } from "@/lib/rigs/rig-data";
@@ -110,13 +111,15 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
   const selectedProduction = data?.production.states[selected] ?? null;
   const selectedName = getStateName(selected) ?? selected;
   const rigReportDate = getRigDataset().source.reportDate;
+  const mapAsOfPeriod = mode === "storage" ? data?.storage.regions.east?.period : data?.production.states.PA?.period;
+  const mapAsOfLabel = mode === "storage" ? formatWeekEnding(mapAsOfPeriod) : formatDataDate(mapAsOfPeriod);
 
   return (
     <div className="macro-map-layout">
       <div className="macro-map-left-column">
       <div className="macro-map-card">
         <div className="macro-card-title">
-          <div><h3>Interactive U.S. energy map</h3><span>{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`}</span></div>
+          <div><h3>Interactive U.S. energy map</h3><span>{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`} · {mapAsOfLabel}</span></div>
           <div className="macro-map-controls">
             <div className="macro-segmented" aria-label="Map metric">
               <button className={mode === "storage" ? "active" : ""} onClick={() => setMode("storage")}>Storage</button>
@@ -177,9 +180,9 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
           <div className="macro-map-tooltip" aria-live="polite">
             <strong>{stateName}</strong>
             {mode === "storage" ? (
-              <><span>{region?.label ?? "No EIA storage region"}</span><b>{formatNumber(region?.current ?? null)} Bcf</b><small>{formatSigned(region?.weeklyChange ?? null, "Bcf")} weekly · {formatPct(region?.fiveYearPct ?? null)} vs 5Y · {region?.period ?? "--"}</small></>
+              <><span>{region?.label ?? "No EIA storage region"}</span><b>{formatNumber(region?.current ?? null)} Bcf</b><small>{formatSigned(region?.weeklyChange ?? null, "Bcf")} weekly · {formatPct(region?.fiveYearPct ?? null)} vs 5Y · {region?.period ? formatWeekEnding(region.period) : "--"}</small></>
             ) : (
-              <><span>Marketed gas production</span><b>{productionView === "current" ? `${formatNumber(production?.current ?? null)} MMcf/mo` : `${formatPct(production?.yearOverYearPct ?? null)} YoY`}</b><small>{formatPct(production?.monthOverMonthPct ?? null)} MoM · {formatPct(production?.yearOverYearPct ?? null)} YoY · {production?.period ?? "--"}</small></>
+              <><span>Marketed gas production</span><b>{productionView === "current" ? `${formatNumber(production?.current ?? null)} MMcf/mo` : `${formatPct(production?.yearOverYearPct ?? null)} YoY`}</b><small>{formatPct(production?.monthOverMonthPct ?? null)} MoM · {formatPct(production?.yearOverYearPct ?? null)} YoY · {production?.period ? formatDataDate(production.period) : "--"}</small></>
             )}
             {rigOverlay && activeRig ? (
               <div className="macro-map-tooltip-rigs">
@@ -198,7 +201,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               ? <><span><i style={{ background: "#506779" }} />Lower</span><span><i style={{ background: "#35a3cb" }} />Mid</span><span><i style={{ background: "#0079b5" }} />Highest</span><small>Relative state-volume scale; unavailable states are gray.</small></>
               : <><span><i style={{ background: productionChangeColor(-12) }} />≤−10%</span><span><i style={{ background: productionChangeColor(-5) }} />Declining</span><span><i style={{ background: productionChangeColor(0) }} />Near flat</span><span><i style={{ background: productionChangeColor(5) }} />Growing</span><span><i style={{ background: productionChangeColor(12) }} />≥+10%</span></>
           )}
-          {rigOverlay ? <span className="macro-rig-legend-note"><i className="macro-rig-legend-dot" />Rig count · Baker Hughes, week of {rigReportDate}</span> : null}
+          {rigOverlay ? <span className="macro-rig-legend-note"><i className="macro-rig-legend-dot" />Rig count · Baker Hughes, {formatWeekEnding(rigReportDate)}</span> : null}
         </div>
       </div>
 
@@ -216,7 +219,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               <div><dt>Weekly change</dt><dd>{formatNumber(selectedRegion?.weeklyChange ?? null)} Bcf</dd></div>
               <div><dt>vs year ago</dt><dd>{formatPct(selectedRegion?.yearAgoPct ?? null)}</dd></div>
               <div><dt>vs 5-year average</dt><dd>{formatPct(selectedRegion?.fiveYearPct ?? null)}</dd></div>
-              <div><dt>Observation week</dt><dd>{selectedRegion?.period ?? "--"}</dd></div>
+              <div><dt>Observation week</dt><dd>{selectedRegion?.period ? formatWeekEnding(selectedRegion.period) : "--"}</dd></div>
             </dl>
             <div className="macro-map-history"><span>Regional storage history</span><HistoricalLineChart ariaLabel={`${selectedRegion?.label ?? selectedName} regional storage history`} unit="Bcf" limit={104} series={[{ id: "selected-storage", label: selectedRegion?.label ?? "Regional storage", color: "#3db3e3", history: selectedRegion?.history ?? [] }]} /></div>
           </>
@@ -227,13 +230,13 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               <div><dt>Latest production</dt><dd>{formatNumber(selectedProduction?.current ?? null)} MMcf</dd></div>
               <div><dt>Month over month</dt><dd>{formatPct(selectedProduction?.monthOverMonthPct ?? null)}</dd></div>
               <div><dt>Year over year</dt><dd>{formatPct(selectedProduction?.yearOverYearPct ?? null)}</dd></div>
-              <div><dt>Observation month</dt><dd>{selectedProduction?.period ?? "--"}</dd></div>
+              <div><dt>Observation month</dt><dd>{selectedProduction?.period ? formatDataDate(selectedProduction.period) : "--"}</dd></div>
             </dl>
             <div className="macro-map-history"><span>State production history</span><HistoricalLineChart ariaLabel={`${selectedName} marketed production history`} unit="MMcf/month" limit={36} series={[{ id: "selected-production", label: selectedName, color: "#70c99a", history: selectedProduction?.history ?? [] }]} /></div>
           </>
         )}
         {selected === "PA" ? <div className="macro-pa-callout"><strong>RRC relevance</strong><span>Pennsylvania is RRC&apos;s core Marcellus operating state.</span></div> : null}
-        <small>Source: U.S. EIA · retrieved {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : "--"}</small>
+        <small>Source: U.S. EIA · retrieved {formatRefreshTimestamp(data?.generatedAt)}</small>
         <DrillingActivityModule stateCode={selected} stateName={selectedName} />
       </aside>
     </div>

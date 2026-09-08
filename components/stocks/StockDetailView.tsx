@@ -81,7 +81,7 @@ export function StockDetailView({ ticker, requestedTicker }: { ticker: Ticker | 
 }
 
 function StockShell({ children }: { children: React.ReactNode }) {
-  return <main className="stock-shell"><nav className="stock-nav" aria-label="Stock detail navigation"><Link href="/">← RRC Peer Intelligence</Link><span>Market data</span></nav><div className="stock-content">{children}</div></main>;
+  return <main className="stock-shell"><nav className="stock-nav" aria-label="Stock detail navigation"><Link href="/">← Range Resources Market &amp; Peer Dashboard</Link><span>Market data</span></nav><div className="stock-content">{children}</div></main>;
 }
 
 function StatePanel({ title, detail }: { title: string; detail: string }) {
