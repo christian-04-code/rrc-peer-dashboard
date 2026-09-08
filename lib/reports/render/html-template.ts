@@ -26,9 +26,18 @@ import { renderBarChartSvg } from "@/lib/reports/render/svg-charts";
  * right (a real research note rarely gives a small bar chart a full text
  * column of its own); a section carrying a table runs full width, since a
  * multi-column table needs the room a half-width column would cramp.
- * Explicitly NOT a pixel-perfect clone of the internal July 2026 reference
- * report (never read, never committed) and explicitly NOT a consumer-
- * dashboard look (no gradients, no rounded cards, no hero sections).
+ *
+ * Cover page (page 1 only): its layout is controlled by page 1 of
+ * Range_Natural_Gas_Macro_Outlook_July_2026.docx, used strictly as a VISUAL
+ * template (never read as a factual/data source -- every string the cover
+ * prints below still comes only from WeeklyReportRenderModel). That
+ * reference page is a single vertical stack -- large logo, generous white
+ * space, a small bold uppercase kicker, a large navy title, a smaller slate
+ * subtitle, a thin divider, then label/value rows for date and controlling
+ * sources -- which is why the cover markup below is its own vertical block
+ * distinct from every other page's two-column/table layout. This only
+ * governs the cover; every other page keeps its prior serif/sans design
+ * unchanged.
  */
 
 const NAVY = "#0b2947";
@@ -39,6 +48,11 @@ const CALLOUT_BG = "#eef3fa";
 const TABLE_STRIPE = "#eaf2f9";
 const SERIF = "Georgia, 'Times New Roman', Times, serif";
 const SANS = "Arial, Helvetica, sans-serif";
+
+/** Cover-page-only tokens, matching the two distinct grays the reference page uses (a slate for the subtitle, a lighter label gray for the date/sources captions) -- not used anywhere outside .cover-*. */
+const COVER_SLATE = "#3e4c59";
+const COVER_LABEL = "#7b8794";
+const COVER_DIVIDER = "#cbd2d9";
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -133,7 +147,12 @@ function renderEvidenceSection(section: EvidenceSection): string {
 }
 
 export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: string | null): string {
-  const logo = logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="Range Resources" />` : `<div class="wordmark">RANGE RESOURCES</div>`;
+  const logo = logoDataUri ? `<img class="cover-logo" src="${logoDataUri}" alt="Range Resources" />` : `<div class="cover-wordmark">RANGE RESOURCES</div>`;
+
+  // Pure function of already-typed render-model data (this file's own header rule) --
+  // no new fact, just naming the source categories already listed in the sources table.
+  const controllingSources =
+    model.sourcesFreshnessTable.rows.map((row) => row.source).filter(Boolean).join(" · ") || "See Sources & Data Freshness below";
 
   const executiveParagraphs = model.executiveAssessmentParagraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
 
@@ -190,17 +209,20 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
     print-color-adjust: exact;
   }
   h1, h2, h3 { color: ${NAVY}; margin: 0 0 5px; font-family: ${SERIF}; }
-  .divider { border: none; border-top: 2px solid ${ACCENT}; margin: 8px 0 12px; }
   .thin-divider { border: none; border-top: 1px solid ${BORDER}; margin: 12px 0; }
 
-  .report-header { display: flex; align-items: flex-start; justify-content: space-between; }
-  .logo { height: 44px; width: auto; }
-  .wordmark { font-family: ${SERIF}; font-size: 15pt; font-weight: 700; letter-spacing: 0.04em; color: ${NAVY}; }
-  .report-title-block { text-align: right; max-width: 74%; }
-  .report-title { font-family: ${SERIF}; font-size: 15pt; font-weight: 700; letter-spacing: 0.01em; }
-  .report-subtitle { font-size: 10pt; color: ${MUTED}; margin-top: 2px; font-style: italic; font-family: ${SERIF}; }
-  .report-meta { font-size: 9pt; color: ${MUTED}; margin-top: 5px; }
-  .classification-line { font-size: 7.5pt; color: ${MUTED}; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; text-align: right; }
+  /* Cover page only -- vertical stack per page 1 of the reference DOCX (see this file's header comment). */
+  .cover-logo-block { margin-bottom: 34px; }
+  .cover-logo { height: 100px; width: auto; }
+  .cover-wordmark { font-family: ${SANS}; font-size: 20pt; font-weight: 800; letter-spacing: 0.02em; color: ${NAVY}; }
+  .cover-kicker { font-family: ${SANS}; font-size: 9pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: ${ACCENT}; margin-bottom: 14px; }
+  .cover-title { font-family: ${SANS}; font-size: 28pt; font-weight: 800; line-height: 1.08; color: ${NAVY}; margin-bottom: 6px; }
+  .cover-subtitle { font-family: ${SANS}; font-size: 13pt; font-weight: 400; color: ${COVER_SLATE}; margin-bottom: 26px; }
+  .cover-divider { border: none; border-top: 1px solid ${COVER_DIVIDER}; margin: 0 0 18px; }
+  .cover-meta-row { margin-bottom: 14px; }
+  .cover-meta-row.cover-meta-row-last { margin-bottom: 0; }
+  .cover-meta-label { font-family: ${SANS}; font-size: 7.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: ${COVER_LABEL}; margin-bottom: 3px; }
+  .cover-meta-value { font-family: ${SANS}; font-size: 11pt; color: ${NAVY}; }
 
   .assessment-heading { font-family: ${SERIF}; font-size: 12pt; font-weight: 700; letter-spacing: 0.01em; margin: 10px 0 5px; }
   .assessment p { margin: 0 0 6px; }
@@ -252,17 +274,28 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
 <body>
 
 <div class="page-one">
-  <div class="report-header">
-    ${logo}
-    <div class="report-title-block">
-      <div class="report-title">${escapeHtml(model.identity.title)}</div>
-      <div class="report-subtitle">${escapeHtml(model.identity.subtitle)}</div>
-      <div class="report-meta">${escapeHtml(model.identity.weekEndingLabel)} &nbsp;&middot;&nbsp; ${escapeHtml(model.identity.dataCutoffLabel)}</div>
-    </div>
+  <div class="cover-logo-block">${logo}</div>
+  <div class="cover-kicker">Investor Relations Briefing | Internal</div>
+  <div class="cover-title">${escapeHtml(model.identity.title)}</div>
+  <div class="cover-subtitle">${escapeHtml(model.identity.subtitle)}</div>
+  <hr class="cover-divider" />
+  <div class="cover-meta-row">
+    <div class="cover-meta-label">Week Ending</div>
+    <div class="cover-meta-value">${escapeHtml(model.identity.weekEndingLabel)}</div>
   </div>
-  <div class="classification-line">Prepared for Management, Finance &amp; Investor Relations &middot; Not for External Distribution</div>
-  <hr class="divider" />
+  <div class="cover-meta-row">
+    <div class="cover-meta-label">Data As Of</div>
+    <div class="cover-meta-value">${escapeHtml(model.identity.dataCutoffLabel)}</div>
+  </div>
+  <div class="cover-meta-row cover-meta-row-last">
+    <div class="cover-meta-label">Controlling Sources</div>
+    <div class="cover-meta-value">${escapeHtml(controllingSources)}</div>
+  </div>
+</div>
 
+<div class="page-break"></div>
+
+<div class="assessment-block">
   <div class="assessment-heading">Weekly Range Resources Intelligence Assessment</div>
   <div class="assessment">${executiveParagraphs}</div>
 
@@ -270,8 +303,6 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   ${riskOpportunityRow}
   ${whatChanged}
 </div>
-
-<div class="page-break"></div>
 
 ${evidenceSections}
 

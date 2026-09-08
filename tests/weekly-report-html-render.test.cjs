@@ -20,13 +20,25 @@ test("renderReportHtml produces a complete, self-contained HTML document", () =>
 test("renderReportHtml falls back to a text wordmark when no logo data URI is supplied", () => {
   const model = buildWeeklyReportRenderModel(SAMPLE_WEEKLY_REPORT_PAYLOAD, SAMPLE_WEEKLY_ANALYST_ASSESSMENT);
   const html = renderReportHtml(model, null);
-  assert.match(html, /class="wordmark">RANGE RESOURCES</);
+  assert.match(html, /class="cover-wordmark">RANGE RESOURCES</);
 });
 
 test("renderReportHtml uses an <img> tag when a logo data URI is supplied", () => {
   const model = buildWeeklyReportRenderModel(SAMPLE_WEEKLY_REPORT_PAYLOAD, SAMPLE_WEEKLY_ANALYST_ASSESSMENT);
   const html = renderReportHtml(model, "data:image/png;base64,AAAA");
-  assert.match(html, /<img class="logo" src="data:image\/png;base64,AAAA"/);
+  assert.match(html, /<img class="cover-logo" src="data:image\/png;base64,AAAA"/);
+});
+
+test("renderReportHtml renders the cover page per the DOCX-derived visual spec (kicker, vertical stack, controlling sources)", () => {
+  const model = buildWeeklyReportRenderModel(SAMPLE_WEEKLY_REPORT_PAYLOAD, SAMPLE_WEEKLY_ANALYST_ASSESSMENT);
+  const html = renderReportHtml(model, null);
+  assert.match(html, /class="cover-kicker">Investor Relations Briefing \| Internal</);
+  assert.match(html, /class="cover-title"/);
+  assert.match(html, /class="cover-subtitle"/);
+  assert.match(html, /class="cover-divider"/);
+  assert.match(html, /class="cover-meta-label">Week Ending/);
+  assert.match(html, /class="cover-meta-label">Data As Of/);
+  assert.match(html, /class="cover-meta-label">Controlling Sources/);
 });
 
 test("renderReportHtml escapes HTML-significant characters in evidence-derived text -- never raw-interpolates untrusted content", () => {
