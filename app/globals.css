@@ -236,13 +236,13 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-snapshot-item[open] p, .macro-snapshot-item[open] small { position: absolute; left: 6px; right: 6px; z-index: 8; margin: 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0,0,0,.34); font-size: 11px; line-height: 1.45; }
 .macro-snapshot-item[open] p { top: calc(100% + 4px); border-radius: 8px 8px 0 0; border-bottom: 0; }
 .macro-snapshot-item[open] small { top: calc(100% + 58px); color: var(--muted); border-radius: 0 0 8px 8px; }
-.macro-section { border: 1px solid var(--border); background: rgba(11,23,38,.95); border-radius: 10px; padding: 14px; overflow: hidden; }
+.macro-section { border: 1px solid var(--border); background: rgba(11,23,38,.95); border-radius: 10px; padding: 14px; overflow: hidden; scroll-margin-top: 150px; }
 .macro-snapshot-section { overflow: visible; }
-.macro-grid-row { display: grid; gap: 12px; }
+.macro-grid-row { display: grid; gap: 12px; scroll-margin-top: 150px; }
 .macro-grid-row-equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .macro-grid-row-demand { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
 .macro-grid-row-rrc { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr); align-items: stretch; }
-.macro-grid-card { min-width: 0; }
+.macro-grid-card { min-width: 0; scroll-margin-top: 150px; }
 .macro-grid-card .macro-section-head { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
 .macro-grid-row-rrc .macro-snapshot-section .macro-section-head { grid-template-columns: 1fr; align-items: start; gap: 5px; }
 .macro-grid-row-rrc .macro-snapshot-section .macro-section-head p { text-align: left; }
@@ -358,8 +358,10 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
-.macro-topic-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 10px 0 4px; }
-.macro-topic-tabs button { flex: 0 0 auto; white-space: nowrap; }
+/* Quick-jump row: compact scroll-to-section links, not tabs -- every section
+   stays mounted and visible regardless of which (if any) of these is clicked. */
+.macro-quickjump { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 10px 0 4px; position: sticky; top: 112px; z-index: 15; background: rgba(6,17,31,.92); backdrop-filter: blur(10px); }
+.macro-quickjump button { flex: 0 0 auto; white-space: nowrap; }
 .eia-outlook { display: grid; gap: 10px; }
 .eia-outlook-select { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--muted); max-width: 320px; }
 .eia-outlook-select select { background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; }

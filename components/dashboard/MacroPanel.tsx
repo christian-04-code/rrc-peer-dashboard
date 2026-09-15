@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useMarketData } from "@/lib/market/use-market-data";
 import { useMacroFundamentals } from "@/lib/market/use-macro-fundamentals";
 import { useMacroSteo } from "@/lib/market/use-macro-steo";
@@ -41,19 +40,27 @@ import { MacroRiskWidget } from "@/components/dashboard/MacroRiskWidget";
 
 const PULSE_IDS = ["henry_hub", "wti", "brent", "storage", "lng_exports", "dry_gas_production", "propane_stocks"];
 
-type Topic = "gas-balance" | "storage" | "supply" | "appalachia" | "lng" | "demand" | "eia-outlook" | "rigs";
-const TOPICS: { id: Topic; label: string }[] = [
+// The long-form page (matching the pre-tab e61e0ac architecture) renders every
+// section simultaneously -- this is no longer tab-gating, just a compact
+// quick-jump row. Clicking an item scrolls to its section; it never
+// hides/unmounts any other section.
+const QUICK_JUMP: { id: string; label: string }[] = [
   { id: "gas-balance", label: "Gas Balance" },
   { id: "storage", label: "Storage" },
+  { id: "map-rigs", label: "Map & Rigs" },
   { id: "supply", label: "Supply" },
-  { id: "appalachia", label: "Appalachia" },
   { id: "lng", label: "LNG" },
   { id: "demand", label: "Demand" },
-  { id: "eia-outlook", label: "EIA Outlook" },
-  { id: "rigs", label: "Rigs" }
+  { id: "ngl", label: "NGL" },
+  { id: "appalachia", label: "Appalachia" },
+  { id: "eia-outlook", label: "EIA Outlook" }
 ];
 
-const RISK_DRIVER_TOPIC: Record<RangeMacroSignalKey, Topic> = {
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const RISK_DRIVER_SECTION: Record<RangeMacroSignalKey, string> = {
   gas_pricing: "gas-balance",
   storage_levels: "storage",
   us_gas_supply: "supply",
@@ -172,7 +179,6 @@ export function MacroPanel() {
   const fundamentals = useMacroFundamentals();
   const steo = useMacroSteo();
   const macroRisk = useMacroRisk();
-  const [topic, setTopic] = useState<Topic>("gas-balance");
   const metrics = market.data?.metrics ?? [];
   const byId = new Map(metrics.map((metric) => [metric.id, metric]));
   const storageMetric = byId.get("storage");
@@ -257,153 +263,137 @@ export function MacroPanel() {
         </div>
       </header>
 
-      <section className="macro-section macro-pulse">
-        <SectionHeader eyebrow="MARKET PULSE" title="Cross-commodity tape" description="Sources: U.S. EIA · OilPriceAPI" />
+      <section className="macro-section macro-pulse" id="market-pulse">
+        <SectionHeader eyebrow="01 · MARKET PULSE" title="Cross-commodity tape" description="Sources: U.S. EIA · OilPriceAPI" />
         <div className="macro-pulse-grid">{PULSE_IDS.map((id) => <PulseMetric key={id} metric={byId.get(id)} label={id.replaceAll("_", " ")} current={id === "henry_hub" ? currentQuotes?.henryHub : id === "wti" ? currentQuotes?.wti : undefined} />)}</div>
       </section>
 
-      <nav className="macro-segmented macro-topic-tabs" aria-label="Macro topic">
-        {TOPICS.map((item) => (
-          <button key={item.id} type="button" aria-pressed={topic === item.id} className={topic === item.id ? "active" : ""} onClick={() => setTopic(item.id)}>{item.label}</button>
+      <nav className="macro-segmented macro-quickjump" aria-label="Macro quick jump">
+        {QUICK_JUMP.map((item) => (
+          <button key={item.id} type="button" onClick={() => scrollToSection(item.id)}>{item.label}</button>
         ))}
       </nav>
 
-      {topic === "gas-balance" ? (
-        <section className="macro-grid-row macro-grid-row-rrc">
-          <article className="macro-section macro-grid-card">
-            <SectionHeader eyebrow="GAS BALANCE" title="Is the U.S. gas market tightening or loosening?" description="Storage deviation and LNG export growth only -- deliberately not a raw production-minus-consumption figure, since those EIA series differ in scope and would be an incompatible-unit aggregation." asOf={`Storage ${storageMetric?.period ? formatWeekEnding(storageMetric.period) : "--"}${storageMetric?.freshness === "stale" ? " (stale)" : ""} · LNG ${lngMetric?.period ? formatDataDate(lngMetric.period) : "--"}${lngMetric?.freshness === "stale" ? " (stale)" : ""}`} />
-            <div className="macro-rrc-grid polished">
-              <div className={`macro-rrc-callout ${gasBalance.gasState === "Tightening" ? "positive" : gasBalance.gasState === "Loosening" ? "negative" : ""}`}>
-                <span className="rrc-macro-risk-label"><b>NATIONAL</b> <em>Gas Balance</em></span>
-                <strong>{gasBalance.gasState}</strong>
-                <p>Storage is {formatPct(gasBalance.storagePct)} versus its five-year average ({gasBalance.storageState}); LNG exports are {formatPct(gasBalance.lngYoY)} year over year ({gasBalance.lngState}). Tightening requires storage at least 5% below normal and LNG exports growing at least 5% YoY; loosening requires the inverse.</p>
-                <small>Is the environment more or less supportive for Range: a Tightening read (low storage + growing LNG demand) is directionally supportive for gas price realizations; Loosening is directionally unsupportive.</small>
-              </div>
-              <div className="macro-regional-grid appalachia">
-                <Stat label="Storage vs 5Y avg" value={formatPct(gasBalance.storagePct)} note={gasBalance.storageState} />
-                <Stat label="LNG exports YoY" value={formatPct(gasBalance.lngYoY)} note={gasBalance.lngState} />
-                <Stat label="Dry gas production YoY" value={formatPct(productionMetric ? periodChangePct(productionMetric, 12) : null)} note={observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} />
-                <Stat label="Electric power demand YoY" value={formatPct(monthlyYoy(electricPower?.history ?? []))} note={observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} />
-                <Stat label="Industrial demand YoY" value={formatPct(monthlyYoy(industrial?.history ?? []))} note={observationLabel(industrial?.period, "monthly", industrial?.freshness)} />
-                <Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" />
-              </div>
+      <section className="macro-grid-row macro-grid-row-rrc" id="gas-balance">
+        <article className="macro-section macro-grid-card">
+          <SectionHeader eyebrow="02 · GAS BALANCE" title="Is the U.S. gas market tightening or loosening?" description="Storage deviation and LNG export growth only -- deliberately not a raw production-minus-consumption figure, since those EIA series differ in scope and would be an incompatible-unit aggregation." asOf={`Storage ${storageMetric?.period ? formatWeekEnding(storageMetric.period) : "--"}${storageMetric?.freshness === "stale" ? " (stale)" : ""} · LNG ${lngMetric?.period ? formatDataDate(lngMetric.period) : "--"}${lngMetric?.freshness === "stale" ? " (stale)" : ""}`} />
+          <div className="macro-rrc-grid polished">
+            <div className={`macro-rrc-callout ${gasBalance.gasState === "Tightening" ? "positive" : gasBalance.gasState === "Loosening" ? "negative" : ""}`}>
+              <span className="rrc-macro-risk-label"><b>NATIONAL</b> <em>Gas Balance</em></span>
+              <strong>{gasBalance.gasState}</strong>
+              <p>Storage is {formatPct(gasBalance.storagePct)} versus its five-year average ({gasBalance.storageState}); LNG exports are {formatPct(gasBalance.lngYoY)} year over year ({gasBalance.lngState}). Tightening requires storage at least 5% below normal and LNG exports growing at least 5% YoY; loosening requires the inverse.</p>
+              <small>Is the environment more or less supportive for Range: a Tightening read (low storage + growing LNG demand) is directionally supportive for gas price realizations; Loosening is directionally unsupportive.</small>
             </div>
-          </article>
-          <article className="macro-section macro-grid-card macro-snapshot-section">
-            <SectionHeader eyebrow="EVIDENCE" title="Macro snapshot" description="Deterministic classifications; select a row for its rule and inputs." />
-            <div className="macro-snapshot compact" aria-label="Macro snapshot">{snapshot.map((item) => <details key={item.label} className={`macro-snapshot-item ${item.tone}`}><summary><span>{item.label}</span><strong>{item.state}</strong></summary><p>{item.rule}</p><small>{item.inputs}</small></details>)}</div>
-          </article>
-        </section>
-      ) : null}
-
-      {topic === "storage" ? (
-        <section className="macro-section macro-storage-section">
-          <SectionHeader title="U.S. natural gas storage" description="Current year against prior year, same-week five-year average, and the full historical range." />
-          <div className="macro-balance-grid">
-            <div className="macro-primary-chart"><div className="macro-card-title"><div><h3>Lower-48 working gas</h3><span className="macro-source-accent">{observationLabel(storageMetric?.period, "weekly", storageMetric?.freshness)} · Weekly · U.S. EIA</span></div><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong></div><StorageChart metric={storageMetric} /></div>
-            <aside className="macro-weekly-report"><div><span>LATEST WEEKLY REPORT</span><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong><p>{observationLabel(storageMetric?.period, "weekly", storageMetric?.freshness)}</p></div><div className="macro-balance-stats">
-              <Stat label="Weekly injection / withdrawal" value={formatDelta(storage?.weeklyChange ?? null, "Bcf")} note="injection (+) / withdrawal (−)" />
-              <Stat label="vs 5-year average" value={formatDelta(storage?.versusAverage ?? null, "Bcf")} note={formatPct(storage?.versusAveragePct ?? null)} />
-              <Stat label="vs year ago" value={formatDelta(storage?.yearOverYear ?? null, "Bcf")} note={storage?.priorYear && storage.yearOverYear !== null ? formatPct((storage.yearOverYear / storage.priorYear) * 100) : "--"} />
-              <Stat label="5-year same-week range" value={storage?.fiveYearMin != null && storage?.fiveYearMax != null ? `${storage.fiveYearMin.toFixed(0)}–${storage.fiveYearMax.toFixed(0)} Bcf` : "--"} />
-            </div></aside>
+            <div className="macro-regional-grid appalachia">
+              <Stat label="Storage vs 5Y avg" value={formatPct(gasBalance.storagePct)} note={gasBalance.storageState} />
+              <Stat label="LNG exports YoY" value={formatPct(gasBalance.lngYoY)} note={gasBalance.lngState} />
+              <Stat label="Dry gas production YoY" value={formatPct(productionMetric ? periodChangePct(productionMetric, 12) : null)} note={observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} />
+              <Stat label="Electric power demand YoY" value={formatPct(monthlyYoy(electricPower?.history ?? []))} note={observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} />
+              <Stat label="Industrial demand YoY" value={formatPct(monthlyYoy(industrial?.history ?? []))} note={observationLabel(industrial?.period, "monthly", industrial?.freshness)} />
+              <Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" />
+            </div>
           </div>
-          <div className="macro-subsection-head"><div><span>REGIONAL STORAGE</span><h3>Regional Working Gas Storage vs. Five-Year Average</h3></div><p>Official EIA regions · {east?.period ? formatWeekEnding(east.period) : "--"}{east?.freshness === "stale" ? " · Stale" : ""}</p></div>
-          <RegionalStorageTable regions={regionalStorage} />
-          {forecastSeries("workingGasStorageForecast", "#e5ad63") ? (
-            <>
-              <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Working gas storage forecast</h3></div><p>{steoVintageLabel("workingGasStorageForecast")}</p></div>
-              <HistoricalLineChart ariaLabel="EIA STEO working gas storage forecast" unit={steoSeries?.workingGasStorageForecast?.unit ?? "Bcf"} limit={24} series={[forecastSeries("workingGasStorageForecast", "#e5ad63") as ChartSeries]} />
-            </>
-          ) : null}
-          <p className="macro-context-note">The interactive storage/production geography map lives under the Rigs tab, alongside the Baker Hughes rig-count overlay it shares a toggle with.</p>
-        </section>
-      ) : null}
+        </article>
+        <article className="macro-section macro-grid-card macro-snapshot-section">
+          <SectionHeader eyebrow="EVIDENCE" title="Macro snapshot" description="Deterministic classifications; select a row for its rule and inputs." />
+          <div className="macro-snapshot compact" aria-label="Macro snapshot">{snapshot.map((item) => <details key={item.label} className={`macro-snapshot-item ${item.tone}`}><summary><span>{item.label}</span><strong>{item.state}</strong></summary><p>{item.rule}</p><small>{item.inputs}</small></details>)}</div>
+        </article>
+      </section>
 
-      {topic === "supply" ? (
-        <section className="macro-section">
-          <SectionHeader eyebrow="SUPPLY" title="Dry-gas supply: actual vs. EIA forecast" description="Monthly national dry production converted to Bcf/d to match EIA STEO's own forecast unit; state ranking uses marketed production. Dashed line is the projection, not an observed value." />
-          <div className="macro-primary-chart borderless">
-            <div className="macro-card-title"><div><h3>U.S. dry natural gas production</h3><span>{observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} · Monthly · {sourceShort(productionMetric)}</span></div><strong>{productionBcfd === null ? "--" : productionBcfd.toFixed(1)} <small>Bcf/d</small></strong></div>
-            <HistoricalLineChart
-              ariaLabel="U.S. dry natural gas production, actual and EIA STEO forecast"
-              unit="Bcf/d"
-              limit={60}
-              series={[{ id: "dry-gas", label: "U.S. dry gas (actual)", color: "#3db3e3", history: toBcfdSeries(productionMetric?.history ?? []) }, forecastSeries("dryGasProductionForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)}
-            />
-            <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(productionMetric ? periodChangePct(productionMetric, 12) : null)} /><Stat label="Latest native observation" value={formatMetricValue(productionMetric)} note={compactUnit(productionMetric)} /></div>
-          </div>
-          <div className="macro-subsection-head compact"><div><span>TOP PRODUCING STATES</span><h3>Latest marketed production</h3></div><p>{states[0]?.period ? formatDataDate(states[0].period) : "--"}</p></div><StateProductionRanking states={states} />
-        </section>
-      ) : null}
+      <section className="macro-section macro-storage-section" id="storage">
+        <SectionHeader eyebrow="03 · U.S. NATURAL GAS STORAGE" title="U.S. natural gas storage" description="Current year against prior year, same-week five-year average, and the full historical range." />
+        <div className="macro-balance-grid">
+          <div className="macro-primary-chart"><div className="macro-card-title"><div><h3>Lower-48 working gas</h3><span className="macro-source-accent">{observationLabel(storageMetric?.period, "weekly", storageMetric?.freshness)} · Weekly · U.S. EIA</span></div><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong></div><StorageChart metric={storageMetric} /></div>
+          <aside className="macro-weekly-report"><div><span>LATEST WEEKLY REPORT</span><strong>{formatMetricValue(storageMetric)} <small>Bcf</small></strong><p>{observationLabel(storageMetric?.period, "weekly", storageMetric?.freshness)}</p></div><div className="macro-balance-stats">
+            <Stat label="Weekly injection / withdrawal" value={formatDelta(storage?.weeklyChange ?? null, "Bcf")} note="injection (+) / withdrawal (−)" />
+            <Stat label="vs 5-year average" value={formatDelta(storage?.versusAverage ?? null, "Bcf")} note={formatPct(storage?.versusAveragePct ?? null)} />
+            <Stat label="vs year ago" value={formatDelta(storage?.yearOverYear ?? null, "Bcf")} note={storage?.priorYear && storage.yearOverYear !== null ? formatPct((storage.yearOverYear / storage.priorYear) * 100) : "--"} />
+            <Stat label="5-year same-week range" value={storage?.fiveYearMin != null && storage?.fiveYearMax != null ? `${storage.fiveYearMin.toFixed(0)}–${storage.fiveYearMax.toFixed(0)} Bcf` : "--"} />
+          </div></aside>
+        </div>
+        <div className="macro-subsection-head"><div><span>REGIONAL STORAGE</span><h3>Regional Working Gas Storage vs. Five-Year Average</h3></div><p>Official EIA regions · {east?.period ? formatWeekEnding(east.period) : "--"}{east?.freshness === "stale" ? " · Stale" : ""}</p></div>
+        <RegionalStorageTable regions={regionalStorage} />
+        {forecastSeries("workingGasStorageForecast", "#e5ad63") ? (
+          <>
+            <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Working gas storage forecast</h3></div><p>{steoVintageLabel("workingGasStorageForecast")}</p></div>
+            <HistoricalLineChart ariaLabel="EIA STEO working gas storage forecast" unit={steoSeries?.workingGasStorageForecast?.unit ?? "Bcf"} limit={24} series={[forecastSeries("workingGasStorageForecast", "#e5ad63") as ChartSeries]} />
+          </>
+        ) : null}
+        <p className="macro-context-note">The interactive storage/production geography map, with the Baker Hughes rig-count overlay, is in the next section below.</p>
+      </section>
 
-      {topic === "appalachia" ? (
-        <section className="macro-section">
-          <SectionHeader eyebrow="APPALACHIA / RANGE" title="PA + WV + OH marketed production" description="EIA does not publish a &quot;Marcellus production&quot; series -- this sums marketed production for the three states EIA does report, the closest available Appalachia proxy." />
-          <div className="macro-primary-chart borderless">
-            <div className="macro-card-title"><div><h3>PA + WV + OH marketed production</h3><span>{observationLabel(appalachia.period, "monthly")} · Monthly · U.S. EIA</span></div><strong>{appalachia.current === null ? "--" : new Intl.NumberFormat("en-US").format(appalachia.current)} <small>MMcf/month</small></strong></div>
-            <HistoricalLineChart ariaLabel="PA + WV + OH marketed production history" unit="MMcf/month" limit={36} series={[{ id: "appalachia", label: `${appalachia.statesIncluded.join(" + ") || "PA + WV + OH"} marketed production`, color: "#70c99a", history: appalachia.history }]} />
-            <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(appalachia.yearOverYearPct)} /><Stat label="Month-over-month" value={formatPct(appalachia.monthOverMonthPct)} /></div>
-            <p className="appalachia-label-note">States included: {appalachia.statesIncluded.length ? appalachia.statesIncluded.join(", ") : "none available"}. This is a state-level EIA aggregate, not an official Marcellus-play figure -- it is never labeled as "Marcellus production".</p>
-          </div>
-          <div className="macro-regional-grid appalachia"><Stat label="East storage vs 5Y" value={formatPct(east?.fiveYearPct ?? null)} note={`${east?.current?.toFixed(0) ?? "--"} Bcf · ${observationLabel(east?.period, "weekly", east?.freshness)}`} /><Stat label="PA production YoY" value={formatPct(pa?.yearOverYearPct ?? null)} note={`${pa?.current?.toFixed(0) ?? "--"} MMcf · ${observationLabel(pa?.period, "monthly")}`} /><Stat label="WV production YoY" value={formatPct(wv?.yearOverYearPct ?? null)} note={observationLabel(wv?.period, "monthly")} /><Stat label="OH production YoY" value={formatPct(oh?.yearOverYearPct ?? null)} note={observationLabel(oh?.period, "monthly")} /><Stat label="LNG exports YoY" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} note={observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} /><Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" /></div>
+      <section className="macro-section" id="map-rigs">
+        <SectionHeader eyebrow="04 · INTERACTIVE ENERGY MAP + RIGS" title="Storage regions, state production and drilling activity" description="Baker Hughes weekly rig counts by basin and state, alongside the storage/production geography map." asOf={formatWeekEnding(getRigDataset().source.reportDate)} />
+        <MacroEnergyMap data={fundamentals.data} />
+      </section>
 
-          <MacroRiskWidget data={macroRisk.data} loading={macroRisk.loading} error={macroRisk.error} onViewDriver={(driver) => setTopic(RISK_DRIVER_TOPIC[driver])} />
-        </section>
-      ) : null}
+      <section className="macro-section" id="supply">
+        <SectionHeader eyebrow="05 · U.S. GAS PRODUCTION" title="Dry-gas supply: actual vs. EIA forecast" description="Monthly national dry production converted to Bcf/d to match EIA STEO's own forecast unit; state ranking uses marketed production. Dashed line is the projection, not an observed value." />
+        <div className="macro-primary-chart borderless">
+          <div className="macro-card-title"><div><h3>U.S. dry natural gas production</h3><span>{observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} · Monthly · {sourceShort(productionMetric)}</span></div><strong>{productionBcfd === null ? "--" : productionBcfd.toFixed(1)} <small>Bcf/d</small></strong></div>
+          <HistoricalLineChart
+            ariaLabel="U.S. dry natural gas production, actual and EIA STEO forecast"
+            unit="Bcf/d"
+            limit={60}
+            series={[{ id: "dry-gas", label: "U.S. dry gas (actual)", color: "#3db3e3", history: toBcfdSeries(productionMetric?.history ?? []) }, forecastSeries("dryGasProductionForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)}
+          />
+          <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(productionMetric ? periodChangePct(productionMetric, 12) : null)} /><Stat label="Latest native observation" value={formatMetricValue(productionMetric)} note={compactUnit(productionMetric)} /></div>
+        </div>
+        <div className="macro-subsection-head compact"><div><span>TOP PRODUCING STATES</span><h3>Latest marketed production</h3></div><p>{states[0]?.period ? formatDataDate(states[0].period) : "--"}</p></div><StateProductionRanking states={states} />
+      </section>
 
-      {topic === "lng" ? (
-        <section className="macro-section">
-          <SectionHeader eyebrow="LNG" title="U.S. LNG exports: actual vs. EIA forecast" description="Observed monthly exports converted to Bcf/d to match EIA STEO's own forecast unit, plus the EIA Short-Term Energy Outlook projection, clearly separated from forward capacity assumptions." />
-          <div className="macro-primary-chart borderless">
-            <div className="macro-card-title"><div><h3>Monthly LNG export trend</h3><span>{observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} · Monthly · {sourceShort(lngMetric)}</span></div><strong>{formatMetricValue(lngMetric)} <small>{compactUnit(lngMetric)}</small></strong></div>
-            <HistoricalLineChart
-              ariaLabel="U.S. LNG exports, actual and EIA STEO forecast"
-              unit="Bcf/d"
-              limit={60}
-              series={[{ id: "lng", label: "LNG exports (actual)", color: "#70c99a", history: toBcfdSeries(lngMetric?.history ?? []) }, forecastSeries("lngExportsForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)}
-            />
-            <div className="macro-inline-stats"><Stat label="Year-over-year growth" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} /><Stat label="Latest observation" value={observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} note="Monthly · U.S. EIA" /></div>
-            <p className="macro-context-note">Rising LNG exports increase structural U.S. natural-gas demand and are strategically relevant to Range&apos;s gas exposure. The EIA-labeled LNG-specific series (NGEXPUS_LNG) is used here, not the broader total gross-exports series that also includes pipeline exports.</p>
-          </div>
-        </section>
-      ) : null}
+      <section className="macro-section" id="lng">
+        <SectionHeader eyebrow="06 · LNG" title="U.S. LNG exports: actual vs. EIA forecast" description="Observed monthly exports converted to Bcf/d to match EIA STEO's own forecast unit, plus the EIA Short-Term Energy Outlook projection, clearly separated from forward capacity assumptions." />
+        <div className="macro-primary-chart borderless">
+          <div className="macro-card-title"><div><h3>Monthly LNG export trend</h3><span>{observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} · Monthly · {sourceShort(lngMetric)}</span></div><strong>{formatMetricValue(lngMetric)} <small>{compactUnit(lngMetric)}</small></strong></div>
+          <HistoricalLineChart
+            ariaLabel="U.S. LNG exports, actual and EIA STEO forecast"
+            unit="Bcf/d"
+            limit={60}
+            series={[{ id: "lng", label: "LNG exports (actual)", color: "#70c99a", history: toBcfdSeries(lngMetric?.history ?? []) }, forecastSeries("lngExportsForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)}
+          />
+          <div className="macro-inline-stats"><Stat label="Year-over-year growth" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} /><Stat label="Latest observation" value={observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} note="Monthly · U.S. EIA" /></div>
+          <p className="macro-context-note">Rising LNG exports increase structural U.S. natural-gas demand and are strategically relevant to Range&apos;s gas exposure. The EIA-labeled LNG-specific series (NGEXPUS_LNG) is used here, not the broader total gross-exports series that also includes pipeline exports.</p>
+        </div>
+      </section>
 
-      {topic === "demand" ? (
-        <section className="macro-grid-row macro-grid-row-demand">
-          <article className="macro-section macro-grid-card">
-            <SectionHeader eyebrow="NATURAL GAS DEMAND" title="Consumption by end use" description="Monthly EIA observations; electric power and industrial demand lead the visual hierarchy." />
-            <div className="macro-primary-chart borderless"><div className="macro-card-title"><div><h3>U.S. demand by sector</h3><span>{observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} · Monthly · U.S. EIA</span></div><small>{fundamentals.data?.demand.status === "ok" ? "Observed EIA" : "Unavailable"}</small></div><DemandChart demand={demand} /><div className="macro-inline-stats"><Stat label="Electric power YoY" value={formatPct(monthlyYoy(electricPower?.history ?? []))} note={observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} /><Stat label="Industrial YoY" value={formatPct(monthlyYoy(industrial?.history ?? []))} note={observationLabel(industrial?.period, "monthly", industrial?.freshness)} /></div></div>
-            <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Electric power demand forecast</h3></div><p>{steoVintageLabel("electricPowerConsumptionForecast")}</p></div>
-            {forecastSeries("electricPowerConsumptionForecast", "#e5ad63") ? (
-              <HistoricalLineChart ariaLabel="Electric power demand, EIA STEO forecast" unit={steoSeries?.electricPowerConsumptionForecast?.unit ?? "Bcf"} limit={24} series={[forecastSeries("electricPowerConsumptionForecast", "#e5ad63") as ChartSeries]} />
-            ) : <div className="macro-chart-empty">--<small>EIA STEO forecast unavailable</small></div>}
-            <p className="macro-context-note">Not overlaid with the observed actual above: EIA reports this STEO series in "{steoSeries?.electricPowerConsumptionForecast?.unit ?? "billion cubic feet"}", a different unit convention than the other STEO consumption series, and it is not combined with the MMcf/month actual without a confirmed conversion.</p>
-            <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Industrial demand: actual vs. forecast</h3></div><p>{steoVintageLabel("industrialConsumptionForecast")}</p></div>
-            <HistoricalLineChart ariaLabel="Industrial demand, actual and EIA STEO forecast" unit="Bcf/d" limit={36} series={[{ id: "industrial-actual", label: "Industrial (actual)", color: "#70c99a", history: toBcfdSeries(industrial?.history ?? []) }, forecastSeries("industrialConsumptionForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)} />
-            <div className="macro-structural-outlook compact"><div><span>STRUCTURAL OUTLOOK</span><h3>Long-run drivers stay separate</h3><p>No dated project-research series is blended into observed EIA history.</p></div><UnsupportedMetric label="LNG capacity" note="Project source required" /><UnsupportedMetric label="AI / data centers" note="Third-party estimate required" /></div>
-          </article>
-          <article className="macro-section macro-grid-card">
-            <SectionHeader eyebrow="NGL" title="U.S. propane inventories" description="Weekly fractionated propane stocks with near-term and annual comparison." />
-            <div className="macro-primary-chart borderless"><div className="macro-card-title"><div><h3>Propane inventory history</h3><span>{observationLabel(propaneMetric?.period, "weekly", propaneMetric?.freshness)} · Weekly · {sourceShort(propaneMetric)}</span></div><strong>{formatMetricValue(propaneMetric)} <small>Mbbl</small></strong></div><HistoricalLineChart ariaLabel="U.S. propane inventory history" unit="Mbbl" limit={104} series={[{ id: "propane", label: "Propane inventories", color: "#e5ad63", history: propaneMetric?.history ?? [] }]} /><div className="macro-inline-stats"><Stat label="Weekly change" value={formatDelta(propaneMetric ? periodChange(propaneMetric) : null, "Mbbl")} /><Stat label="Year-over-year" value={formatPct(propaneMetric ? periodChangePct(propaneMetric, 52) : null)} /></div></div>
-            <div className="macro-unsupported-row"><UnsupportedMetric label="Ethane exports" note="No normalized series" /><UnsupportedMetric label="NGL pricing" note="No supported live series" /></div>
-          </article>
-        </section>
-      ) : null}
+      <section className="macro-grid-row macro-grid-row-demand">
+        <article className="macro-section macro-grid-card" id="demand">
+          <SectionHeader eyebrow="07 · NATURAL GAS DEMAND" title="Consumption by end use" description="Monthly EIA observations; electric power and industrial demand lead the visual hierarchy." />
+          <div className="macro-primary-chart borderless"><div className="macro-card-title"><div><h3>U.S. demand by sector</h3><span>{observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} · Monthly · U.S. EIA</span></div><small>{fundamentals.data?.demand.status === "ok" ? "Observed EIA" : "Unavailable"}</small></div><DemandChart demand={demand} /><div className="macro-inline-stats"><Stat label="Electric power YoY" value={formatPct(monthlyYoy(electricPower?.history ?? []))} note={observationLabel(electricPower?.period, "monthly", electricPower?.freshness)} /><Stat label="Industrial YoY" value={formatPct(monthlyYoy(industrial?.history ?? []))} note={observationLabel(industrial?.period, "monthly", industrial?.freshness)} /></div></div>
+          <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Electric power demand forecast</h3></div><p>{steoVintageLabel("electricPowerConsumptionForecast")}</p></div>
+          {forecastSeries("electricPowerConsumptionForecast", "#e5ad63") ? (
+            <HistoricalLineChart ariaLabel="Electric power demand, EIA STEO forecast" unit={steoSeries?.electricPowerConsumptionForecast?.unit ?? "Bcf"} limit={24} series={[forecastSeries("electricPowerConsumptionForecast", "#e5ad63") as ChartSeries]} />
+          ) : <div className="macro-chart-empty">--<small>EIA STEO forecast unavailable</small></div>}
+          <p className="macro-context-note">Not overlaid with the observed actual above: EIA reports this STEO series in "{steoSeries?.electricPowerConsumptionForecast?.unit ?? "billion cubic feet"}", a different unit convention than the other STEO consumption series, and it is not combined with the MMcf/month actual without a confirmed conversion.</p>
+          <div className="macro-subsection-head compact"><div><span>EIA STEO OUTLOOK</span><h3>Industrial demand: actual vs. forecast</h3></div><p>{steoVintageLabel("industrialConsumptionForecast")}</p></div>
+          <HistoricalLineChart ariaLabel="Industrial demand, actual and EIA STEO forecast" unit="Bcf/d" limit={36} series={[{ id: "industrial-actual", label: "Industrial (actual)", color: "#70c99a", history: toBcfdSeries(industrial?.history ?? []) }, forecastSeries("industrialConsumptionForecast", "#e5ad63")].filter((entry): entry is ChartSeries => entry !== null)} />
+          <div className="macro-structural-outlook compact"><div><span>STRUCTURAL OUTLOOK</span><h3>Long-run drivers stay separate</h3><p>No dated project-research series is blended into observed EIA history.</p></div><UnsupportedMetric label="LNG capacity" note="Project source required" /><UnsupportedMetric label="AI / data centers" note="Third-party estimate required" /></div>
+        </article>
+        <article className="macro-section macro-grid-card" id="ngl">
+          <SectionHeader eyebrow="08 · NGL" title="U.S. propane inventories" description="Weekly fractionated propane stocks with near-term and annual comparison." />
+          <div className="macro-primary-chart borderless"><div className="macro-card-title"><div><h3>Propane inventory history</h3><span>{observationLabel(propaneMetric?.period, "weekly", propaneMetric?.freshness)} · Weekly · {sourceShort(propaneMetric)}</span></div><strong>{formatMetricValue(propaneMetric)} <small>Mbbl</small></strong></div><HistoricalLineChart ariaLabel="U.S. propane inventory history" unit="Mbbl" limit={104} series={[{ id: "propane", label: "Propane inventories", color: "#e5ad63", history: propaneMetric?.history ?? [] }]} /><div className="macro-inline-stats"><Stat label="Weekly change" value={formatDelta(propaneMetric ? periodChange(propaneMetric) : null, "Mbbl")} /><Stat label="Year-over-year" value={formatPct(propaneMetric ? periodChangePct(propaneMetric, 52) : null)} /></div></div>
+          <div className="macro-unsupported-row"><UnsupportedMetric label="Ethane exports" note="No normalized series" /><UnsupportedMetric label="NGL pricing" note="No supported live series" /></div>
+        </article>
+      </section>
 
-      {topic === "eia-outlook" ? (
-        <section className="macro-section">
-          <SectionHeader eyebrow="EIA OUTLOOK" title="Short-Term Energy Outlook" description="EIA's own forward projection, actual-vs-forecast where an observed counterpart exists, with forecast revisions once a second monthly snapshot has been captured." />
-          <EiaOutlookModule steo={steo.data} loading={steo.loading} error={steo.error} metrics={eiaOutlookMetrics} forecastStartPeriod={steoForecastStartPeriod} />
-        </section>
-      ) : null}
+      <section className="macro-section" id="appalachia">
+        <SectionHeader eyebrow="09 · APPALACHIA / RANGE" title="PA + WV + OH marketed production" description="EIA does not publish a &quot;Marcellus production&quot; series -- this sums marketed production for the three states EIA does report, the closest available Appalachia proxy." />
+        <div className="macro-primary-chart borderless">
+          <div className="macro-card-title"><div><h3>PA + WV + OH marketed production</h3><span>{observationLabel(appalachia.period, "monthly")} · Monthly · U.S. EIA</span></div><strong>{appalachia.current === null ? "--" : new Intl.NumberFormat("en-US").format(appalachia.current)} <small>MMcf/month</small></strong></div>
+          <HistoricalLineChart ariaLabel="PA + WV + OH marketed production history" unit="MMcf/month" limit={36} series={[{ id: "appalachia", label: `${appalachia.statesIncluded.join(" + ") || "PA + WV + OH"} marketed production`, color: "#70c99a", history: appalachia.history }]} />
+          <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(appalachia.yearOverYearPct)} /><Stat label="Month-over-month" value={formatPct(appalachia.monthOverMonthPct)} /></div>
+          <p className="appalachia-label-note">States included: {appalachia.statesIncluded.length ? appalachia.statesIncluded.join(", ") : "none available"}. This is a state-level EIA aggregate, not an official Marcellus-play figure -- it is never labeled as "Marcellus production".</p>
+        </div>
+        <div className="macro-regional-grid appalachia"><Stat label="East storage vs 5Y" value={formatPct(east?.fiveYearPct ?? null)} note={`${east?.current?.toFixed(0) ?? "--"} Bcf · ${observationLabel(east?.period, "weekly", east?.freshness)}`} /><Stat label="PA production YoY" value={formatPct(pa?.yearOverYearPct ?? null)} note={`${pa?.current?.toFixed(0) ?? "--"} MMcf · ${observationLabel(pa?.period, "monthly")}`} /><Stat label="WV production YoY" value={formatPct(wv?.yearOverYearPct ?? null)} note={observationLabel(wv?.period, "monthly")} /><Stat label="OH production YoY" value={formatPct(oh?.yearOverYearPct ?? null)} note={observationLabel(oh?.period, "monthly")} /><Stat label="LNG exports YoY" value={formatPct(lngMetric ? periodChangePct(lngMetric, 12) : null)} note={observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} /><Stat label="Henry Hub trend" value={formatDelta(henryHubMetric ? periodChange(henryHubMetric) : null, "$/MMBtu")} note="Latest official daily move" /></div>
 
-      {topic === "rigs" ? (
-        <section className="macro-section">
-          <SectionHeader eyebrow="RIGS" title="Drilling activity" description="Baker Hughes weekly rig counts by basin and state, alongside the storage/production geography map." asOf={formatWeekEnding(getRigDataset().source.reportDate)} />
-          <MacroEnergyMap data={fundamentals.data} />
-        </section>
-      ) : null}
+        <MacroRiskWidget data={macroRisk.data} loading={macroRisk.loading} error={macroRisk.error} onViewDriver={(driver) => scrollToSection(RISK_DRIVER_SECTION[driver])} />
+      </section>
+
+      <section className="macro-section" id="eia-outlook">
+        <SectionHeader eyebrow="10 · EIA OUTLOOK" title="Short-Term Energy Outlook" description="EIA's own forward projection, actual-vs-forecast where an observed counterpart exists, with forecast revisions once a second monthly snapshot has been captured." />
+        <EiaOutlookModule steo={steo.data} loading={steo.loading} error={steo.error} metrics={eiaOutlookMetrics} forecastStartPeriod={steoForecastStartPeriod} />
+      </section>
 
       <footer className="macro-freshness">
         <div><strong>DATA FRESHNESS</strong><span>Observation period and retrieval timestamp are tracked separately; publication weekdays are not assumed.</span></div>

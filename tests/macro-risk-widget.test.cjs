@@ -46,17 +46,17 @@ test("the 'what changed' section distinguishes 'no prior snapshot' from 'nothing
   assert.match(widgetSource, /More history is needed to evaluate changes between report periods/);
 });
 
-test("MacroPanel wires the widget with a live data hook and a callback that switches the active topic tab (View data interaction)", () => {
+test("MacroPanel wires the widget with a live data hook and a callback that scrolls to the driver's long-form section (View data interaction)", () => {
   assert.match(panelSource, /useMacroRisk\(\)/);
-  assert.match(panelSource, /<MacroRiskWidget data=\{macroRisk\.data\} loading=\{macroRisk\.loading\} error=\{macroRisk\.error\} onViewDriver=\{\(driver\) => setTopic\(RISK_DRIVER_TOPIC\[driver\]\)\}/);
+  assert.match(panelSource, /<MacroRiskWidget data=\{macroRisk\.data\} loading=\{macroRisk\.loading\} error=\{macroRisk\.error\} onViewDriver=\{\(driver\) => scrollToSection\(RISK_DRIVER_SECTION\[driver\]\)\}/);
 });
 
-test("every RangeMacroSignalKey the engine can produce has a corresponding topic-tab mapping -- a 'View data' click can never target a nonexistent tab", () => {
+test("every RangeMacroSignalKey the engine can produce has a corresponding long-form section mapping -- a 'View data' click can never target a nonexistent section", () => {
   const engineSource = fs.readFileSync(path.join(process.cwd(), "lib", "market", "macro-risk-engine.ts"), "utf8");
   const keyMatches = [...engineSource.matchAll(/^\s+\| "([a-z_]+)";?$/gm)].map((match) => match[1]);
   assert.ok(keyMatches.length >= 7, "expected to find the RangeMacroSignalKey union members");
   for (const key of keyMatches) {
-    assert.match(panelSource, new RegExp(`${key}: "`), `RISK_DRIVER_TOPIC is missing a mapping for "${key}"`);
+    assert.match(panelSource, new RegExp(`${key}: "`), `RISK_DRIVER_SECTION is missing a mapping for "${key}"`);
   }
 });
 
