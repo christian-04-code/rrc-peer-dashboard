@@ -68,33 +68,19 @@ test("the freshness-dot 'error' state has real CSS (not an unstyled class that s
   assert.match(cssSource, /\.freshness-dot\.error\s*\{\s*background:\s*var\(--negative\);?\s*\}/);
 });
 
-test("Data Health is honestly scoped to live sources only -- its label and healthy-case detail must not imply Rigs (manually imported, never live) is covered", () => {
-  assert.match(panelSource, /LIVE DATA HEALTH/, "the header must not claim to cover the full Macro dataset when it only checks live EIA/OilPriceAPI/STEO sources");
-  assert.match(
-    panelSource,
-    /Rigs is manually imported and reported separately below/,
-    "the healthy-case detail text must disclose that Rigs sits outside this badge's scope, not imply blanket coverage"
-  );
+test("the restored Macro structure does not regain the redesign-only Live Data Health card or executive Market Condition summary (both intentionally dropped in the 8fff1c9 restoration)", () => {
+  assert.doesNotMatch(panelSource, /LIVE DATA HEALTH/, "the Live Data Health trust card was intentionally removed -- it must not silently return");
+  assert.doesNotMatch(panelSource, /function computeDataHealth/, "computeDataHealth was intentionally removed along with the card it powered");
+  assert.doesNotMatch(panelSource, /macro-exec-summary/, "the executive Market Condition summary section was intentionally removed -- it must not silently return");
 });
 
-test("computeDataHealth cannot report Healthy while any tracked source has failed or gone stale (a source error or stale observation must never be masked)", () => {
-  assert.match(panelSource, /if \(failed\.length > 0\)/, "a failed source must short-circuit before the healthy branch can run");
-  assert.match(panelSource, /if \(stale\.length > 0\)/, "a stale source must short-circuit before the healthy branch can run");
-  // "lagged" must never appear in the failed/stale accumulation logic -- it's EIA's own normal
-  // publication cadence (confirmed in production), not a fault, and must not downgrade the badge.
-  const healthFnMatch = panelSource.match(/function computeDataHealth[\s\S]*?\n}\n/);
-  assert.ok(healthFnMatch, "computeDataHealth function body not found");
-  assert.doesNotMatch(healthFnMatch[0], /freshness === "lagged"/, "lagged must not be treated as a health failure");
-});
-
-test("the Data Sources & Freshness table includes both EIA STEO (forecast/monthly) and Baker Hughes Rigs (manual) rows, each derived from real data -- not silently omitted from the one place a user can audit every source at once", () => {
-  assert.match(panelSource, /EIA STEO · Outlook \(forecast\)/);
+test("the restored compact DATA FRESHNESS footer still surfaces EIA STEO and Baker Hughes source/freshness info, with a dynamic (not hardcoded) Baker Hughes report date", () => {
+  assert.match(panelSource, /EIA STEO/, "the compact footer must still report EIA STEO's freshness, not silently drop it");
   assert.match(panelSource, /steoObservation/, "STEO's observation date must come from the real snapshot fetchedAt, not a hardcoded string");
-  assert.match(panelSource, /Baker Hughes · Rigs/);
+  assert.match(panelSource, /Baker Hughes/, "the compact footer must still report Baker Hughes Rigs freshness, not silently drop it");
   assert.match(
     panelSource,
     /formatWeekEnding\(getRigDataset\(\)\.source\.reportDate\)/,
-    "the Rigs freshness row must read the real imported report date, not a hardcoded one"
+    "the Baker Hughes freshness entry must read the real imported report date, not a hardcoded one"
   );
-  assert.match(panelSource, /macro-freshness-status manual/, "Rigs must render as its own distinct 'Manual' status, not 'Current'/'Lagged'/'Stale'/'Source error'");
 });
