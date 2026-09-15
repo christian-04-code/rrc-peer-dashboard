@@ -77,8 +77,9 @@ test("EIA STEO Outlook module and the inline STEO forecast subsections all show 
   assert.match(panelSource, /steoVintageLabel\("industrialConsumptionForecast"\)/);
 });
 
-test("the Rigs section header shows the real Baker Hughes report week, not a hardcoded date", () => {
-  assert.match(panelSource, /asOf=\{formatWeekEnding\(getRigDataset\(\)\.source\.reportDate\)\}/);
+test("the Rigs topic shows the real Baker Hughes report week, not a hardcoded date -- rendered via the manual-data freshness badge, not the section header's asOf prop, since Phase 3's redesign moved it there for prominence", () => {
+  assert.match(panelSource, /formatWeekEnding\(getRigDataset\(\)\.source\.reportDate\)/);
+  assert.match(panelSource, /macro-manual-badge/, "the manual/static nature of Rigs data must be visibly badged, not folded silently into the section header");
 });
 
 test("the interactive energy map shows a header-level 'as of' date derived from real region/production data for the active mode", () => {

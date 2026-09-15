@@ -148,7 +148,11 @@ test("Macro renders the required evidence chart datasets, organized into the Pha
   const storageTabStart = source.indexOf('topic === "storage"');
   assert.ok(gasBalanceTabStart >= 0 && macroSnapshotIndex >= 0 && storageTabStart >= 0);
   assert.ok(gasBalanceTabStart < macroSnapshotIndex && macroSnapshotIndex < storageTabStart, "Macro Snapshot must render inside the first (gas-balance) topic tab");
-  assert.match(source, /Sources: U\.S\. EIA · OilPriceAPI/);
+  // Phase 3 redesign reframed the Market Pulse description away from a bare
+  // "Sources: U.S. EIA · OilPriceAPI" line toward explicitly clarifying this
+  // strip is not the full Macro dataset (Section 3 of the redesign brief) --
+  // per-card attribution (sourceShort / "OilPriceAPI current") is unchanged.
+  assert.match(source, /Not the full Macro dataset/);
   assert.match(source, /Week ending/);
   // Phase 6D replaced the single-signal buildRrcMacroRisk callout with the
   // deterministic multi-signal MacroRiskWidget (lib/market/macro-risk-engine.ts).
@@ -161,7 +165,10 @@ test("Macro cleanup uses concise source copy and existing accent treatments", ()
   const panel = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroPanel.tsx"), "utf8");
   const map = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
   const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
-  assert.match(panel, /U\.S\. EIA · EIA APIs/);
+  // Phase 3 redesign replaced the old bare "U.S. EIA · EIA APIs" header subtitle
+  // with a concise one-sentence description of what the page covers -- still
+  // concise (not the old verbose copy the doesNotMatch above guards against).
+  assert.match(panel, /U\.S\. gas fundamentals, Appalachia supply, LNG, demand and EIA outlook\./);
   assert.match(panel, /Regional Working Gas Storage vs\. Five-Year Average/);
   assert.match(panel, /Official EIA regions/);
   assert.match(panel, /macro-source-accent/);

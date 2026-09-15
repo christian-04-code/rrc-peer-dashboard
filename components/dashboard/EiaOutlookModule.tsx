@@ -84,8 +84,8 @@ export function EiaOutlookModule({
         <div className="macro-stat"><span>Outlook horizon end</span><strong>{periodLabel(furthest.period)}</strong><small>{new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(furthest.value)} {series.unit}</small></div>
       </div>
 
-      <div className="eia-outlook-revisions">
-        <span>FORECAST REVISION</span>
+      <details className="eia-outlook-revisions">
+        <summary>FORECAST REVISION{revisions.length > 0 ? ` (${revisions.length})` : ""}</summary>
         {revisions.length === 0 ? (
           <p className="macro-context-note">
             Only one EIA STEO snapshot has been captured for this series so far, so there is nothing yet to compare it
@@ -104,7 +104,7 @@ export function EiaOutlookModule({
             ))}
           </div>
         )}
-      </div>
+      </details>
     </div>
   );
 }

@@ -213,7 +213,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .guidance-row .guidance-value { color: #8fd6ff; font-weight: 600; text-align: right; }
 .guidance-row-detail { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; line-height: 1.35; }
 .guidance-row-note { margin: 2px 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-.macro-panel { display: grid; gap: 12px; padding-top: 2px; }
+.macro-panel { display: grid; gap: 22px; padding-top: 2px; }
 .macro-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 2px 2px 8px; }
 .macro-page-head h1 { margin: 0 0 4px; }
 .macro-page-head p { margin: 0; color: var(--muted); font-size: 13px; }
@@ -222,6 +222,42 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-asof span, .macro-asof small { color: var(--muted); }
 .macro-asof-note { font-size: 9px; line-height: 1.4; }
 .macro-section-asof { color: var(--muted); }
+
+/* Section 1 -- page header: title/subtitle left, two prominent trust cards
+   (Last Updated, Data Health) right. Replaces the old cramped .macro-page-head
+   right-hand column (.macro-asof) for the Macro experience specifically --
+   the global "N feeds active" indicator elsewhere in the app is untouched. */
+.macro-page-head-v2 { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 4px 2px 4px; }
+.macro-page-title h1 { margin: 0 0 6px; font-size: 26px; }
+.macro-page-title p { margin: 0; color: var(--muted); font-size: 14px; max-width: 52ch; }
+.macro-trust-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.macro-trust-card { display: grid; gap: 4px; min-width: 190px; border: 1px solid var(--border); border-radius: 10px; background: rgba(16,32,53,.5); padding: 11px 14px; }
+.macro-trust-card > span { color: #75c7ee; font-size: 10px; font-weight: 800; letter-spacing: .09em; }
+.macro-trust-card > strong { font-size: 18px; }
+.macro-trust-card > small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.macro-health { display: inline-flex; align-items: center; gap: 7px; }
+.macro-health.positive { color: var(--positive); }
+.macro-health.caution { color: var(--caution); }
+.macro-health.negative { color: var(--negative); }
+.macro-page-error { grid-column: 1 / -1; margin: 0; color: var(--negative); font-size: 12px; }
+
+/* Section 2 -- executive market-condition summary: the single strongest
+   visual area on the page, per the design brief. One large regime callout
+   plus a compact signal grid explaining why. */
+.macro-exec-summary { background: linear-gradient(160deg, rgba(0,129,198,.1), rgba(11,23,38,.97)); border-color: rgba(0,129,198,.35); padding: 20px; }
+.macro-exec-body { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); gap: 20px; padding-top: 14px; align-items: stretch; }
+.macro-exec-regime { display: grid; align-content: center; gap: 10px; padding: 18px 20px; border-radius: 12px; border-left: 4px solid var(--border); background: rgba(6,17,31,.5); }
+.macro-exec-regime.positive { border-left-color: var(--positive); }
+.macro-exec-regime.negative { border-left-color: var(--negative); }
+.macro-exec-regime.neutral { border-left-color: var(--muted); }
+.macro-exec-regime > span { color: #75c7ee; font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.macro-exec-regime > strong { font-size: 34px; line-height: 1.05; }
+.macro-exec-regime p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text); }
+.macro-exec-regime small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.macro-exec-signals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-content: center; }
+.macro-exec-signals .macro-stat { padding: 12px; }
+.macro-exec-signals .macro-stat span { font-size: 10.5px; }
+.macro-exec-signals .macro-stat strong { font-size: 16px; }
 .macro-risk-snapshot-date { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .macro-snapshot { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
 .macro-snapshot-item { position: relative; border-right: 1px solid var(--border); }
@@ -236,7 +272,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-snapshot-item[open] p, .macro-snapshot-item[open] small { position: absolute; left: 6px; right: 6px; z-index: 8; margin: 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0,0,0,.34); font-size: 11px; line-height: 1.45; }
 .macro-snapshot-item[open] p { top: calc(100% + 4px); border-radius: 8px 8px 0 0; border-bottom: 0; }
 .macro-snapshot-item[open] small { top: calc(100% + 58px); color: var(--muted); border-radius: 0 0 8px 8px; }
-.macro-section { border: 1px solid var(--border); background: rgba(11,23,38,.95); border-radius: 10px; padding: 14px; overflow: hidden; }
+.macro-section { border: 1px solid var(--border); background: rgba(11,23,38,.95); border-radius: 10px; padding: 18px; overflow: hidden; }
 .macro-snapshot-section { overflow: visible; }
 .macro-grid-row { display: grid; gap: 12px; }
 .macro-grid-row-equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -248,18 +284,49 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-grid-row-rrc .macro-snapshot-section .macro-section-head p { text-align: left; }
 .macro-grid-card > .macro-primary-chart.borderless { margin-top: 12px; }
 .macro-primary-chart.borderless { border: 0; background: transparent; border-radius: 0; padding: 0; }
-.macro-section-head { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(320px, 1.3fr); align-items: flex-end; gap: 20px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
-.macro-section-head h2 { margin: 3px 0 0; font-size: 16px; }
-.macro-section-head p { margin: 0; color: var(--muted); font-size: 12px; text-align: right; }
-.macro-pulse-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin: 0 -14px -14px; }
-.macro-pulse-item { min-width: 0; display: grid; gap: 5px; padding: 11px 12px 9px; border-right: 1px solid var(--border); }
-.macro-pulse-item:last-child { border-right: 0; }
+/* Appalachia is Range's own strategic basin -- give its primary chart a
+   distinct accent treatment so it reads with more visual weight than a
+   generic fundamentals chart, not an identical gray card. */
+.macro-primary-chart.emphasis { border-color: rgba(112,201,154,.4); background: linear-gradient(160deg, rgba(112,201,154,.08), rgba(6,17,31,.6)); padding: 16px; }
+.macro-emphasis-value { color: var(--positive); }
+/* A short connective label bridging a topic's own data (above) and the
+   Range Impact / AI risk read of it (below), so the widget reads as this
+   data's conclusion rather than an unrelated append. */
+.macro-connector { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.macro-connector > span { flex: 0 0 auto; color: #75c7ee; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.macro-connector > p { margin: 0; color: var(--muted); font-size: 11px; }
+/* EIA Outlook is a genuinely different data class (forecast, not observed
+   actual) -- a caution-toned left accent visually separates it from the
+   Fundamentals topics without a new color system. */
+.macro-outlook-section { border-left: 3px solid var(--caution); }
+.macro-forecast-eyebrow { color: var(--caution) !important; }
+/* Rigs' one manually-imported dataset -- a caution-toned badge, deliberately
+   distinct from the freshness-dot language used for live EIA/OilPriceAPI
+   sources, so it cannot be mistaken for a live feed. */
+.macro-manual-badge { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 4px; padding: 11px 13px; border: 1px solid rgba(229,173,99,.4); border-radius: 9px; background: rgba(229,173,99,.07); }
+.macro-manual-badge strong { display: block; font-size: 12px; color: var(--text); }
+.macro-manual-badge span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.macro-section-head { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(320px, 1.3fr); align-items: flex-end; gap: 20px; padding-bottom: 13px; border-bottom: 1px solid var(--border); }
+.macro-section-head h2 { margin: 3px 0 0; font-size: 18px; }
+.macro-section-head p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; text-align: right; }
+/* Section 3 -- Market Pulse: responsive auto-fit wrap instead of a forced
+   7-column row, so nothing gets crushed at any desktop width; each metric is
+   its own tile (gap-separated, not divider-separated) rather than the old
+   single bordered strip. */
+.macro-pulse-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 10px; margin-top: 14px; }
+.macro-pulse-item { min-width: 0; display: grid; gap: 8px; padding: 14px; border-radius: 10px; background: rgba(16,32,53,.45); }
 .macro-pulse-label, .macro-pulse-value, .macro-pulse-change { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
-.macro-pulse-label span { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.macro-pulse-value strong { font-size: 19px; line-height: 1; }
-.macro-pulse-value em { color: var(--muted); font-size: 9px; font-style: normal; text-align: right; }
-.macro-pulse-change span, .macro-pulse-change small, .macro-pulse-item > small { font-size: 9px; }
-.macro-pulse-item > small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.macro-pulse-label span { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+.macro-pulse-value strong { font-size: 25px; line-height: 1; }
+.macro-pulse-value em { color: var(--muted); font-size: 10px; font-style: normal; text-align: right; }
+.macro-pulse-change span { font-size: 11.5px; font-weight: 650; }
+.macro-pulse-change small { color: var(--muted); font-size: 10px; }
+.macro-pulse-item > small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+/* A raw upstream error message (e.g. the EIA API's own JSON error body) can
+   run long -- clamp it visually so one failed source can't dominate the tile
+   or push others around, while keeping the full text in the DOM (title
+   attribute) and never hiding that an error occurred. */
+.macro-pulse-item > small.negative { color: var(--negative); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .positive { color: var(--positive); }
 .negative { color: var(--negative); }
 .neutral { color: var(--muted); }
@@ -267,6 +334,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .freshness-dot.current { background: var(--positive); box-shadow: 0 0 0 3px rgba(112,201,154,.1); }
 .freshness-dot.lagged { background: #e5ad63; }
 .freshness-dot.stale { background: #e5ad63; }
+.freshness-dot.error { background: var(--negative); }
 .macro-spark { width: 100%; height: 32px; }
 .macro-spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .macro-no-chart { height: 32px; display: grid; place-items: center; color: var(--muted); font-size: 9px; }
@@ -309,9 +377,9 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-subsection-head h3 { margin: 3px 0 0; font-size: 13px; }
 .macro-subsection-head p { margin: 0; color: var(--muted); font-size: 10px; }
 .macro-subsection-head.compact { margin-top: 12px; padding-top: 10px; }
-.macro-stat { min-width: 0; display: grid; align-content: center; gap: 3px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 9px; }
-.macro-stat span, .macro-stat small { color: var(--muted); font-size: 9px; }
-.macro-stat strong { font-size: 13px; overflow-wrap: anywhere; }
+.macro-stat { min-width: 0; display: grid; align-content: center; gap: 4px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 10px 11px; }
+.macro-stat span, .macro-stat small { color: var(--muted); font-size: 10.5px; }
+.macro-stat strong { font-size: 15px; overflow-wrap: anywhere; }
 .macro-flow-strip { display: grid; grid-template-columns: 1fr 30px 1fr 1fr; gap: 8px; align-items: stretch; margin-top: 10px; }
 .macro-flow-strip > div:not(.macro-flow-arrow) { display: grid; gap: 5px; }
 .macro-flow-strip .macro-stat { padding-block: 7px; }
@@ -356,13 +424,29 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
-.macro-topic-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 10px 0 4px; }
-.macro-topic-tabs button { flex: 0 0 auto; white-space: nowrap; }
+.macro-topic-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; margin: 6px 0 0; }
+.macro-topic-tabs button { flex: 0 0 auto; white-space: nowrap; font-size: 12px; padding: 7px 12px; }
+
+/* Section 4 -- grouped topic nav: a small uppercase group label above each
+   segmented row, so Fundamentals/Outlook/Activity read as three conceptual
+   clusters instead of one flat 8-button strip. Switching stays the same
+   client-side useState -- no routing added. */
+.macro-topic-groups { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: flex-start; }
+.macro-topic-group { display: grid; gap: 2px; }
+.macro-topic-group-label { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
 .eia-outlook { display: grid; gap: 10px; }
 .eia-outlook-select { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--muted); max-width: 320px; }
 .eia-outlook-select select { background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
-.eia-outlook-revisions { display: grid; gap: 6px; }
-.eia-outlook-revisions > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+/* Forecast revisions are useful but secondary to the main forecast chart
+   above -- a native <details> keeps them one click away instead of always
+   consuming page space, consistent with the Macro Snapshot's existing
+   <details>/<summary> pattern. */
+.eia-outlook-revisions { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
+.eia-outlook-revisions summary { cursor: pointer; list-style: none; color: #75c7ee; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.eia-outlook-revisions summary::-webkit-details-marker { display: none; }
+.eia-outlook-revisions summary::before { content: "▸ "; }
+.eia-outlook-revisions[open] summary::before { content: "▾ "; }
+.eia-outlook-revisions .eia-outlook-revision-table, .eia-outlook-revisions .macro-context-note { margin-top: 8px; }
 .eia-outlook-revision-table { display: grid; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
 .eia-outlook-revision-row { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1.3fr; gap: 6px; padding: 5px 8px; font-size: 10px; border-bottom: 1px solid var(--border); align-items: center; }
 .eia-outlook-revision-row.header { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
@@ -563,6 +647,34 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-freshness span { color: var(--muted); font-size: 9px; }
 .macro-freshness-list { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px 12px; }
 .macro-freshness-list span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Section 6 -- collapsible "Data Sources & Freshness", replacing the old
+   always-open .macro-freshness footer. Per-dataset freshness stays visible
+   inline near each chart (observationLabel calls throughout); this is the
+   one place to see every source at once, collapsed by default so it never
+   competes for attention with the page above it. */
+.macro-freshness-details { border-top: 1px solid var(--border); padding-top: 14px; }
+.macro-freshness-details summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.macro-freshness-details summary::-webkit-details-marker { display: none; }
+.macro-freshness-details summary::before { content: "▸"; color: var(--muted); font-size: 11px; margin-right: 2px; }
+.macro-freshness-details[open] summary::before { content: "▾"; }
+.macro-freshness-details summary strong { font-size: 13px; }
+.macro-freshness-details summary span { color: var(--muted); font-size: 11px; }
+.macro-freshness-table { display: grid; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+.macro-freshness-row { display: grid; grid-template-columns: 1.6fr 1.1fr 1.3fr .8fr 1.1fr; align-items: center; gap: 10px; min-width: 640px; padding: 8px 12px; font-size: 11.5px; border-bottom: 1px solid var(--border); }
+.macro-freshness-row:last-child { border-bottom: 0; }
+.macro-freshness-row.header { color: #75c7ee; background: rgba(16,32,53,.7); font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.macro-freshness-row > span:not(:first-child) { color: var(--muted); }
+.macro-freshness-status { display: inline-flex !important; align-items: center; gap: 6px; color: var(--text) !important; }
+.macro-freshness-status.current { color: var(--positive) !important; }
+.macro-freshness-status.lagged, .macro-freshness-status.stale { color: var(--caution) !important; }
+.macro-freshness-status.error { color: var(--negative) !important; }
+/* Manual/static (Rigs) is deliberately its own tone -- neither "current" (it
+   is never live) nor "error" (nothing failed) nor "lagged/stale" (those imply
+   an automated feed that fell behind). Reuses --caution, the same "needs a
+   second look, not necessarily broken" signal as lagged/stale. */
+.macro-freshness-status.manual { color: var(--caution) !important; }
+.freshness-dot.manual { background: var(--caution); }
 .muted, .fixture-note { color: var(--muted); }
 .fixture-note { margin-top: 14px; font-size: 12px; }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -573,10 +685,8 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-grid { grid-template-columns: 1fr; }
   aside { display: grid; grid-template-columns: 1fr 1fr; }
-  .macro-pulse-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .macro-pulse-item:nth-child(3n) { border-right: 0; }
-  .macro-pulse-item:nth-child(-n+6) { border-bottom: 1px solid var(--border); }
   .macro-page-head { align-items: flex-start; }
+  .macro-exec-body { grid-template-columns: 1fr; }
   .macro-snapshot { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .macro-snapshot-item:nth-child(3) { border-right: 0; }
   .macro-snapshot-item:nth-child(-n+3) { border-bottom: 1px solid var(--border); }
@@ -601,14 +711,14 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .macro-page-head { display: grid; }
   .macro-asof { text-align: left; }
+  .macro-page-head-v2 { align-items: stretch; }
+  .macro-trust-row { width: 100%; }
+  .macro-trust-card { flex: 1 1 auto; }
   .macro-section-head { grid-template-columns: 1fr; align-items: flex-start; }
   .macro-section-head p { text-align: left; }
   .macro-snapshot { grid-template-columns: 1fr 1fr; }
   .macro-snapshot-item, .macro-snapshot-item:nth-child(3) { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .macro-snapshot-item:nth-child(even) { border-right: 0; }
-  .macro-pulse-grid { grid-template-columns: 1fr 1fr; }
-  .macro-pulse-item, .macro-pulse-item:nth-child(3n) { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  .macro-pulse-item:nth-child(even) { border-right: 0; }
   .macro-balance-grid, .macro-two-column, .macro-rrc-grid { grid-template-columns: 1fr; }
   .macro-weekly-report .macro-balance-stats, .macro-unsupported-row { grid-template-columns: 1fr; }
   .macro-subsection-head { align-items: flex-start; flex-direction: column; gap: 5px; }

@@ -64,17 +64,17 @@ test("history is present, chronologically descending, and capped at 52 weeks", (
   }
 });
 
-test("PA reconciles to known reviewed values from the source workbook", () => {
+test("PA reconciles to known reviewed values from the source workbook (Sep 11, 2026 report)", () => {
   const pa = dataset.states.PA;
-  assert.equal(pa.current, 16);
-  assert.equal(pa.yoy, -2);
-  assert.equal(pa.commodityMix.gas, 16);
+  assert.equal(pa.current, 15);
+  assert.equal(pa.yoy, -3);
+  assert.equal(pa.commodityMix.gas, 15);
   assert.equal(pa.commodityMix.oil, 0);
   assert.equal(pa.topCounties[0].dominantBasin, "Marcellus");
   // Regression: trajectoryMix was previously always {0,0,0} for every state (an
   // uppercase-vs-title-case label mismatch in scripts/rigs/import.py's aggregation
   // lookup), which silently hid the trajectory row in the Drilling Activity module.
-  assert.equal(pa.trajectoryMix.horizontal, 14);
+  assert.equal(pa.trajectoryMix.horizontal, 13);
   assert.equal(pa.trajectoryMix.directional, 2);
   assert.equal(pa.trajectoryMix.vertical, 0);
 });
@@ -152,20 +152,20 @@ test("zero-rig basins (e.g. Mississippian) are present with an explicit zero, no
   assert.deepEqual(dataset.basins.Mississippian.states, []);
 });
 
-test("Permian, Marcellus, and Eagle Ford reconcile to known reviewed values from the source workbook", () => {
+test("Permian, Marcellus, and Eagle Ford reconcile to known reviewed values from the source workbook (Sep 11, 2026 report)", () => {
   const permian = dataset.basins.Permian;
-  assert.equal(permian.current, 265);
+  assert.equal(permian.current, 268);
   assert.deepEqual(permian.states.map((state) => state.code), ["TX", "NM"]);
-  assert.equal(permian.commodityMix.oil, 263);
-  assert.equal(permian.commodityMix.gas, 2);
+  assert.equal(permian.commodityMix.oil, 267);
+  assert.equal(permian.commodityMix.gas, 1);
 
   const marcellus = dataset.basins.Marcellus;
-  assert.equal(marcellus.current, 24);
+  assert.equal(marcellus.current, 23);
   assert.deepEqual(marcellus.states.map((state) => state.code).sort(), ["PA", "WV"]);
-  assert.equal(marcellus.commodityMix.gas, 24);
+  assert.equal(marcellus.commodityMix.gas, 23);
 
   const eagleFord = dataset.basins["Eagle Ford"];
-  assert.equal(eagleFord.current, 49);
+  assert.equal(eagleFord.current, 51);
   assert.deepEqual(eagleFord.states.map((state) => state.code), ["TX"]);
 });
 
