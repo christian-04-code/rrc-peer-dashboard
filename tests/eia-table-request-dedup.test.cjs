@@ -52,7 +52,11 @@ test("a rejected shared in-flight request clears its entry -- it does not perman
   const params = { route: "natural-gas/stor/wkly/data", frequency: "weekly", length: 10 };
 
   const results = await Promise.allSettled([fetchEiaTable(params), fetchEiaTable(params)]);
-  assert.equal(fetchCalls, 1, "concurrent identical requests still coalesce even when the shared result is a rejection");
+  // A 429 is retried (up to MAX_EIA_RETRIES additional attempts) before the
+  // shared in-flight promise finally rejects -- dedup still coalesces the
+  // two *logical* calls into that one retrying attempt (not two independent
+  // 4x retry sequences), so the raw fetch count is "1 + retries", not "1".
+  assert.equal(fetchCalls, 4, "concurrent identical requests still coalesce into one retrying attempt, not two independent retry sequences, even when the shared result is a rejection");
   assert.equal(results[0].status, "rejected");
   assert.equal(results[1].status, "rejected");
   assert.match(results[0].reason.message, /429/);
@@ -130,7 +134,12 @@ test("a caller-configured timeout still applies per-request even when deduplicat
 
   const start = Date.now();
   const results = await Promise.allSettled([fetchEiaTable(params), fetchEiaTable(params)]);
-  assert.ok(Date.now() - start < 2000, "shared timeout must still bound the wait");
+  // A hung request times out per-attempt (50ms each) but a timeout is
+  // retried the same as a 429, so the shared promise now bounds the wait to
+  // "retries x (timeout + backoff)", not a single 50ms window -- still
+  // bounded, just no longer near-instant. See MAX_EIA_RETRIES/
+  // EIA_RETRY_BASE_DELAY_MS in lib/eia/client.ts for the worst-case ceiling.
+  assert.ok(Date.now() - start < 8000, "shared timeout must still bound the wait, inclusive of bounded retry backoff");
   assert.equal(results[0].status, "rejected");
   assert.equal(results[1].status, "rejected");
 

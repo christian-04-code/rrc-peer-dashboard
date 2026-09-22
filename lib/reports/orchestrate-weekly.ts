@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { getPool, isDatabaseConfigured } from "@/lib/persistence/db";
 import { runWeeklyReportMigrations } from "@/lib/reports/persistence/migrate";
 import { runWeeklySnapshotBuild } from "@/lib/reports/snapshot-builder";
@@ -93,17 +93,28 @@ export const PUBLISH_SAFETY_BUFFER_MS = 60 * 60 * 1000; // 1 hour
 const ORCHESTRATION_LOCK_QUERY = `SELECT pg_try_advisory_lock(hashtext('rrc_weekly_report_orchestration')::bigint) AS locked`;
 const ORCHESTRATION_UNLOCK_QUERY = `SELECT pg_advisory_unlock(hashtext('rrc_weekly_report_orchestration')::bigint) AS unlocked`;
 
-async function tryAcquireLock(pool: Pool): Promise<boolean> {
+// A Postgres advisory lock (the non-`_xact_` variant used here) is scoped to
+// the SESSION/connection that took it, not to the query. `pool.query()`
+// checks a connection out and back in per call, so acquiring on one call and
+// releasing on a later call gave no guarantee both landed on the same
+// physical connection -- with the default pg Pool size (>1), the unlock
+// could silently no-op on a different connection while the true lock-holder
+// stays checked into the pool, never actually releasing the lock until that
+// connection's own idle timeout eventually closes it. Fixed by holding one
+// dedicated PoolClient for the lock's entire lifetime (acquire -> unlock ->
+// release-to-pool), independent of the `pool` used for every other query in
+// this file.
+async function tryAcquireLock(client: PoolClient): Promise<boolean> {
   try {
-    const result = await pool.query(ORCHESTRATION_LOCK_QUERY);
+    const result = await client.query(ORCHESTRATION_LOCK_QUERY);
     return result.rows[0]?.locked === true;
   } catch {
     return false;
   }
 }
 
-async function releaseLock(pool: Pool): Promise<void> {
-  await pool.query(ORCHESTRATION_UNLOCK_QUERY).catch(() => undefined);
+async function releaseLock(client: PoolClient): Promise<void> {
+  await client.query(ORCHESTRATION_UNLOCK_QUERY).catch(() => undefined);
 }
 
 export type WeeklyReportOrchestrationStage = "not_ready" | "locked" | "already_published" | "failed" | "published";
@@ -213,8 +224,10 @@ export async function orchestrateWeeklyReport(options: OrchestrateWeeklyReportOp
     pool = getPool();
   }
 
-  const lockAcquired = await tryAcquireLock(pool);
+  const lockClient = await pool.connect();
+  const lockAcquired = await tryAcquireLock(lockClient);
   if (!lockAcquired) {
+    lockClient.release();
     return { stage: "locked", reason: "Another weekly report orchestration run is already in progress." };
   }
 
@@ -405,6 +418,7 @@ export async function orchestrateWeeklyReport(options: OrchestrateWeeklyReportOp
   } catch (error) {
     return { stage: "failed", reason: safeErrorMessage(error) };
   } finally {
-    await releaseLock(pool);
+    await releaseLock(lockClient);
+    lockClient.release();
   }
 }

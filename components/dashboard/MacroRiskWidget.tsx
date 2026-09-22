@@ -16,6 +16,22 @@ function stateClass(state: RangeMacroSignalState): string {
   return state.toLowerCase().replace(/_/g, "-");
 }
 
+/**
+ * Highlights standalone $ amounts and percentages inside AI-generated prose
+ * with the dashboard's existing blue accent (Phase 13/10: "important live
+ * numbers highlighted with existing blue accent"). Never touches the text
+ * itself -- only wraps already-present numeric substrings in a span, so the
+ * AI/context layer remains strictly downstream of live deterministic data;
+ * nothing here can invent or alter a value.
+ */
+const HIGHLIGHT_NUMBER_PATTERN = /([+-]?\$?\d[\d,]*\.?\d*%?(?:\/(?:MMBtu|Mcfe|bbl|d))?)/g;
+function highlightNumbers(text: string): (string | JSX.Element)[] {
+  const parts = text.split(HIGHLIGHT_NUMBER_PATTERN);
+  return parts.map((part, index) =>
+    index % 2 === 1 && /\d/.test(part) ? <span key={index} className="macro-inline-accent">{part}</span> : part
+  );
+}
+
 export function MacroRiskWidget({
   data,
   loading,
@@ -51,7 +67,7 @@ export function MacroRiskWidget({
               <div className="macro-risk-item-metrics">
                 {signal.metrics.map((metric) => <span key={metric.label}>{metric.label}: <b>{metric.value}</b></span>)}
               </div>
-              <p>{signal.reason}</p>
+              <p className="macro-risk-reason">{signal.reason}</p>
               <button type="button" className="macro-risk-view" onClick={() => onViewDriver(signal.driver)}>View {signal.label} data →</button>
             </article>
           ))
@@ -63,9 +79,9 @@ export function MacroRiskWidget({
         {data.changes.length > 0 ? (
           <ul>{data.changes.map((change) => <li key={change.driver}>{change.label}: {STATE_LABELS[change.fromState]} → {STATE_LABELS[change.toState]}</li>)}</ul>
         ) : data.hasPriorSnapshot ? (
-          <p className="macro-context-note">No driver's classification changed since the last report.</p>
+          <p className="macro-context-note compact">No material changes since the last report.</p>
         ) : (
-          <p className="macro-context-note">More history is needed to evaluate changes between report periods.</p>
+          <p className="macro-context-note compact">More history is needed to evaluate changes between report periods.</p>
         )}
       </div>
 
@@ -73,7 +89,7 @@ export function MacroRiskWidget({
         <span>AI RANGE MACRO SUMMARY</span>
         {(data.aiSummaryStatus === "ready" || data.aiSummaryStatus === "stale") && data.aiSummary ? (
           <>
-            <p>{data.aiSummary.summary}</p>
+            <p className="macro-ai-summary-text">{highlightNumbers(data.aiSummary.summary)}</p>
             <small>
               {data.aiSummaryStatus === "stale" ? "Based on a prior data snapshot -- newer data is available and a refreshed summary will follow on the next scheduled run. " : ""}
               Based on Macro snapshot {formatDataDate(data.aiSummary.snapshotAsOf)} · Generated {formatRefreshTimestamp(data.aiSummary.generatedAt)} · {data.aiSummary.aiModel}

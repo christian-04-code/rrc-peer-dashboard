@@ -84,14 +84,17 @@ export function EiaOutlookModule({
         <div className="macro-stat"><span>Outlook horizon end</span><strong>{periodLabel(furthest.period)}</strong><small>{new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(furthest.value)} {series.unit}</small></div>
       </div>
 
-      <div className="eia-outlook-revisions">
-        <span>FORECAST REVISION</span>
-        {revisions.length === 0 ? (
+      {revisions.length === 0 ? (
+        <div className="eia-outlook-revisions">
+          <span>FORECAST REVISION</span>
           <p className="macro-context-note">
             Only one EIA STEO snapshot has been captured for this series so far, so there is nothing yet to compare it
             against. Revision tracking will populate automatically as future monthly STEO releases are captured over time.
           </p>
-        ) : (
+        </div>
+      ) : (
+        <details className="eia-outlook-revisions eia-outlook-revisions-details">
+          <summary>Forecast revisions <span className="macro-context-note-inline">({revisions.length} period{revisions.length === 1 ? "" : "s"} vs. prior STEO snapshot)</span></summary>
           <div className="eia-outlook-revision-table" role="table" aria-label={`${series.label} forecast revisions`}>
             <div className="eia-outlook-revision-row header" role="row"><span>Period</span><span>Prior snapshot</span><span>Current snapshot</span><span>Change</span></div>
             {revisions.slice(0, 12).map((revision) => (
@@ -103,8 +106,8 @@ export function EiaOutlookModule({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </details>
+      )}
     </div>
   );
 }

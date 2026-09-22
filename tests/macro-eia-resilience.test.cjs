@@ -59,7 +59,13 @@ test("SCENARIO D (timeout): a stalled EIA connection is bounded by a request tim
     /EIA table request failed for route/
   );
   const elapsed = Date.now() - start;
-  assert.ok(elapsed < 2000, `expected the timeout to bound the wait to roughly timeoutMs, took ${elapsed}ms`);
+  // A stalled connection is now retried (bounded, with backoff) before
+  // finally giving up -- see MAX_EIA_RETRIES/EIA_RETRY_BASE_DELAY_MS in
+  // lib/eia/client.ts, added because a real production 429 on this exact
+  // route (natural-gas/stor/wkly/data) was observed with zero retry, which
+  // fed straight into both the regional storage table and the Weekly
+  // Report's readiness gate. Still bounded, just no longer near-instant.
+  assert.ok(elapsed < 8000, `expected the timeout to still bound the wait once retries settle, took ${elapsed}ms`);
 });
 
 test("SCENARIO D recovery: after a bounded timeout rejects, a fresh call against a healthy EIA succeeds normally (no persisted failure state)", async () => {

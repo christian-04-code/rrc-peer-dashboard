@@ -42,7 +42,7 @@ test("a stale AI summary is visibly labeled as based on a prior snapshot, never 
 
 test("the 'what changed' section distinguishes 'no prior snapshot' from 'nothing changed' -- two different real states, not one conflated message", () => {
   assert.match(widgetSource, /data\.hasPriorSnapshot/);
-  assert.match(widgetSource, /No driver's classification changed since the last report/);
+  assert.match(widgetSource, /No material changes since the last report/);
   assert.match(widgetSource, /More history is needed to evaluate changes between report periods/);
 });
 

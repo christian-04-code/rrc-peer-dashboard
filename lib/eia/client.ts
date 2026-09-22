@@ -95,8 +95,37 @@ function logEiaTableFailure(details: {
   elapsedMs: number;
   timeoutMs: number;
   reason: "timeout" | "network" | `http_${number}`;
+  attempt: number;
 }): void {
   console.error("[EIA table]", details);
+}
+
+// EIA's public API enforces a per-key rate limit and returns plain HTTP 429
+// (with no Retry-After header in practice) when it's exceeded; it also
+// occasionally 5xx's transiently. Neither is a real "this data doesn't
+// exist" failure the way a 4xx auth/shape error is, so both are worth a
+// short, bounded retry before giving up -- observed directly in production
+// (`[EIA table] { route: 'natural-gas/stor/wkly/data', reason: 'http_429' }`)
+// causing the regional storage table to degrade to "--" AND, because the
+// Weekly Report's readiness gate (lib/reports/orchestrate-weekly.ts) shares
+// this same client for its own storage-availability check, silently
+// blocking that day's report generation with no retry at all.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_EIA_RETRIES = 3;
+const EIA_RETRY_BASE_DELAY_MS = 400;
+
+function isRetryableStatus(status: number): boolean {
+  return RETRYABLE_STATUS.has(status);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Exponential backoff with full jitter, capped, so a burst of parallel EIA calls doesn't retry in lockstep. */
+function retryDelayMs(attempt: number): number {
+  const cap = EIA_RETRY_BASE_DELAY_MS * 2 ** attempt;
+  return Math.floor(Math.random() * cap);
 }
 
 async function requestEiaTable(url: URL, route: string, params: { frequency: EiaFrequency; revalidate?: number; timeoutMs?: number }): Promise<EiaTableResult> {
@@ -108,27 +137,40 @@ async function requestEiaTable(url: URL, route: string, params: { frequency: Eia
   // are much heavier than demand), so callers own their own timeout instead
   // of inheriting one global cutoff -- see lib/eia/macro-fundamentals.ts.
   const timeoutMs = params.timeoutMs ?? DEFAULT_TABLE_TIMEOUT_MS;
-  const startedAt = Date.now();
-  let response: Response;
-  try {
-    response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 }, signal: AbortSignal.timeout(timeoutMs) });
-  } catch (error) {
-    const reason = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network";
-    logEiaTableFailure({ route, frequency: params.frequency, elapsedMs: Date.now() - startedAt, timeoutMs, reason });
-    throw new Error(`EIA table request failed for route "${route}": ${error instanceof Error ? error.message : String(error)}`);
-  }
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    logEiaTableFailure({
-      route,
-      frequency: params.frequency,
-      elapsedMs: Date.now() - startedAt,
-      timeoutMs,
-      reason: `http_${response.status}`
-    });
-    throw new Error(`EIA table request failed: ${response.status} for route "${route}".${body.trim() ? ` ${body.slice(0, 300)}` : ""}`);
-  }
 
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_EIA_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(retryDelayMs(attempt));
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await fetch(url, { next: { revalidate: params.revalidate ?? 3600 }, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (error) {
+      const reason = error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network";
+      logEiaTableFailure({ route, frequency: params.frequency, elapsedMs: Date.now() - startedAt, timeoutMs, reason, attempt });
+      lastError = new Error(`EIA table request failed for route "${route}": ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      logEiaTableFailure({
+        route,
+        frequency: params.frequency,
+        elapsedMs: Date.now() - startedAt,
+        timeoutMs,
+        reason: `http_${response.status}`,
+        attempt
+      });
+      lastError = new Error(`EIA table request failed: ${response.status} for route "${route}".${body.trim() ? ` ${body.slice(0, 300)}` : ""}`);
+      if (isRetryableStatus(response.status) && attempt < MAX_EIA_RETRIES) continue;
+      throw lastError;
+    }
+    return finishEiaTableResponse(response, route, params.frequency);
+  }
+  throw lastError ?? new Error(`EIA table request failed for route "${route}" after ${MAX_EIA_RETRIES + 1} attempts.`);
+}
+
+async function finishEiaTableResponse(response: Response, route: string, frequency: EiaFrequency): Promise<EiaTableResult> {
   const payload = (await response.json()) as EiaApiPayload;
   const data = payload.response?.data;
   if (!Array.isArray(data)) throw new Error(`EIA table response for route "${route}" did not contain a data array.`);
@@ -142,7 +184,7 @@ async function requestEiaTable(url: URL, route: string, params: { frequency: Eia
     return [{ ...row, period, value }];
   });
   if (rows.length === 0) throw new Error(`EIA table response for route "${route}" contained no usable numeric rows.`);
-  return { route, frequency: params.frequency, rows, fetchedAt: new Date().toISOString() };
+  return { route, frequency, rows, fetchedAt: new Date().toISOString() };
 }
 
 export async function fetchEiaTable(params: {
@@ -191,24 +233,37 @@ async function requestEia(
   url: URL,
   context: { route: string; seriesId: string; frequency: EiaFrequency }
 ): Promise<EiaFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(url, { next: { revalidate: 900 } });
-  } catch (error) {
-    throw new Error(
-      `EIA API network request failed for route "${context.route}" series "${context.seriesId}": ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+  let response: Response | null = null;
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_EIA_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(retryDelayMs(attempt));
+    try {
+      const candidate = await fetch(url, { next: { revalidate: 900 } });
+      if (!candidate.ok) {
+        const body = await candidate.text().catch(() => "");
+        const detail = body.trim() ? ` ${body.slice(0, 300)}` : "";
+        const error = new Error(
+          `EIA API request failed: ${candidate.status} ${candidate.statusText} for route "${context.route}" series "${context.seriesId}".${detail}`
+        );
+        lastError = error;
+        console.error("[EIA series]", { route: context.route, seriesId: context.seriesId, reason: `http_${candidate.status}`, attempt });
+        if (isRetryableStatus(candidate.status) && attempt < MAX_EIA_RETRIES) continue;
+        throw error;
+      }
+      response = candidate;
+      break;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("EIA API request failed:")) throw error;
+      lastError = new Error(
+        `EIA API network request failed for route "${context.route}" series "${context.seriesId}": ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      console.error("[EIA series]", { route: context.route, seriesId: context.seriesId, reason: "network", attempt });
+      if (attempt >= MAX_EIA_RETRIES) throw lastError;
+    }
   }
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    const detail = body.trim() ? ` ${body.slice(0, 300)}` : "";
-    throw new Error(
-      `EIA API request failed: ${response.status} ${response.statusText} for route "${context.route}" series "${context.seriesId}".${detail}`
-    );
-  }
+  if (!response) throw lastError ?? new Error(`EIA API request failed for route "${context.route}" series "${context.seriesId}" after ${MAX_EIA_RETRIES + 1} attempts.`);
 
   let payload: EiaApiPayload;
   try {

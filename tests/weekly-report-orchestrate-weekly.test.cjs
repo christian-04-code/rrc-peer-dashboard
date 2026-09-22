@@ -83,17 +83,27 @@ function snapshotRow(record) {
   };
 }
 
-/** Same ordered-route fake Pool as weekly-report-publish-service.test.cjs. */
+/**
+ * Same ordered-route fake Pool as weekly-report-publish-service.test.cjs,
+ * plus a `.connect()` matching pg's real Pool: orchestrate-weekly.ts holds
+ * one dedicated PoolClient for the advisory lock's entire lifetime (see its
+ * own comment on why `pool.query()` alone isn't session-safe for a
+ * lock/unlock pair), so the fake must support that shape too.
+ */
 function fakePool(routes) {
   const calls = [];
+  async function query(sql, params) {
+    calls.push({ sql, params });
+    for (const route of routes) {
+      if (route.match.test(sql)) return { rows: route.respond(params) };
+    }
+    throw new Error(`fakePool: no route matched query: ${sql}`);
+  }
   return {
     calls,
-    async query(sql, params) {
-      calls.push({ sql, params });
-      for (const route of routes) {
-        if (route.match.test(sql)) return { rows: route.respond(params) };
-      }
-      throw new Error(`fakePool: no route matched query: ${sql}`);
+    query,
+    async connect() {
+      return { query, release() {} };
     }
   };
 }

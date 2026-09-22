@@ -119,7 +119,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
       <div className="macro-map-left-column">
       <div className="macro-map-card">
         <div className="macro-card-title">
-          <div><h3>Interactive U.S. energy map</h3><span>{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`} · {mapAsOfLabel}</span></div>
+          <div><span className="macro-source-accent">{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`} · {mapAsOfLabel}</span></div>
           <div className="macro-map-controls">
             <div className="macro-segmented" aria-label="Map metric">
               <button className={mode === "storage" ? "active" : ""} onClick={() => setMode("storage")}>Storage</button>

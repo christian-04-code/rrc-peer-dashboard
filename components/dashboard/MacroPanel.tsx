@@ -251,6 +251,22 @@ export function MacroPanel() {
   // is always requested (see eiaOutlookMetrics above), so it's a safe representative snapshot date.
   const steoObservation = steoSeries?.henryHubForecast ? formatDataDate(snapshotMonthFrom(steoSeries.henryHubForecast.fetchedAt)) : "--";
 
+  // Compact "N/M feeds current" footer summary (Data Sources & Freshness) --
+  // reuses each feed's own already-computed status/freshness field, no new
+  // business logic. "Lagged" counts as current: it is a source's own normal
+  // publication cadence, not a fault (a EIA weekly series is legitimately
+  // several days behind a daily one on the same page). Baker Hughes is
+  // manually imported, not part of the live-fetch pipeline this count is
+  // meant to describe, so it is listed in detail below but excluded here.
+  const freshnessChecks: boolean[] = [
+    ...metrics.map((metric) => metric.freshness !== "stale" && metric.freshness !== "unavailable"),
+    ...(currentQuotes ? Object.values(currentQuotes).map((quote) => quote.status === "ok") : []),
+    east ? east.freshness !== "stale" && east.freshness !== "unavailable" : false,
+    steo.data?.status === "ok"
+  ];
+  const freshnessCurrentCount = freshnessChecks.filter(Boolean).length;
+  const freshnessTotalCount = freshnessChecks.length;
+
   return (
     <div className="macro-panel">
       <header className="macro-page-head">
@@ -279,9 +295,9 @@ export function MacroPanel() {
           <SectionHeader eyebrow="02 · GAS BALANCE" title="Is the U.S. gas market tightening or loosening?" description="Storage deviation and LNG export growth only -- deliberately not a raw production-minus-consumption figure, since those EIA series differ in scope and would be an incompatible-unit aggregation." asOf={`Storage ${storageMetric?.period ? formatWeekEnding(storageMetric.period) : "--"}${storageMetric?.freshness === "stale" ? " (stale)" : ""} · LNG ${lngMetric?.period ? formatDataDate(lngMetric.period) : "--"}${lngMetric?.freshness === "stale" ? " (stale)" : ""}`} />
           <div className="macro-rrc-grid polished">
             <div className={`macro-rrc-callout ${gasBalance.gasState === "Tightening" ? "positive" : gasBalance.gasState === "Loosening" ? "negative" : ""}`}>
-              <span className="rrc-macro-risk-label"><b>NATIONAL</b> <em>Gas Balance</em></span>
+              <span className="rrc-macro-risk-label"><b>Gas Balance</b></span>
               <strong>{gasBalance.gasState}</strong>
-              <p>Storage is {formatPct(gasBalance.storagePct)} versus its five-year average ({gasBalance.storageState}); LNG exports are {formatPct(gasBalance.lngYoY)} year over year ({gasBalance.lngState}). Tightening requires storage at least 5% below normal and LNG exports growing at least 5% YoY; loosening requires the inverse.</p>
+              <p>Storage is {formatPct(gasBalance.storagePct)} versus its five-year average ({gasBalance.storageState}); LNG exports are {formatPct(gasBalance.lngYoY)} year over year ({gasBalance.lngState}). <span className="macro-info-tip" tabIndex={0} title="Tightening requires storage at least 5% below normal and LNG exports growing at least 5% YoY; loosening requires the inverse.">Classification rule ⓘ</span></p>
               <small>Is the environment more or less supportive for Range: a Tightening read (low storage + growing LNG demand) is directionally supportive for gas price realizations; Loosening is directionally unsupportive.</small>
             </div>
             <div className="macro-regional-grid appalachia">
@@ -295,7 +311,7 @@ export function MacroPanel() {
           </div>
         </article>
         <article className="macro-section macro-grid-card macro-snapshot-section">
-          <SectionHeader eyebrow="EVIDENCE" title="Macro snapshot" description="Deterministic classifications; select a row for its rule and inputs." />
+          <SectionHeader title="Macro snapshot" description="Select a row for its exact rule and inputs." />
           <div className="macro-snapshot compact" aria-label="Macro snapshot">{snapshot.map((item) => <details key={item.label} className={`macro-snapshot-item ${item.tone}`}><summary><span>{item.label}</span><strong>{item.state}</strong></summary><p>{item.rule}</p><small>{item.inputs}</small></details>)}</div>
         </article>
       </section>
@@ -330,7 +346,7 @@ export function MacroPanel() {
       <section className="macro-section" id="supply">
         <SectionHeader eyebrow="05 · U.S. GAS PRODUCTION" title="Dry-gas supply: actual vs. EIA forecast" description="Monthly national dry production converted to Bcf/d to match EIA STEO's own forecast unit; state ranking uses marketed production. Dashed line is the projection, not an observed value." />
         <div className="macro-primary-chart borderless">
-          <div className="macro-card-title"><div><h3>U.S. dry natural gas production</h3><span>{observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} · Monthly · {sourceShort(productionMetric)}</span></div><strong>{productionBcfd === null ? "--" : productionBcfd.toFixed(1)} <small>Bcf/d</small></strong></div>
+          <div className="macro-card-title"><div><span className="macro-source-accent">{observationLabel(productionMetric?.period, "monthly", productionMetric?.freshness)} · Monthly · {sourceShort(productionMetric)}</span></div><strong>{productionBcfd === null ? "--" : productionBcfd.toFixed(1)} <small>Bcf/d</small></strong></div>
           <HistoricalLineChart
             ariaLabel="U.S. dry natural gas production, actual and EIA STEO forecast"
             unit="Bcf/d"
@@ -345,7 +361,7 @@ export function MacroPanel() {
       <section className="macro-section" id="lng">
         <SectionHeader eyebrow="06 · LNG" title="U.S. LNG exports: actual vs. EIA forecast" description="Observed monthly exports converted to Bcf/d to match EIA STEO's own forecast unit, plus the EIA Short-Term Energy Outlook projection, clearly separated from forward capacity assumptions." />
         <div className="macro-primary-chart borderless">
-          <div className="macro-card-title"><div><h3>Monthly LNG export trend</h3><span>{observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} · Monthly · {sourceShort(lngMetric)}</span></div><strong>{formatMetricValue(lngMetric)} <small>{compactUnit(lngMetric)}</small></strong></div>
+          <div className="macro-card-title"><div><span className="macro-source-accent">{observationLabel(lngMetric?.period, "monthly", lngMetric?.freshness)} · Monthly · {sourceShort(lngMetric)}</span></div><strong>{formatMetricValue(lngMetric)} <small>{compactUnit(lngMetric)}</small></strong></div>
           <HistoricalLineChart
             ariaLabel="U.S. LNG exports, actual and EIA STEO forecast"
             unit="Bcf/d"
@@ -380,7 +396,7 @@ export function MacroPanel() {
       <section className="macro-section" id="appalachia">
         <SectionHeader eyebrow="09 · APPALACHIA / RANGE" title="PA + WV + OH marketed production" description="EIA does not publish a &quot;Marcellus production&quot; series -- this sums marketed production for the three states EIA does report, the closest available Appalachia proxy." />
         <div className="macro-primary-chart borderless">
-          <div className="macro-card-title"><div><h3>PA + WV + OH marketed production</h3><span>{observationLabel(appalachia.period, "monthly")} · Monthly · U.S. EIA</span></div><strong>{appalachia.current === null ? "--" : new Intl.NumberFormat("en-US").format(appalachia.current)} <small>MMcf/month</small></strong></div>
+          <div className="macro-card-title"><div><span className="macro-source-accent">{observationLabel(appalachia.period, "monthly")} · Monthly · U.S. EIA</span></div><strong>{appalachia.current === null ? "--" : new Intl.NumberFormat("en-US").format(appalachia.current)} <small>MMcf/month</small></strong></div>
           <HistoricalLineChart ariaLabel="PA + WV + OH marketed production history" unit="MMcf/month" limit={36} series={[{ id: "appalachia", label: `${appalachia.statesIncluded.join(" + ") || "PA + WV + OH"} marketed production`, color: "#70c99a", history: appalachia.history }]} />
           <div className="macro-inline-stats"><Stat label="Year-over-year" value={formatPct(appalachia.yearOverYearPct)} /><Stat label="Month-over-month" value={formatPct(appalachia.monthOverMonthPct)} /></div>
           <p className="appalachia-label-note">States included: {appalachia.statesIncluded.length ? appalachia.statesIncluded.join(", ") : "none available"}. This is a state-level EIA aggregate, not an official Marcellus-play figure -- it is never labeled as "Marcellus production".</p>
@@ -396,14 +412,20 @@ export function MacroPanel() {
       </section>
 
       <footer className="macro-freshness">
-        <div><strong>DATA FRESHNESS</strong><span>Observation period and retrieval timestamp are tracked separately; publication weekdays are not assumed.</span></div>
-        <div className="macro-freshness-list">
-          {metrics.map((metric) => <span key={metric.id}><i className={`freshness-dot ${metric.freshness}`} />EIA · {metric.label}: {observationLabel(metric.period, metric.frequency)} · {metric.frequency} · {metric.freshness} · retrieved {formatRefreshTimestamp(metric.fetchedAt)}</span>)}
-          {currentQuotes ? Object.values(currentQuotes).map((quote) => <span key={quote.id}><i className={`freshness-dot ${quote.status === "ok" ? "current" : "unavailable"}`} />OilPriceAPI · {quote.label}: {formatRefreshTimestamp(quote.asOf)} · current market · {quote.dataStatus ?? quote.status}</span>) : null}
-          <span><i className={`freshness-dot ${east?.freshness ?? "unavailable"}`} />EIA · regional storage: {observationLabel(east?.period, "weekly")} · weekly · {east?.freshness ?? "unavailable"} · retrieved {formatRefreshTimestamp(fundamentals.data?.generatedAt)}</span>
-          <span><i className={`freshness-dot ${steo.data?.status === "ok" ? "current" : "unavailable"}`} />EIA STEO · outlook: {steoObservation} · monthly · retrieved {steo.data?.generatedAt ? formatRefreshTimestamp(steo.data.generatedAt) : "--"}</span>
-          <span><i className="freshness-dot" />Baker Hughes · rigs: {formatWeekEnding(getRigDataset().source.reportDate)} · weekly · manual import</span>
-        </div>
+        <details className="macro-freshness-details">
+          <summary>
+            <strong>DATA FRESHNESS</strong>
+            <span className={freshnessCurrentCount === freshnessTotalCount ? "macro-source-accent" : undefined}>{freshnessCurrentCount}/{freshnessTotalCount} feeds current{freshnessCurrentCount === freshnessTotalCount ? "" : ` · ${freshnessTotalCount - freshnessCurrentCount} lagged/stale`}</span>
+          </summary>
+          <p className="macro-context-note">Observation period and retrieval timestamp are tracked separately; publication weekdays are not assumed. "Lagged" reflects a source's normal publication cadence, not a fault.</p>
+          <div className="macro-freshness-list">
+            {metrics.map((metric) => <span key={metric.id}><i className={`freshness-dot ${metric.freshness}`} />EIA · {metric.label}: {observationLabel(metric.period, metric.frequency)} · {metric.frequency} · {metric.freshness} · retrieved {formatRefreshTimestamp(metric.fetchedAt)}</span>)}
+            {currentQuotes ? Object.values(currentQuotes).map((quote) => <span key={quote.id}><i className={`freshness-dot ${quote.status === "ok" ? "current" : "unavailable"}`} />OilPriceAPI · {quote.label}: {formatRefreshTimestamp(quote.asOf)} · current market · {quote.dataStatus ?? quote.status}</span>) : null}
+            <span><i className={`freshness-dot ${east?.freshness ?? "unavailable"}`} />EIA · regional storage: {observationLabel(east?.period, "weekly")} · weekly · {east?.freshness ?? "unavailable"} · retrieved {formatRefreshTimestamp(fundamentals.data?.generatedAt)}</span>
+            <span><i className={`freshness-dot ${steo.data?.status === "ok" ? "current" : "unavailable"}`} />EIA STEO · outlook: {steoObservation} · monthly · retrieved {steo.data?.generatedAt ? formatRefreshTimestamp(steo.data.generatedAt) : "--"}</span>
+            <span><i className="freshness-dot" />Baker Hughes · rigs: {formatWeekEnding(getRigDataset().source.reportDate)} · weekly · manual import</span>
+          </div>
+        </details>
       </footer>
     </div>
   );
