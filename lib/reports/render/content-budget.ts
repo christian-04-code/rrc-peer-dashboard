@@ -67,18 +67,15 @@ export const STANDARD_BUDGET: ContentBudget = {
  */
 export const REDUCED_BUDGET: ContentBudget = {
   tier: "reduced",
-  maxEvidenceSections: 4,
-  maxAtAGlanceMetrics: 5,
-  // A peer-table row is one compact table line, not a paragraph -- showing
-  // all 6 tracked peers instead of 4 costs almost no vertical space, and a
-  // truncated "Range vs. Peers" table was an explicit review finding.
-  maxPeerCompanies: 6,
-  maxRisksOpportunitiesRows: 6,
-  maxNewsRows: 3,
+  maxEvidenceSections: 3,
+  maxAtAGlanceMetrics: 4,
+  maxPeerCompanies: 5,
+  maxRisksOpportunitiesRows: 5,
+  maxNewsRows: 2,
   maxSourceRows: 20,
-  maxWhatChangedItems: 3,
-  maxWatchItems: 3,
-  maxCommentarySentences: 2,
+  maxWhatChangedItems: 2,
+  maxWatchItems: 2,
+  maxCommentarySentences: 1,
   // The IR-enhancement fields below are the newest, most-optional content in
   // the report (see their own "empty most weeks by design" headers) -- a
   // real production render with a full week's worth of this content still
