@@ -1,6 +1,213 @@
 # Current Handoff
 
-## IR REPORT ENHANCEMENT IN PROGRESS (2026-09-08) — READ THIS FIRST
+## MACRO DASHBOARD PRODUCTION REPAIR + UI CLEANUP (2026-09-22) — READ THIS FIRST, SUPERSEDES EVERYTHING BELOW FOR MACRO/PEER-ANALYTICS PURPOSES
+
+This section is for the next coding agent (ChatGPT Work) continuing this work. Everything below it in this file is an unrelated, older workstream (the Weekly AI Report / IR Report Enhancement content pipeline) — still historically accurate for that subsystem, but not the active thread. Written by Claude Sonnet 5 at the end of a context-exhausted session; this is a handoff, not new product work.
+
+### 1. Current production state
+
+- **Repo:** `rrc-peer-dashboard`, working directory `Peer Comparsion site/rrc-peer-dashboard` (note the misspelling in the parent folder name).
+- **Branch:** work happens directly on `main` in this project — no PR workflow. The local checkout's branch is named `feat/ir-report-enhancement` but its tip is identical to `origin/main` (pushed there directly each time); don't be confused by the branch name.
+- **`main` HEAD / production commit (confirmed matching):** `38de570` — verified both via `git log -1` and `vercel inspect rrc-peer-dashboard.vercel.app --logs | grep Commit`.
+- **Production URL:** https://rrc-peer-dashboard.vercel.app — aliases to the latest `main`-branch deployment automatically on push.
+- **Working tree:** clean as of this handoff (aside from this documentation edit).
+- **Last confirmed test/build status (same commit):**
+  - `npx tsc --noEmit -p tsconfig.json` — clean
+  - `npm test` — **1433 pass, 0 fail, 81 skipped** (skips are all DB-gated tests; no local Postgres in dev sandboxes — this is a longstanding, expected limitation, not a regression)
+  - `npm run build` — clean
+- **Environment/API dependencies (names only, no values were ever read or exposed by this session):** `EIA_API_KEY`, `OIL_PRICE_API`, `ANTHROPIC_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET`, `POSTGRES_*`/`DATABASE_URL` (Neon), `FMP_KEY`, `FINNHUB_API_KEY` — all confirmed present in Vercel Production via `vercel env ls` (names/scopes only). `EIA_API_KEY`/`FMP_KEY`/`FINNHUB_API_KEY` are Production-only (not set for Preview) — expect Preview deployments to show degraded/unavailable EIA data unless that's changed.
+- **IMPORTANT — prior security incident (fully resolved, credential rotation confirmed by the user in this session's chat, not independently re-verified by inspecting values):** an earlier, unrelated background-agent incident (documented in this assistant's own long-term memory, not in this repo) provisioned an unauthorized Neon DB and exposed a Vercel secret. The user confirmed rotation was completed before this session began. No further action needed unless something looks freshly wrong.
+
+### 2. Architecture map
+
+**A. Macro dashboard (top-level page component)**
+- `components/dashboard/MacroPanel.tsx` — the whole long-form Macro tab. Renders every section unconditionally in one continuous scroll (NOT tab-gated — this was deliberately reverted from a tab-gated redesign earlier in September; see commits `975f383`/`c94343b` in git log if you need the full story). Owns `SectionHeader` (title + optional short "as of" date + `DataInfoTooltip`), the sticky quick-jump nav (`QUICK_JUMP` const, scroll-based, never hides/unmounts sections), Market Pulse cards, the Gas Balance card, Macro Snapshot accordion, Storage section, and mounts `MacroEnergyMap`, `EiaOutlookModule`, `MacroRiskWidget`.
+- `components/dashboard/HomeDashboard.tsx` — top-level tab switcher (Overview/Forecast/Macro/News), plain client-side state, no router.
+
+**B. EIA API ingestion (shared client)**
+- `lib/eia/client.ts` — the ONE shared EIA HTTP client. `fetchEiaTable()` (bulk/table endpoint, e.g. regional storage) and `fetchEiaSeries()`/`fetchEiaSeriesById()` (single-series endpoints, e.g. Henry Hub, Lower-48 storage). **Has bounded retry with exponential backoff+jitter on 429/5xx/timeout/network** (added this session, `MAX_EIA_RETRIES = 3`, base delay 400ms) — added because a real production 429 on the regional storage route was caught live and traced as the root cause of both the intermittent "--" regional storage table AND the stale Peer Analytics report (see §8). Non-retryable 4xx fails immediately. In-flight request de-dup per warm instance (`inFlightEiaTableRequests`).
+- `lib/eia/series.ts` — EIA series ID registry (Henry Hub, WTI, Brent, Lower-48 storage, LNG exports, dry gas production, propane stocks, STEO series IDs).
+- `lib/eia/macro-fundamentals.ts` — the four "table" endpoint fetchers used by `/api/macro`: `fetchRegionalStorageTable()`, `fetchStateMarketedProductionTable()`, `fetchDemandTable()`, `fetchSteoTable()`. Each has its own `*_TIMEOUT_MS` constant (25s each) passed into `fetchEiaTable`.
+
+**C. EIA STEO data**
+- `lib/market/macro-steo.ts`, `lib/market/macro-steo-types.ts`, `lib/market/macro-steo-refresh.ts` — normalization + Neon-persisted vintage snapshots (for forecast-revision comparisons).
+- `lib/market/persistence/steo-repo.ts` — DB access for STEO snapshot history.
+- `app/api/macro/steo/route.ts` — the API route.
+- `components/dashboard/EiaOutlookModule.tsx` — frontend (metric picker, actual-vs-forecast chart, forecast-revision table now behind a collapsed `<details>`, added this session).
+
+**D. Storage data (Lower-48 aggregate)**
+- Fetch: `fetchLower48StorageWeekly()` in `lib/eia/client.ts` (single-series endpoint, NOT the same EIA route as regional storage).
+- Normalize/build: `lib/market/build-market-metrics.ts` (the `storage` entry in `NormalizedMarketMetric[]`).
+- Frontend: the "U.S. Natural Gas Storage" section in `MacroPanel.tsx` (`StorageChart` component, custom SVG, not the shared `.macro-evidence-chart` wrapper).
+
+**E. Storage regional mapping (EIA's 5 official storage regions)**
+- **State→region mapping: `lib/market/storage-regions.ts`** (`REGION_STATES` const, `getStorageRegionForState()`). 49 Lower-48 states + DC map to exactly one of `east`/`midwest`/`southCentral`/`mountain`/`pacific`; Alaska/Hawaii intentionally map to `null` (EIA doesn't report Lower-48 storage for them — this is correct, not a bug).
+- Fetch: `fetchRegionalStorageTable()` (`lib/eia/macro-fundamentals.ts`) → `lib/market/macro-fundamentals.ts` normalizes into `RegionalStorageMetric` per region (current/priorWeek/weeklyChange/yearAgo/yearAgoPct/fiveYearAverage/fiveYearPct).
+- API: `/api/macro` route (`app/api/macro/route.ts`) — `storage.regions.{east,midwest,southCentral,mountain,pacific}`.
+- Table UI: `RegionalStorageTable` in `components/dashboard/MacroVisuals.tsx`.
+- **Verified-correct example values (Sep 11, 2026 observation, for regression comparison only — do not hardcode these anywhere in app code):**
+  - East: 795 Bcf, **+4.14%** vs 5Y
+  - Midwest: 934 Bcf, **+2.14%** vs 5Y
+  - South Central: 1,039 Bcf, **-1.29%** vs 5Y
+  - Mountain: 241 Bcf, **+7.78%** vs 5Y
+  - Pacific: 289 Bcf, **+9.47%** vs 5Y
+
+**F. Interactive U.S. map (Storage + Production modes)**
+- `components/dashboard/MacroEnergyMap.tsx` — the whole map component. `storageColor(value)`/`productionColor(value,max)`/`productionChangeColor(value)` bucket functions. `regionFor(data, stateCode)` resolves a state to its region object for Storage mode. `MAP_STATES` built once at module load from `us-atlas/states-albers-10m.json` via `topojson-client`.
+- Layout (as of this session): `.macro-map-stack` (outer vertical stack) > `.macro-map-layout` (2-col row: `.macro-map-card` the map itself, `aside.macro-map-detail` the Selected Geography + Drilling Activity panel) then `<BasinRigActivity />` full-width below the row (moved out of the row's left column this session — see §3).
+- **Storage mode is explicitly region-based today**: every state in a region gets that region's `fiveYearPct`/color (verified exhaustively this session — see §3). **The detail panel still leads with the clicked STATE's name** ("Pennsylvania") with a secondary sentence clarifying it's regional — this is the #1 pending change, see §5.
+
+**G. Production map (independent, state-based — do not conflate with Storage mode)**
+- Same file (`MacroEnergyMap.tsx`), `mode === "production"` branch. Colors states by their own `data.production.states[code]` value (current volume or YoY%), completely independent of storage regions. This semantic split (Storage=regional, Production=state-level) is intentional and must be preserved.
+
+**H. Baker Hughes rig data / import**
+- Import script: `scripts/rigs/import.py` (run via `npm run rigs:import -- "<path-to-xlsx>"`).
+- Source: a manually-downloaded weekly Baker Hughes `.xlsx` "North America Rig Count Report" — **no stable API or fixed download URL exists**, confirmed via `docs/rig-count-import.md` (read that file for the full explanation before considering automation).
+- Output: `data/rigs/rig-count.json` (committed, diffable).
+- Validation: the import script cross-reconciles NAM Breakdown vs NAM Weekly sheet totals and basin/state sums against the US total; fails loudly on mismatch.
+- Consumer: `lib/rigs/rig-data.ts` (`getRigDataset()`, `getRigState()`, `getRankedRigBasins()`, `getRigStateMax()`), typed via `lib/rigs/types.ts`.
+- UI: `components/dashboard/BasinRigActivity.tsx` (basin-level ranking table + selected-basin detail), `components/dashboard/DrillingActivity.tsx` (`DrillingActivityModule`, state-level, mounted in the map's right-column aside).
+- **Do not attempt to automate this without the user's explicit sign-off on the fragility tradeoff** (scraping Baker Hughes' page, or a third-party mirror) — this was investigated and explicitly rejected this session per the existing docs' own reasoning.
+
+**I. Macro Risk / AI summary**
+- Deterministic risk engine: `lib/market/macro-risk-engine.ts` (`buildRangeMacroSignals`, `rankRangeMacroSignals`, `buildMacroRiskPayload` — SUPPORTIVE/WATCH/MODERATE_RISK/HIGH_RISK/UNAVAILABLE per driver).
+- Orchestration + AI narrative: `lib/market/macro-risk-orchestrate.ts`, `lib/market/macro-summary-service.ts`, persisted via `lib/market/persistence/summary-repo.ts`.
+- API: `app/api/macro/risk/route.ts`. Frontend hook: `lib/market/use-macro-risk.ts`.
+- UI: `components/dashboard/MacroRiskWidget.tsx` — ranked driver cards (left) + "What Changed" + AI Range Macro Summary (right column, restructured into a 2-col `.macro-risk-body` grid this session; AI summary text split into one `<p>` per sentence via a mechanical regex, never reparsed/recategorized/reordered).
+- Daily orchestration entry point (cron): `lib/market/macro-orchestrate-daily.ts`.
+
+**J. Peer Analytics reports** (internally named "Weekly [AI] Report" throughout the codebase — same feature, different name; don't be thrown by this)
+- Snapshot build: `lib/reports/snapshot-builder.ts`, readiness: `lib/reports/readiness.ts`, Macro evidence collection for the report specifically: `lib/reports/adapters/macro-adapter.ts` (`collectMacroEvidence`) — this is what gates report generation on live EIA data being fetchable (see §8).
+- AI analyst call: `lib/reports/analyst-service.ts`, `lib/reports/ai/anthropic-provider.ts`, `lib/reports/ai/prompt.ts`.
+- PDF render: `lib/reports/render/*` (Chromium/puppeteer-core based).
+- Frontend: `components/dashboard/WeeklyReportDownloadButton.tsx` (Overview tab — checks `/api/reports/latest` on mount).
+
+**K. Report cron**
+- `app/api/cron/reports/route.ts` — thin, `CRON_SECRET`-gated route calling `orchestrateWeeklyReport()`.
+- `lib/reports/orchestrate-weekly.ts` — the real orchestration logic: Postgres advisory lock (fixed this session to use one dedicated `pool.connect()` client for the lock's full lifetime instead of two independent `pool.query()` calls — the old version wasn't guaranteed to release on the same session under a multi-connection pool), live EIA readiness peek, 1-hour data-driven "safety buffer" anchored to a durable first-observed-at ledger (not wall-clock, not `created_at`), then snapshot build → AI → render → publish.
+- Schedule: `vercel.json` — `"0 17 * * *"` (17:00 UTC daily), alongside `/api/cron/macro` (12:15 UTC) and `/api/cron/news` (11:15 UTC).
+
+**L. Report persistence**
+- `lib/reports/persistence/report-repo.ts` (`weekly_report_snapshots` table — draft/pending/building/ready/published lifecycle, one published row per week enforced at the DB level), `lib/reports/persistence/storage-observation-repo.ts` (the safety-buffer ledger, `weekly_report_storage_observations` table), `lib/reports/persistence/migrate.ts`, `lib/reports/persistence/schema.sql`.
+
+**M. `/api/reports/latest`**
+- `app/api/reports/latest/route.ts` + `lib/reports/latest-report-service.ts` — cheap read-only status endpoint (`{available, storageWeekEnding, publishedAt, sizeBytes}`), and `/api/reports/latest/download` for the actual PDF. Both pure reads, no generation logic.
+
+**N. Peer Analytics frontend**
+- `components/dashboard/WeeklyReportDownloadButton.tsx` — on the **Overview** tab (not Macro), near the top, checks `/api/reports/latest` on mount and renders a real download link or a calm "Not Available Yet" disabled state.
+
+**O. Market/OilPriceAPI data**
+- `lib/oilpriceapi/client.ts` — `fetchOilPriceApiQuotes()`, authenticated batch endpoint with a keyless-demo fallback. Normalizes `stale`/`data_status` fields straight from the provider's own response (never invented).
+- `app/api/market/route.ts` — builds `currentMarket` quotes; **deliberately refuses to present a quote as "current"** if the provider's own `stale === true` flag is set (`unavailableCurrentMarket()`), even though the fetch itself succeeded — this is intentional data-integrity behavior, confirmed this session, not a bug.
+- `lib/market/build-market-metrics.ts` — the EIA-sourced `NormalizedMarketMetric[]` (separate from OilPriceAPI's live quotes; the Market Pulse cards blend both, falling back to the EIA metric when the live quote is unavailable).
+
+**P. Vercel cron configuration**
+- `vercel.json` — exactly 3 crons: `/api/cron/news` (11:15 UTC), `/api/cron/macro` (12:15 UTC), `/api/cron/reports` (17:00 UTC). All three use the identical `Authorization: Bearer $CRON_SECRET` pattern; confirmed this session that unauthenticated requests correctly 401 on all three in production.
+
+### 3. Macro work completed this session (2026-09-22, commits `31ec62d` → `38de570`) — do not reimplement unless a regression is demonstrated
+
+**Root-cause pipeline fixes:**
+- `lib/eia/client.ts`: added bounded retry+backoff (429/5xx/timeout/network) — a real production 429 on the regional-storage route was caught live in Vercel logs and traced as blocking both the regional storage table AND (because `lib/reports/adapters/macro-adapter.ts` shares the same live EIA fetch to gate report readiness) the Peer Analytics report's daily cron.
+- `lib/reports/orchestrate-weekly.ts`: fixed the advisory-lock acquire/release to use one dedicated `pool.connect()` client instead of two independent `pool.query()` calls (a latent correctness bug under a multi-connection pool, found while fixing the above).
+
+**Title cleanup:**
+- Removed the numbered eyebrow labels (`01 · MARKET PULSE` ... `10 · EIA OUTLOOK`) throughout `MacroPanel.tsx` — they duplicated the descriptive title immediately below them.
+- Removed duplicate section/card titles (LNG, Supply, Appalachia cards; the map's old internal "Interactive U.S. energy map" h3 vs. its section title).
+- Converted all section/subsection titles to title case, preserving acronym casing (U.S., LNG, NGL, EIA, STEO, Bcf, MMcf).
+
+**Tooltips:**
+- New `components/dashboard/DataInfoTooltip.tsx` — the structured (Source/Series/Observation/methodology/caveat fields) counterpart to the existing `components/dashboard/InfoTip.tsx` (plain-string tooltip). Both share the same underlying `.info-tip*` hover/`:focus-within` CSS in `components/dashboard/ForecastPanel.css` (imported globally) — this was a deliberate reuse, not a new tooltip system.
+- Used in all 11 `SectionHeader` instances, the Gas Balance card, the header's "Last Updated" block, and the Electric Power Demand Forecast subsection's unit-mismatch caveat.
+- Verified keyboard-accessible (focus triggers the bubble via the same CSS as hover; `aria-label` carries the full flattened content for screen readers).
+- Observation dates/source metadata were NOT hidden — short "as of" strings stayed visible next to titles; only the longer methodology/caveat prose moved into the tooltip.
+
+**Layout:**
+- `MacroRiskWidget.tsx` restructured into a 2-column grid (`.macro-risk-body`: driver list left, "What Changed" + AI summary right), collapsing to 1 column below 980px.
+- AI Range Macro Summary text split into one paragraph per sentence (mechanical regex boundary, `(?<=[.!?])\s+(?=[A-Z])` — never reorders/categorizes/drops content).
+- `BasinRigActivity` moved out of the map row's left column to sit full-width below the map+detail row (it was previously stacked with the map, making that column much taller than the right-column detail aside).
+- `.macro-grid-row-demand` (Demand | NGL cards) and `.macro-rrc-grid` (Gas Balance callout | regional stats) both got `align-items: start` — CSS Grid's default `stretch` was inflating the shorter card in each pair to match the taller one, leaving empty space inside the shorter card's own bordered box. Verified via `getBoundingClientRect()` on live production, not just visually.
+- **Real regression caught and fixed in the same pass**: adding 11 `DataInfoTooltip` instances caused an actual ~320px horizontal-scroll bug (a closed `.info-tip-bubble` still occupies its box for scroll-width purposes since it's hidden via opacity/visibility, not `display:none`). Fixed with `overflow-x: clip` on both `html` and `body` in `app/globals.css` (body alone did not propagate to the viewport's scrollbox in this app's root layout — verified empirically, not assumed). Confirmed the quick-jump nav's `position: sticky` still works afterward.
+
+**Storage map:** re-verified end to end (state → region → five-year deviation → bucket → legend) and found correct; **no data/logic changes were made to it this session** — see §6 for the next planned change (region-first UX), which is different from "fixing a bug."
+
+### 4. Important design principles to preserve
+
+1. One title per section — no duplicates.
+2. No persistent methodology paragraphs / excessive gray explanatory text in the default view.
+3. Methodology/source explanations belong in `DataInfoTooltip` (structured) or `InfoTip` (plain string) where practical — reuse these, don't build a third tooltip system.
+4. Observation dates and source transparency must stay easily accessible (short visible label, or the tooltip — never fully hidden).
+5. Charts should fill their container without distortion (the shared `.macro-evidence-chart svg { height: auto; aspect-ratio: 660/220; }` rule in `app/globals.css` handles this for every chart using `HistoricalLineChart`; don't reintroduce a flat pixel height).
+6. Avoid large unexplained blank areas — but a modest, unbordered height difference between two legitimately different-shaped cards in a row is normal and NOT a bug; only fix genuine `align-items: stretch`-driven empty space inside a bordered box.
+7. Preserve the existing dark-theme/blue-cyan-accent (`#75c7ee`) visual language; green/red for directional deltas; muted orange (`#e5ad63`) for forecast/rig accents. Don't invent a new palette.
+8. Never fabricate data — every "--"/unavailable state reflects a real missing/failed value, never a zero substitute.
+9. Never present regional data as a state-level observation without saying so (this is the whole point of §6 below).
+10. Don't change calculations/formulas to fix a visual problem — if a value looks wrong, verify against the live source before touching logic.
+11. Production verification (live `vercel inspect`/browser checks) matters more than "the code looks right" — this whole session's Peer Analytics status (§8) is exactly why.
+
+### 5. New pending UI changes — NOT implemented yet, next agent's job
+
+**A. Gas Balance / directional color consistency:** apply green (positive/up) / red (negative/down) / neutral (existing muted treatment) consistently to directional change metrics across Macro, without over-coloring. Likely touches `Stat` component usages and the `.positive`/`.negative` CSS classes already defined in `app/globals.css` — check what's already used consistently (e.g. `macro-pulse-change`) vs. inconsistently before changing anything.
+
+**B. Lower-48 Storage chart sizing:** `StorageChart` in `MacroPanel.tsx` (custom SVG, `viewBox="0 0 660 220"`, NOT using the shared `.macro-evidence-chart` wrapper — it has its own `.macro-storage-chart` class). Inspect actual rendered proportions on production before changing anything; increase plotting area / reduce internal whitespace without distorting the aspect ratio or breaking the axis/legend.
+
+**C. Regional Storage Table hierarchy:** `RegionalStorageTable` in `components/dashboard/MacroVisuals.tsx`. Bolder column headers; green/red for Weekly Δ, vs YA, vs 5Y (directional columns only) — do NOT color the absolute inventory columns (Current, Prior Wk, 5Y Avg) just because the numbers are large/small.
+
+### 6. Storage map — next important semantic change (biggest pending item)
+
+**Problem:** Storage mode's map/interaction/detail-panel already color and group states correctly by EIA region (verified, see §3), but the **UX still leads with the clicked state's name** ("Pennsylvania") with the regional caveat as a secondary sentence, which can still read as if Illinois (e.g.) has its own storage observation.
+
+**Desired behavior (from the user, not yet built):**
+- Map: no change needed to coloring logic (already region-first) — but consider a clearer visual grouping/labeling of the 5 regions if practical.
+- Alaska: already correctly shows "unavailable" (`storageColor(null)`) — do not assign it fake Lower-48 data.
+- Interaction: clicking a state in Storage mode should make the analytical geography the **region** ("Midwest Storage Region"), not the state. The state stays visible as secondary context ("Selected state: Illinois").
+- Right detail panel (`aside.macro-map-detail` in `MacroEnergyMap.tsx`): should lead with "Midwest Storage Region" (not "Illinois"), then Regional working gas / Weekly change / vs year ago / vs 5-year average / Observation week / Regional storage history — with "Selected state: Illinois" and a concise regional-membership note (via `DataInfoTooltip` or a short label) underneath, replacing the current long always-visible sentence ("EIA reports weekly storage for the Midwest region—not separately for Illinois.").
+- Production mode: **do not change its semantics** — it must stay state-based, independent of storage regions, in both directions of mode-switching (Storage→Production→Storage already verified to correctly restore regional coloring — don't regress that).
+
+**Files the next agent will need:** `components/dashboard/MacroEnergyMap.tsx` (the `selected`/`selectedRegion`/`selectedName` state and the `aside.macro-map-detail` JSX), `lib/market/storage-regions.ts` (`STORAGE_REGION_LABELS`, `getStorageRegionForState` — read-only reference, don't rewrite the mapping without checking it against current official EIA region definitions first), `components/dashboard/DataInfoTooltip.tsx` (reuse for the regional-membership note).
+
+### 7. EIA region definitions (current repo state — verify against official EIA docs before modifying)
+
+From `lib/market/storage-regions.ts`, `REGION_STATES`:
+- **East:** CT, DE, DC, FL, GA, MA, MD, ME, NH, NJ, NY, NC, OH, PA, RI, SC, VT, VA, WV
+- **Midwest:** IL, IN, IA, KY, MI, MN, MO, TN, WI
+- **South Central:** AL, AR, KS, LA, MS, OK, TX
+- **Mountain:** AZ, CO, ID, MT, NE, NM, NV, ND, SD, UT, WY
+- **Pacific:** CA, OR, WA
+
+This was NOT rewritten during this handoff. Verify it against EIA's current published region definitions before changing it for any reason — a silent rewrite here would be a serious, hard-to-notice data-integrity risk.
+
+### 8. Peer Analytics — STILL OPEN, DO NOT CLAIM FIXED
+
+**Prior stale state:** `storageWeekEnding: "2026-08-28"`, `publishedAt: "2026-09-04T20:49:14Z"`.
+
+**Fixes deployed this session:** the EIA retry/backoff fix and the advisory-lock fix (§3, commit `31ec62d`) directly target the mechanism that was blocking report generation. Live production EIA storage was independently confirmed fetchable as of week ending 2026-09-11 (i.e., readiness *should* now be achievable).
+
+**What was NOT confirmed:** the `/api/cron/reports` cron (17:00 UTC daily) had **not yet fired again since the fix deployed** by the time this was last checked. **No new report has been observed through either `/api/reports/latest` or the live Peer Analytics/Overview frontend.** Do not consider this fixed based on code review alone.
+
+**Next agent must:**
+1. `curl https://rrc-peer-dashboard.vercel.app/api/reports/latest` — check if `storageWeekEnding` has advanced past `2026-08-28` and `publishedAt` past `2026-09-04`.
+2. If still stale, check whether today's 17:00 UTC cron has actually fired yet (compare current UTC time), then check Vercel function logs for `/api/cron/reports` (`vercel inspect rrc-peer-dashboard.vercel.app --logs`, or `vercel logs` for a live tail) for its actual `stage`/`reason` result.
+3. If it ran and returned `not_ready`/`failed`, trace via `lib/reports/orchestrate-weekly.ts` → `lib/reports/adapters/macro-adapter.ts` (`collectMacroEvidence`) → `lib/eia/client.ts` for the specific failure reason (the route never leaks internal detail to its HTTP response by design — you must read server logs, not the response body).
+4. Once a new report is confirmed published, verify it's ALSO visible on the live Overview tab via `WeeklyReportDownloadButton.tsx` (`/api/reports/latest` driving its rendered state) — code correctness alone doesn't count as done here.
+
+### 9. Baker Hughes (reference — see §2H for the architecture map)
+
+Current workflow is entirely manual by design (no automatable source exists): download the weekly `.xlsx` from Baker Hughes → `npm run rigs:import -- "<path>"` (`scripts/rigs/import.py`) → the script cross-validates two sheets and fails loudly on mismatch → commit the updated `data/rigs/rig-count.json`. Consumed by `lib/rigs/rig-data.ts`, rendered by `BasinRigActivity.tsx`/`DrillingActivity.tsx`/the map's rig overlay. **Do not attempt to automate this** without the user's explicit sign-off — a public API/stable URL does not exist, confirmed via `docs/rig-count-import.md`'s own documented reasoning.
+
+### 10. Known recent commits (chronological, all on `main`)
+
+- `31ec62d` — **EIA retry/backoff + report-pipeline advisory-lock fix.** Root cause fix for both the intermittent regional-storage "--" and the stale Peer Analytics report. Also the first pass of Macro chart-sizing (`aspect-ratio` fix) and initial duplicate-title/tooltip cleanup on that day.
+- `d91c180` — **MacroRiskWidget 2-column layout + AI summary sentence-splitting.** Post-deploy verification pass following `31ec62d`; found the AI summary was still one dense paragraph and the risk widget wasted horizontal space.
+- `9d11731` — **Macro title/tooltip cleanup (main pass).** Removed numbered eyebrows, added `DataInfoTooltip.tsx`, title-cased all section headings, simplified the Gas Balance card, fixed the map/rig and Demand/NGL empty-space layout bugs.
+- `38de570` — **Horizontal-overflow fix, current confirmed production state.** Found during visual QA of `9d11731`'s own tooltip additions; `overflow-x: clip` on `html`+`body`.
+
+### 11. Recommended first task for the next agent
+
+**Verify Peer Analytics (§8) before anything else** — it's the highest-severity open item and requires almost no code archaeology, just checking `/api/reports/latest` and Vercel cron logs against current UTC time. Only after that's resolved (or its exact current blocker is identified) should the pending UI items (§5, §6) be started.
+
+---
+
+## IR REPORT ENHANCEMENT IN PROGRESS (2026-09-08) — historical; unrelated workstream, superseded above for Macro/Peer-Analytics purposes only
 
 New work, on a new branch (`feat/ir-report-enhancement`, cut from `main` at `8fff1c9` -- Phase 7's PR #13 merge), **not yet merged, not yet deployed**. Full detail in `docs/IR_REPORT_ENHANCEMENT.md`. Deliberately kept out of Phase 7's own architecture doc and Issue #14 so that release's audit history stays intact and closed -- this is a genuinely separate enhancement (conditional Investor Questions / IR-preparation sections), not a continuation of the Phase 7 release-review fixes below.
 
