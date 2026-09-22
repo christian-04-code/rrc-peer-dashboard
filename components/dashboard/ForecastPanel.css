@@ -83,6 +83,18 @@
    other .info-tip consumer is unaffected since this only applies with --wide added. */
 .info-tip--wide .info-tip-bubble { max-width: 360px; }
 
+/* Structured "data details" bubble content (components/dashboard/
+   DataInfoTooltip.tsx) -- Source/Series/Observation/Retrieved fields plus
+   optional methodology/caveat prose, inside the same bubble shell above. */
+.info-tip-bubble--data { display: grid; gap: 8px; }
+.info-tip-fields { display: grid; gap: 5px; margin: 0; }
+.info-tip-fields > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.info-tip-fields dt { margin: 0; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.info-tip-fields dd { margin: 0; text-align: right; font-size: 11.5px; color: var(--text); }
+.info-tip-methodology, .info-tip-caveat { margin: 0; padding-top: 7px; border-top: 1px solid var(--border); font-size: 11.5px; line-height: 1.5; color: var(--text); }
+.info-tip-methodology b { color: #75c7ee; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 3px; }
+.info-tip-caveat { color: var(--muted); }
+
 /* Three color-coded source/status cards at the top of the page. */
 .wb-source-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .wb-source-card { border: 1px solid var(--border); border-left-width: 3px; background: var(--panel); border-radius: 12px; padding: 11px 14px; display: grid; gap: 3px; }

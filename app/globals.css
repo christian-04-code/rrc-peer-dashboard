@@ -220,7 +220,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-kicker, .macro-section-head > div > span, .macro-flow-strip > div > span, .macro-rrc-callout > span { color: #75c7ee; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 .macro-asof { display: grid; gap: 3px; text-align: right; font-size: 12px; max-width: 320px; }
 .macro-asof span, .macro-asof small { color: var(--muted); }
-.macro-asof-note { font-size: 9px; line-height: 1.4; }
+.macro-asof-value { display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .macro-section-asof { color: var(--muted); }
 .macro-risk-snapshot-date { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .macro-snapshot { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
@@ -240,17 +240,23 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-snapshot-section { overflow: visible; }
 .macro-grid-row { display: grid; gap: 12px; scroll-margin-top: 150px; }
 .macro-grid-row-equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.macro-grid-row-demand { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+/* align-items: start (not the grid default "stretch") -- the NGL card has
+   far less content than the three-chart Demand card beside it; stretch was
+   forcing NGL's bordered card to match Demand's full height, leaving a
+   large empty area inside NGL's own box below its actual content. */
+.macro-grid-row-demand { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
 .macro-grid-row-rrc { grid-template-columns: minmax(0, 8fr) minmax(300px, 4fr); align-items: stretch; }
 .macro-grid-card { min-width: 0; scroll-margin-top: 150px; }
-.macro-grid-card .macro-section-head { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
-.macro-grid-row-rrc .macro-snapshot-section .macro-section-head { grid-template-columns: 1fr; align-items: start; gap: 5px; }
-.macro-grid-row-rrc .macro-snapshot-section .macro-section-head p { text-align: left; }
 .macro-grid-card > .macro-primary-chart.borderless { margin-top: 12px; }
 .macro-primary-chart.borderless { border: 0; background: transparent; border-radius: 0; padding: 0; }
-.macro-section-head { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(320px, 1.3fr); align-items: flex-end; gap: 20px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
-.macro-section-head h2 { margin: 3px 0 0; font-size: 16px; }
-.macro-section-head p { margin: 0; color: var(--muted); font-size: 12px; text-align: right; }
+/* One title + an optional short "as of" date, side by side, wrapping on
+   narrow widths -- no longer a fixed two-column grid sized for a long
+   permanent description paragraph (that copy now lives in the ⓘ tooltip
+   next to the title, see DataInfoTooltip). */
+.macro-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
+.macro-section-head-title { display: flex; align-items: center; gap: 2px; }
+.macro-section-head h2 { margin: 0; font-size: 16px; }
+.macro-section-asof { margin: 0; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .macro-pulse-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin: 0 -14px -14px; }
 .macro-pulse-item { min-width: 0; display: grid; gap: 5px; padding: 11px 12px 9px; border-right: 1px solid var(--border); }
 .macro-pulse-item:last-child { border-right: 0; }
@@ -309,6 +315,8 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-weekly-report p, .macro-weekly-report > small { margin: 0; color: var(--muted); font-size: 9px; }
 .macro-subsection-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-top: 14px; padding: 11px 2px 0; border-top: 1px solid var(--border); }
 .macro-subsection-head h3 { margin: 3px 0 0; font-size: 13px; }
+.macro-subsection-title { display: inline-flex; align-items: center; gap: 2px; }
+.macro-subsection-title h3 { margin: 3px 0 0; }
 .macro-subsection-head p { margin: 0; color: var(--muted); font-size: 10px; }
 .macro-subsection-head.compact { margin-top: 12px; padding-top: 10px; }
 .macro-stat { min-width: 0; display: grid; align-content: center; gap: 3px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 9px; }
@@ -325,16 +333,19 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-unsupported span { color: var(--muted); font-size: 10px; }
 .macro-unsupported strong { font-size: 13px; }
 .macro-unsupported small { grid-column: 1 / -1; color: #62758a; font-size: 9px; }
-.macro-rrc-grid { display: grid; grid-template-columns: minmax(300px, .7fr) minmax(0, 1.3fr); gap: 12px; padding-top: 12px; }
+/* align-items: start -- after Section 6's Gas Balance card simplification
+   (methodology moved into its tooltip) the callout is now noticeably
+   shorter than the six-stat regional grid beside it; stretch (the grid
+   default) would otherwise inflate the callout's own bordered box to match
+   the taller stats grid, leaving empty space inside it. */
+.macro-rrc-grid { display: grid; grid-template-columns: minmax(300px, .7fr) minmax(0, 1.3fr); align-items: start; gap: 12px; padding-top: 12px; }
 .macro-rrc-callout { display: grid; align-content: center; gap: 8px; border-left: 3px solid var(--border); }
 .macro-rrc-callout.positive { border-left-color: var(--positive); }
 .macro-rrc-callout.negative { border-left-color: var(--negative); }
-.macro-rrc-callout > strong { font-size: 24px; }
+.macro-rrc-callout-head { display: flex; align-items: center; gap: 2px; }
+.macro-rrc-callout-head strong { font-size: 24px; }
 .macro-rrc-callout p { margin: 0; color: var(--text); font-size: 11px; line-height: 1.5; }
 .macro-rrc-callout small { color: var(--muted); font-size: 10px; }
-.rrc-macro-risk-label b { color: #75c7ee; }
-.rrc-macro-risk-label em { color: var(--negative); font-style: normal; }
-.macro-info-tip { color: #75c7ee; cursor: help; border-bottom: 1px dotted currentColor; white-space: nowrap; }
 .macro-regional-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .macro-regional-grid.appalachia { gap: 7px; }
 .macro-evidence-chart { margin-top: 8px; }
@@ -363,8 +374,14 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-deviation-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, transparent 49.5%, var(--border) 49.5%, var(--border) 50.5%, transparent 50.5%); overflow: hidden; }
 .macro-deviation-bar i { display: block; height: 100%; background: #cf704f; border-radius: 99px; }
 .macro-deviation-bar i.below { background: #36a4c8; }
+/* Outer vertical stack: the map+detail row, then Major Basin Rig Activity
+   full-width below it (moved out of the row's left column -- see
+   MacroEnergyMap.tsx -- since BasinRigActivity already manages its own
+   internal table/detail split and giving it the full row's width avoids
+   the map+detail row's height mismatch leaving a large empty gap beside a
+   much-shorter aside). */
+.macro-map-stack { display: grid; gap: 14px; }
 .macro-map-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .55fr); align-items: start; gap: 12px; padding-top: 12px; }
-.macro-map-left-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .macro-map-card, .macro-map-detail { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-map-controls { display: grid; justify-items: end; gap: 5px; }
 .macro-segmented { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 8px; }
@@ -526,7 +543,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
    than a full-width module below the whole map+detail grid. The ranking table,
    selected-basin detail, and gainers/decliners stack vertically here since this
    column is narrower than the old full-page width the module was designed for. */
-.basin-activity { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.basin-activity { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .basin-activity .macro-card-title { flex-wrap: wrap; gap: 10px; }
 .basin-activity .macro-map-controls { flex-direction: row; align-items: center; }
 .basin-jump { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--muted); }
@@ -636,8 +653,6 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .macro-page-head { display: grid; }
   .macro-asof { text-align: left; }
-  .macro-section-head { grid-template-columns: 1fr; align-items: flex-start; }
-  .macro-section-head p { text-align: left; }
   .macro-snapshot { grid-template-columns: 1fr 1fr; }
   .macro-snapshot-item, .macro-snapshot-item:nth-child(3) { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .macro-snapshot-item:nth-child(even) { border-right: 0; }

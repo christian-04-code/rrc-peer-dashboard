@@ -143,11 +143,11 @@ test("Macro renders the required evidence chart datasets, in the restored long-f
   // Macro Snapshot evidence panel) comes first, directly followed by Storage,
   // matching the pre-tab e61e0ac architecture's own ordering.
   const gasBalanceStart = source.indexOf('id="gas-balance"');
-  const macroSnapshotIndex = source.indexOf("Macro snapshot");
+  const macroSnapshotIndex = source.indexOf("Macro Snapshot");
   const storageStart = source.indexOf('id="storage"');
   assert.ok(gasBalanceStart >= 0 && macroSnapshotIndex >= 0 && storageStart >= 0);
   assert.ok(gasBalanceStart < macroSnapshotIndex && macroSnapshotIndex < storageStart, "Macro Snapshot must render inside the Gas Balance section, before Storage");
-  assert.match(source, /Sources: U\.S\. EIA · OilPriceAPI/);
+  assert.match(source, /U\.S\. EIA · OilPriceAPI/);
   assert.match(source, /Week ending/);
   // Phase 6D replaced the single-signal buildRrcMacroRisk callout with the
   // deterministic multi-signal MacroRiskWidget (lib/market/macro-risk-engine.ts).
@@ -167,6 +167,11 @@ test("Macro cleanup uses concise source copy and existing accent treatments", ()
   assert.match(map, /<p>Source: U\.S\. EIA<\/p>/);
   assert.doesNotMatch(map, /distinct from the national dry-production series/);
   assert.match(css, /\.macro-card-title span\.macro-source-accent\s*\{[^}]*#75c7ee/);
-  assert.match(css, /\.rrc-macro-risk-label em\s*\{[^}]*var\(--negative\)/);
+  // The Gas Balance callout's own small kicker label ("NATIONAL Gas Balance")
+  // was removed as redundant with the section title above it (Macro UI
+  // cleanup pass) -- DataInfoTooltip, the shared/reused tooltip component,
+  // takes over that spot next to the state word instead of a new label.
+  assert.doesNotMatch(panel, /rrc-macro-risk-label/);
+  assert.match(panel, /<DataInfoTooltip/);
   assert.match(css, /\.macro-regional-row\.header\s*\{[^}]*#75c7ee/);
 });

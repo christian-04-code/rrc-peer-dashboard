@@ -78,7 +78,7 @@ test("EIA STEO Outlook module and the inline STEO forecast subsections all show 
 });
 
 test("the Rigs section header shows the real Baker Hughes report week, not a hardcoded date", () => {
-  assert.match(panelSource, /asOf=\{formatWeekEnding\(getRigDataset\(\)\.source\.reportDate\)\}/);
+  assert.match(panelSource, /asOf=\{`Rigs \$\{formatWeekEnding\(getRigDataset\(\)\.source\.reportDate\)\}`\}/);
 });
 
 test("the interactive energy map shows a header-level 'as of' date derived from real region/production data for the active mode", () => {

@@ -115,8 +115,8 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
   const mapAsOfLabel = mode === "storage" ? formatWeekEnding(mapAsOfPeriod) : formatDataDate(mapAsOfPeriod);
 
   return (
-    <div className="macro-map-layout">
-      <div className="macro-map-left-column">
+    <div className="macro-map-stack">
+      <div className="macro-map-layout">
       <div className="macro-map-card">
         <div className="macro-card-title">
           <div><span className="macro-source-accent">{mode === "storage" ? "EIA weekly storage region · deviation from 5-year average" : `EIA monthly marketed production · ${productionView === "current" ? "current state volume" : "year-over-year change"}`} · {mapAsOfLabel}</span></div>
@@ -205,9 +205,6 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
         </div>
       </div>
 
-      <BasinRigActivity />
-      </div>
-
       <aside className="macro-map-detail">
         <div className="macro-map-detail-head"><span>SELECTED GEOGRAPHY</span><button onClick={() => setSelected("PA")}>Reset to PA</button></div>
         <h3>{selectedName}</h3>
@@ -239,6 +236,9 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
         <small>Source: U.S. EIA · retrieved {formatRefreshTimestamp(data?.generatedAt)}</small>
         <DrillingActivityModule stateCode={selected} stateName={selectedName} />
       </aside>
+      </div>
+
+      <BasinRigActivity />
     </div>
   );
 }
