@@ -67,7 +67,7 @@ export const STANDARD_BUDGET: ContentBudget = {
  */
 export const REDUCED_BUDGET: ContentBudget = {
   tier: "reduced",
-  maxEvidenceSections: 5,
+  maxEvidenceSections: 4,
   maxAtAGlanceMetrics: 5,
   // A peer-table row is one compact table line, not a paragraph -- showing
   // all 6 tracked peers instead of 4 costs almost no vertical space, and a
@@ -76,12 +76,21 @@ export const REDUCED_BUDGET: ContentBudget = {
   maxRisksOpportunitiesRows: 6,
   maxNewsRows: 3,
   maxSourceRows: 20,
-  maxWhatChangedItems: 4,
-  maxWatchItems: 4,
+  maxWhatChangedItems: 3,
+  maxWatchItems: 3,
   maxCommentarySentences: 2,
-  maxKeyMetricsToWatch: 5,
-  maxGuidanceRows: 6,
-  maxInvestorQuestions: 4
+  // The IR-enhancement fields below are the newest, most-optional content in
+  // the report (see their own "empty most weeks by design" headers) -- a
+  // real production render with a full week's worth of this content still
+  // produced 7 pages at the PRE-EXISTING reduced caps (4/6/5), identical to
+  // its own standard-tier attempt, confirming those caps were not actually
+  // acting as a safety net for a genuinely full week. Cut hard here, since
+  // this tier's only job is guaranteeing the 5-page hard maximum, not
+  // preserving every optional section -- omitted content still surfaces via
+  // `omittedContentLabels`, never silently.
+  maxKeyMetricsToWatch: 3,
+  maxGuidanceRows: 4,
+  maxInvestorQuestions: 1
 };
 
 export function budgetForTier(tier: RenderBudgetTier): ContentBudget {
