@@ -36,6 +36,12 @@ export async function GET(request: Request) {
 
   try {
     const result = await orchestrateWeeklyReport();
+    // The response body itself is never inspected by anything but this
+    // route's own caller (Vercel's cron scheduler, or `vercel crons run`),
+    // so the stage/reason that explains a "not_ready"/"failed" run would
+    // otherwise be invisible in server logs -- log it here, same
+    // non-secret-leaking shape as the response, for production diagnosis.
+    console.log("[cron/reports]", JSON.stringify(result));
     return NextResponse.json(result);
   } catch {
     // No detail from an unexpected/fatal error ever reaches the response
