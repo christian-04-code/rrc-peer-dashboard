@@ -80,7 +80,7 @@ export function MacroRiskWidget({
                 <div className="macro-risk-item-metrics">
                   {signal.metrics.map((metric) => <span key={metric.label}>{metric.label}: <b>{metric.value}</b></span>)}
                 </div>
-                <p className="macro-risk-reason">{signal.reason}</p>
+                <p className="macro-risk-reason">{signal.interpretation}</p>
                 <button type="button" className="macro-risk-view" onClick={() => onViewDriver(signal.driver)}>View {signal.label} data →</button>
               </article>
             ))

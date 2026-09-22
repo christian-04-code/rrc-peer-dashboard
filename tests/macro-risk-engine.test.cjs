@@ -272,6 +272,38 @@ test("computeSignalChanges skips a driver that was UNAVAILABLE (and therefore ab
   assert.ok(!changes.some((change) => change.driver === "power_data_center_demand"));
 });
 
+test("interpretation is the reason string with its own metric-restatement clause removed -- reason itself stays byte-identical (it is also the AI-facing/fingerprinted deterministicReason)", () => {
+  const signals = buildRangeMacroSignals(baseInputs({ appalachiaSupply: { yoyPct: 0.5, value: 1_122_431, period: "2026-05", statesIncluded: ["PA", "WV", "OH"] } }));
+  const appalachia = signals.find((signal) => signal.driver === "appalachia_supply");
+
+  // The exact evidence sentence the metrics row above the reason/interpretation
+  // text already displays (label + formatted percentage) must appear in the
+  // full `reason` (unchanged, still used for AI fingerprinting/persistence)...
+  assert.match(appalachia.reason, /^PA \+ WV \+ OH marketed production is \+0\.5% year over year, /);
+  // ...but must NOT be repeated in `interpretation`, which is what the
+  // MacroRiskWidget driver card actually renders (Macro UI de-duplication pass).
+  assert.doesNotMatch(appalachia.interpretation, /PA \+ WV \+ OH marketed production/);
+  assert.doesNotMatch(appalachia.interpretation, /\+0\.5%/);
+  // interpretation is still a real, complete, capitalized standalone sentence -- not truncated to nothing.
+  assert.match(appalachia.interpretation, /^[A-Z]/);
+  assert.match(appalachia.interpretation, /\.$/);
+  assert.ok(appalachia.interpretation.length > 20);
+});
+
+test("interpretation preserves trailing STEO forecast-direction context for LNG/industrial demand -- de-duplication never drops real analytical content, only the repeated number", () => {
+  const signals = buildRangeMacroSignals(baseInputs({ lngDemand: { yoyPct: 7, value: 500_000, period: "2026-05", forecastDirection: "rising" } }));
+  const lng = signals.find((signal) => signal.driver === "lng_demand");
+  assert.match(lng.interpretation, /STEO forecast horizon is rising/);
+  assert.doesNotMatch(lng.interpretation, /U\.S\. LNG exports are/);
+});
+
+test("interpretation for an UNAVAILABLE signal is the same explanatory sentence as reason -- there is no separate evidence clause to strip when there's no evidence at all", () => {
+  const signals = buildRangeMacroSignals(baseInputs({ henryHub: { trendPct: null, value: null, period: null } }));
+  const gasPricing = signals.find((signal) => signal.driver === "gas_pricing");
+  assert.equal(gasPricing.reason, "Henry Hub trend data is currently unavailable.");
+  assert.equal(gasPricing.interpretation, "Henry Hub trend data is currently unavailable.");
+});
+
 test("rankRangeMacroSignals with all signals unavailable returns an empty list, not a crash or fabricated ranking", () => {
   const inputs = {
     henryHub: { trendPct: null, value: null, period: null },

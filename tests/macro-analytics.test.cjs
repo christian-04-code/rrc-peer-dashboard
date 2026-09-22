@@ -128,3 +128,25 @@ test("unavailable metrics produce unavailable classifications rather than neutra
   assert.equal(result.find((item) => item.label === "NGL").state, "Unavailable");
 });
 
+test("Macro Snapshot tone mapping: supportive/expanding states map to positive, weakening/loosening states map to negative, and balanced/near-normal states map to neutral -- the presentation-color rule the Macro Snapshot UI relies on", () => {
+  const lng = Array.from({ length: 13 }, (_, index) => ({
+    period: `2026-${String(13 - index).padStart(2, "0")}`,
+    value: index === 0 ? 105 : index === 12 ? 100 : 102
+  }));
+  const propane = Array.from({ length: 5 }, (_, index) => ({ period: `2026-07-${String(31 - index * 7).padStart(2, "0")}`, value: index === 0 ? 95 : 100 }));
+  const tightening = buildMacroSnapshot([
+    metric("storage", "weekly", storageHistory),
+    metric("lng_exports", "monthly", lng),
+    metric("propane_stocks", "weekly", propane)
+  ]);
+  assert.equal(tightening.find((item) => item.label === "Natural Gas").tone, "positive", "Tightening is supportive for Range and must render positive/green");
+  assert.equal(tightening.find((item) => item.label === "Storage").tone, "positive", "Below Normal storage is the supportive read");
+  assert.equal(tightening.find((item) => item.label === "LNG").tone, "positive", "Expanding LNG exports are supportive");
+  assert.equal(tightening.find((item) => item.label === "NGL").tone, "positive", "Supportive NGL state must map to positive");
+
+  const unavailable = buildMacroSnapshot([]);
+  for (const item of unavailable) {
+    assert.equal(item.tone, "neutral", `an Unavailable state (${item.label}) must never render as positive or negative -- it is a missing observation, not a balanced reading`);
+  }
+});
+

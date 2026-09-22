@@ -126,6 +126,19 @@ test("interactive map exposes both metrics, semantic storage labeling, and point
   assert.match(source, /State production history/);
 });
 
+test("storage map selection is region-first: clicking a state highlights its whole EIA storage region and the detail panel leads with the region, not the state", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
+  // Every state sharing the selected state's storage region gets the same
+  // "selected" visual treatment in storage mode -- not just the clicked state.
+  assert.match(source, /selectedRegionId !== null && getStorageRegionForState\(state\.code\) === selectedRegionId/, "storage mode highlights the whole region, not just the clicked state");
+  // Production mode's own selection stays purely state-based, independent of storage regions.
+  assert.match(source, /: selected === state\.code/, "production mode selection stays state-first");
+  // The detail panel's primary heading is the region ("<Label> Storage Region"), with the
+  // clicked state demoted to secondary context ("Selected state: ...") -- never the reverse.
+  assert.match(source, /\$\{selectedRegion\.label\} Storage Region/, "storage mode's detail heading names the region");
+  assert.match(source, /Selected state: <strong>\{selectedName\}<\/strong>/, "the clicked state is shown as secondary context, not the primary heading");
+});
+
 test("Macro renders the required evidence chart datasets, in the restored long-form (e61e0ac-structured) section order", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroPanel.tsx"), "utf8");
   const chartLabels = [
@@ -173,5 +186,16 @@ test("Macro cleanup uses concise source copy and existing accent treatments", ()
   // takes over that spot next to the state word instead of a new label.
   assert.doesNotMatch(panel, /rrc-macro-risk-label/);
   assert.match(panel, /<DataInfoTooltip/);
-  assert.match(css, /\.macro-regional-row\.header\s*\{[^}]*#75c7ee/);
+  // Directional color pass (2026-09-22): the Regional Storage Table header
+  // row moved from the cyan source-accent color to bold white for readable
+  // hierarchy against its now-colored directional columns (Weekly Δ/vs YA/
+  // vs 5Y) -- font-weight 700 was already present, unchanged.
+  assert.match(css, /\.macro-regional-row\.header\s*\{[^}]*color:\s*var\(--text\)/);
+  assert.match(css, /\.macro-regional-row\.header\s*\{[^}]*font-weight:\s*700/);
+  // Semantic Macro Snapshot status colors (2026-09-22): positive/negative
+  // tones were already styled; "neutral" (balanced/near-normal/unavailable)
+  // now gets the existing --caution amber, reused from MacroRiskWidget's
+  // MODERATE_RISK badge rather than a new color -- distinct from the
+  // directional-metric --muted gray used elsewhere.
+  assert.match(css, /\.macro-snapshot-item\.neutral summary strong\s*\{[^}]*var\(--caution\)/);
 });

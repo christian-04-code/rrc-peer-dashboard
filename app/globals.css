@@ -243,6 +243,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-snapshot-item summary strong { font-size: 14px; }
 .macro-snapshot-item.positive summary strong { color: var(--positive); }
 .macro-snapshot-item.negative summary strong { color: var(--negative); }
+.macro-snapshot-item.neutral summary strong { color: var(--caution); }
 .macro-snapshot-item[open] { z-index: 8; }
 .macro-snapshot-item[open] p, .macro-snapshot-item[open] small { position: absolute; left: 6px; right: 6px; z-index: 8; margin: 0; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0,0,0,.34); font-size: 11px; line-height: 1.45; }
 .macro-snapshot-item[open] p { top: calc(100% + 4px); border-radius: 8px 8px 0 0; border-bottom: 0; }
@@ -289,7 +290,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-spark { width: 100%; height: 32px; }
 .macro-spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .macro-no-chart { height: 32px; display: grid; place-items: center; color: var(--muted); font-size: 9px; }
-.macro-balance-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(230px, .65fr); gap: 12px; padding-top: 12px; }
+.macro-balance-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(230px, .65fr); align-items: start; gap: 12px; padding-top: 12px; }
 .macro-primary-chart, .macro-demand-stack, .macro-rrc-callout, .macro-regional-grid { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; }
 .macro-card-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .macro-card-title h3, .macro-demand-stack h3 { margin: 0 0 3px; font-size: 13px; }
@@ -298,7 +299,13 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-card-title > strong { font-size: 20px; }
 .macro-card-title strong small { color: var(--muted); font-size: 9px; font-weight: 500; }
 .macro-trend-wrap { margin-top: 4px; }
-.macro-trend, .macro-storage-chart { display: block; width: 100%; height: 220px; }
+.macro-trend { display: block; width: 100%; height: 220px; }
+/* Same fix as .macro-evidence-chart's own aspect-ratio rule: a flat 220px
+   height on a wide card (this chart isn't under the shared wrapper, so it
+   didn't inherit that earlier fix) left the 660x220 viewBox letterboxed --
+   centered with unused blank space on both sides -- instead of filling the
+   available plotting width. */
+.macro-storage-chart { display: block; width: 100%; height: auto; aspect-ratio: 660 / 220; }
 .macro-trend line, .macro-storage-chart > line { stroke: var(--border); stroke-width: 1; }
 .macro-trend polyline { fill: none; stroke: var(--accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
 .macro-chart-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; }
@@ -333,6 +340,10 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-stat { min-width: 0; display: grid; align-content: center; gap: 3px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 9px; }
 .macro-stat span, .macro-stat small { color: var(--muted); font-size: 9px; }
 .macro-stat strong { font-size: 13px; overflow-wrap: anywhere; }
+.macro-stat strong.positive { color: var(--positive); }
+.macro-stat strong.negative { color: var(--negative); }
+.macro-stat small.positive { color: var(--positive); }
+.macro-stat small.negative { color: var(--negative); }
 .macro-flow-strip { display: grid; grid-template-columns: 1fr 30px 1fr 1fr; gap: 8px; align-items: stretch; margin-top: 10px; }
 .macro-flow-strip > div:not(.macro-flow-arrow) { display: grid; gap: 5px; }
 .macro-flow-strip .macro-stat { padding-block: 7px; }
@@ -350,13 +361,20 @@ aside { display: flex; flex-direction: column; gap: 14px; }
    default) would otherwise inflate the callout's own bordered box to match
    the taller stats grid, leaving empty space inside it. */
 .macro-rrc-grid { display: grid; grid-template-columns: minmax(300px, .7fr) minmax(0, 1.3fr); align-items: start; gap: 12px; padding-top: 12px; }
-.macro-rrc-callout { display: grid; align-content: center; gap: 8px; border-left: 3px solid var(--border); }
+.macro-rrc-callout { display: grid; align-content: start; gap: 8px; border-left: 3px solid var(--border); }
 .macro-rrc-callout.positive { border-left-color: var(--positive); }
 .macro-rrc-callout.negative { border-left-color: var(--negative); }
 .macro-rrc-callout-head { display: flex; align-items: center; gap: 2px; }
 .macro-rrc-callout-head strong { font-size: 24px; }
 .macro-rrc-callout p { margin: 0; color: var(--text); font-size: 11px; line-height: 1.5; }
 .macro-rrc-callout small { color: var(--muted); font-size: 10px; }
+.macro-rrc-news { display: grid; gap: 5px; margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); }
+.macro-rrc-news > span { color: #75c7ee; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.macro-rrc-news a { display: grid; gap: 3px; text-decoration: none; }
+.macro-rrc-news a:hover strong, .macro-rrc-news a:focus strong { text-decoration: underline; }
+.macro-rrc-news strong { color: var(--text); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.macro-rrc-news small { color: var(--muted); font-size: 9px; }
+.macro-rrc-news-empty { font-style: italic; }
 .macro-regional-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .macro-regional-grid.appalachia { gap: 7px; }
 .macro-evidence-chart { margin-top: 8px; }
@@ -380,8 +398,10 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-regional-table { display: grid; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
 .macro-regional-row { display: grid; grid-template-columns: 1.05fr repeat(7, .72fr) 1.2fr; align-items: center; gap: 10px; min-height: 42px; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 11px; }
 .macro-regional-row:last-child { border-bottom: 0; }
-.macro-regional-row.header { min-height: 30px; color: #75c7ee; background: rgba(16,32,53,.72); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.macro-regional-row.header { min-height: 30px; color: var(--text); background: rgba(16,32,53,.72); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .macro-regional-row > span { color: var(--muted); }
+.macro-regional-row > span.positive { color: var(--positive); }
+.macro-regional-row > span.negative { color: var(--negative); }
 .macro-deviation-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, transparent 49.5%, var(--border) 49.5%, var(--border) 50.5%, transparent 50.5%); overflow: hidden; }
 .macro-deviation-bar i { display: block; height: 100%; background: #cf704f; border-radius: 99px; }
 .macro-deviation-bar i.below { background: #36a4c8; }
@@ -478,6 +498,10 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-detail-head button { border-color: var(--border); }
 .macro-map-detail h3 { margin: 0; font-size: 19px; }
 .macro-map-detail p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.macro-map-detail-title { display: flex; align-items: center; gap: 6px; }
+.macro-map-detail-title h3 { text-transform: uppercase; letter-spacing: .02em; }
+.macro-map-detail-substate { color: var(--muted); font-size: 11px; margin-top: -4px; }
+.macro-map-detail-substate strong { color: var(--text); font-weight: 700; }
 .macro-map-detail dl { display: grid; gap: 0; margin: 0; }
 .macro-map-detail dl div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .macro-map-detail dt { color: var(--muted); font-size: 9px; }

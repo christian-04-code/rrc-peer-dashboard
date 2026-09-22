@@ -23,6 +23,11 @@ test("an empty signals list renders a safe explanatory message instead of crashi
   assert.match(widgetSource, /No macro driver had enough live data to classify this run/);
 });
 
+test("driver cards render the deterministic interpretation, not the full reason string -- never repeating the exact metric value already shown in the metrics row above it", () => {
+  assert.match(widgetSource, /macro-risk-reason">\{signal\.interpretation\}/, "the driver card body must render signal.interpretation, not signal.reason, to avoid restating the metrics row's own number");
+  assert.doesNotMatch(widgetSource, /macro-risk-reason">\{signal\.reason\}/, "must not have regressed back to the pre-de-duplication full reason string");
+});
+
 test("each item exposes source/freshness via its own metrics, and a 'View data' interaction that calls back with the driver key", () => {
   assert.match(widgetSource, /signal\.metrics\.map/);
   assert.match(widgetSource, /onViewDriver\(signal\.driver\)/);

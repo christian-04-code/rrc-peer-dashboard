@@ -72,11 +72,11 @@ export function RegionalStorageTable({ regions }: { regions: RegionalStorageMetr
             <strong>{region.label}</strong>
             <span>{region.current === null ? "--" : `${region.current.toFixed(0)} Bcf`}</span>
             <span>{region.priorWeek === null ? "--" : `${region.priorWeek.toFixed(0)} Bcf`}</span>
-            <span>{region.weeklyChange === null ? "--" : `${region.weeklyChange >= 0 ? "+" : ""}${region.weeklyChange.toFixed(0)}`}</span>
+            <span className={region.weeklyChange === null || region.weeklyChange === 0 ? "" : region.weeklyChange > 0 ? "positive" : "negative"}>{region.weeklyChange === null ? "--" : `${region.weeklyChange >= 0 ? "+" : ""}${region.weeklyChange.toFixed(0)}`}</span>
             <span>{region.yearAgo === null ? "--" : `${region.yearAgo.toFixed(0)} Bcf`}</span>
-            <span>{formatPct(region.yearAgoPct)}</span>
+            <span className={region.yearAgoPct === null || region.yearAgoPct === 0 ? "" : region.yearAgoPct > 0 ? "positive" : "negative"}>{formatPct(region.yearAgoPct)}</span>
             <span>{region.fiveYearAverage === null ? "--" : `${region.fiveYearAverage.toFixed(0)} Bcf`}</span>
-            <span>{formatPct(deviation)}</span>
+            <span className={deviation === null || deviation === 0 ? "" : deviation > 0 ? "positive" : "negative"}>{formatPct(deviation)}</span>
             <div className="macro-deviation-bar"><i className={deviation !== null && deviation < 0 ? "below" : "above"} style={{ width: `${width}%`, marginLeft: deviation !== null && deviation < 0 ? `${50 - width}%` : "50%" }} /></div>
           </div>
         );

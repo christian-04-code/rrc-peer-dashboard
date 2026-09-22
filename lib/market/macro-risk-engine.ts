@@ -51,7 +51,10 @@ export type RangeMacroSignal = {
   /** Signed percentage: positive = directionally supportive for Range's gas-price realizations, negative = directionally adverse. Null when the underlying data is unavailable. Not a probability or a confidence score -- purely the classification input. */
   pressurePct: number | null;
   metrics: RangeMacroSignalMetric[];
+  /** Full sentence(s): the evidence restatement (already duplicated by `metrics` above) plus the interpretation, concatenated -- kept exactly as-is because it is also the string persisted/fingerprinted as MacroRiskPayloadSignal.deterministicReason for the AI provider. UI code that already shows `metrics` should prefer `interpretation` instead, to avoid restating the same number twice. */
   reason: string;
+  /** Just the analytical-meaning clause of `reason`, with the evidence-restatement clause it's normally joined to removed -- capitalized, ready to render as its own standalone sentence. Never a hardcoded per-driver rewrite; both `reason` and `interpretation` are derived from the exact same deterministic template. */
+  interpretation: string;
   /** The most recent data period the classification is based on -- for on-widget freshness display, not part of the classification itself. */
   period: string | null;
 };
@@ -111,6 +114,11 @@ function qualifier(state: RangeMacroSignalState, supportivePhrase: string, watch
     case "HIGH_RISK": return highPhrase;
     default: return "";
   }
+}
+
+/** Lowercases only the first character -- used to embed an otherwise-standalone, capitalized `interpretation` sentence mid-sentence inside the full `reason` string (e.g. "..., a supportive near-term trend..." not "..., A supportive..."). */
+function lowerFirst(text: string): string {
+  return text.length === 0 ? text : text[0].toLowerCase() + text.slice(1);
 }
 
 export type ForecastDirection = "rising" | "falling" | "flat" | null;
@@ -178,6 +186,112 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
   const industrialPressure = inputs.industrialDemand.yoyPct;
   const industrialState = classifySignalMagnitude(industrialPressure);
 
+  // Every reason below is composed as `${evidenceClause}, ${interpretationClause}`
+  // -- the evidenceClause restates the exact metric already shown in the
+  // driver card's own metrics row (e.g. "Henry Hub is +2.1% over the latest
+  // 30 daily observations"), which duplicated that number when both were
+  // shown together in the UI. `interpretation` below exposes ONLY the
+  // clause that adds incremental analytical meaning, so a renderer (the
+  // MacroRiskWidget driver cards) can show data once and interpretation
+  // once -- `reason` itself is unchanged, byte-for-byte, since it is also
+  // the exact string persisted/fingerprinted as MacroRiskPayloadSignal's
+  // deterministicReason for the AI provider and must never drift from it.
+  const gasPricingInterpretation = gasPricingState === "UNAVAILABLE"
+    ? "Henry Hub trend data is currently unavailable."
+    : qualifier(gasPricingState,
+        "A supportive near-term trend for Range's realized gas price.",
+        "Not yet a clear directional signal for Range's realized gas price.",
+        "A moderate near-term headwind for Range's realized gas price.",
+        "A sharp near-term headwind for Range's realized gas price."
+      );
+  const gasPricingReason = gasPricingState === "UNAVAILABLE"
+    ? gasPricingInterpretation
+    : `Henry Hub is ${formatPct(gasPricingPressure)} over the latest 30 daily observations, ${lowerFirst(gasPricingInterpretation)}`;
+
+  const storageInterpretation = storageState === "UNAVAILABLE"
+    ? "Storage deviation data is currently unavailable."
+    : qualifier(storageState,
+        "A tight balance that is directionally supportive for gas pricing.",
+        "Close to normal, not a clear price signal on its own.",
+        "A moderate surplus that can pressure near-term gas pricing.",
+        "A large surplus that is a significant headwind for near-term gas pricing."
+      );
+  const storageReason = storageState === "UNAVAILABLE"
+    ? storageInterpretation
+    : `Storage is ${formatPct(inputs.storage.vs5yrPct)} versus its five-year average, ${lowerFirst(storageInterpretation)}`;
+
+  const usGasSupplyInterpretation = usGasSupplyState === "UNAVAILABLE"
+    ? "U.S. dry gas production trend data is currently unavailable."
+    : qualifier(usGasSupplyState,
+        "Supply growth cooling enough to be directionally supportive for the broader gas balance.",
+        "Not yet a clear signal for the broader gas balance.",
+        "Supply growth that can loosen the broader gas balance and pressure pricing.",
+        "Supply growth accelerating enough to be a significant pressure on the broader gas balance."
+      );
+  const usGasSupplyReason = usGasSupplyState === "UNAVAILABLE"
+    ? usGasSupplyInterpretation
+    : `U.S. dry gas production is ${formatPct(inputs.usGasSupply.yoyPct)} year over year, ${lowerFirst(usGasSupplyInterpretation)}`;
+
+  const appalachiaInterpretation = appalachiaState === "UNAVAILABLE"
+    ? "PA + WV + OH marketed production trend data is currently unavailable."
+    : qualifier(appalachiaState,
+        "Regional supply growth easing enough to be directionally supportive for regional takeaway/basis competition.",
+        "Not yet a clear signal for regional takeaway/basis competition.",
+        "Regional supply growth that can increase competition for regional takeaway capacity.",
+        "Regional supply growth accelerating enough to be a significant pressure on regional takeaway capacity and basis."
+      );
+  const appalachiaReason = appalachiaState === "UNAVAILABLE"
+    ? appalachiaInterpretation
+    : `PA + WV + OH marketed production is ${formatPct(inputs.appalachiaSupply.yoyPct)} year over year, ${lowerFirst(appalachiaInterpretation)}`;
+
+  const lngForecastNote = inputs.lngDemand.forecastDirection ? ` EIA's STEO forecast horizon is ${inputs.lngDemand.forecastDirection} for this series.` : "";
+  const lngInterpretation = (lngState === "UNAVAILABLE"
+    ? "U.S. LNG export trend data is currently unavailable."
+    : qualifier(lngState,
+        "A supportive source of structural natural-gas demand.",
+        "Not yet a clear directional signal.",
+        "A moderate reduction in a key source of structural natural-gas demand.",
+        "A sharp reduction in a key source of structural natural-gas demand."
+      )) + lngForecastNote;
+  const lngReason = lngState === "UNAVAILABLE"
+    ? lngInterpretation
+    : `U.S. LNG exports are ${formatPct(inputs.lngDemand.yoyPct)} year over year, ${lowerFirst(qualifier(lngState,
+        "a supportive source of structural natural-gas demand.",
+        "not yet a clear directional signal.",
+        "a moderate reduction in a key source of structural natural-gas demand.",
+        "a sharp reduction in a key source of structural natural-gas demand."
+      ))}${lngForecastNote}`;
+
+  const powerInterpretation = powerState === "UNAVAILABLE"
+    ? "Electric power sector gas demand trend data is currently unavailable."
+    : `${qualifier(powerState,
+        "A supportive incremental source of gas demand.",
+        "Not yet a clear directional signal.",
+        "A moderate reduction in an incremental source of gas demand.",
+        "A sharp reduction in an incremental source of gas demand."
+      )} EIA's STEO power-sector forecast is tracked separately (Phase 6C left it forecast-only; its unit convention could not be safely combined with this actual figure).`;
+  const powerReason = powerState === "UNAVAILABLE"
+    ? powerInterpretation
+    : `Electric power sector gas demand is ${formatPct(inputs.powerDemand.yoyPct)} year over year, ${lowerFirst(powerInterpretation)}`;
+
+  const industrialForecastNote = inputs.industrialDemand.forecastDirection ? ` EIA's STEO forecast horizon is ${inputs.industrialDemand.forecastDirection} for this series.` : "";
+  const industrialInterpretation = (industrialState === "UNAVAILABLE"
+    ? "Industrial gas demand trend data is currently unavailable."
+    : qualifier(industrialState,
+        "A supportive incremental source of gas demand.",
+        "Not yet a clear directional signal.",
+        "A moderate reduction in an incremental source of gas demand.",
+        "A sharp reduction in an incremental source of gas demand."
+      )) + industrialForecastNote;
+  const industrialReason = industrialState === "UNAVAILABLE"
+    ? industrialInterpretation
+    : `Industrial gas demand is ${formatPct(inputs.industrialDemand.yoyPct)} year over year, ${lowerFirst(qualifier(industrialState,
+        "a supportive incremental source of gas demand.",
+        "not yet a clear directional signal.",
+        "a moderate reduction in an incremental source of gas demand.",
+        "a sharp reduction in an incremental source of gas demand."
+      ))}${industrialForecastNote}`;
+
   return [
     {
       driver: "gas_pricing",
@@ -187,14 +301,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: gasPricingPressure,
       period: inputs.henryHub.period,
       metrics: [metricOrUnavailable("Henry Hub", inputs.henryHub.value, "$/MMBtu", 2), pctMetric("30-observation trend", gasPricingPressure)],
-      reason: gasPricingState === "UNAVAILABLE"
-        ? "Henry Hub trend data is currently unavailable."
-        : `Henry Hub is ${formatPct(gasPricingPressure)} over the latest 30 daily observations, ${qualifier(gasPricingState,
-            "a supportive near-term trend for Range's realized gas price.",
-            "not yet a clear directional signal for Range's realized gas price.",
-            "a moderate near-term headwind for Range's realized gas price.",
-            "a sharp near-term headwind for Range's realized gas price."
-          )}`
+      reason: gasPricingReason,
+      interpretation: gasPricingInterpretation
     },
     {
       driver: "storage_levels",
@@ -204,14 +312,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: storagePressure,
       period: inputs.storage.period,
       metrics: [metricOrUnavailable("Working gas storage", inputs.storage.value, "Bcf", 0), pctMetric("vs 5-year average", inputs.storage.vs5yrPct)],
-      reason: storageState === "UNAVAILABLE"
-        ? "Storage deviation data is currently unavailable."
-        : `Storage is ${formatPct(inputs.storage.vs5yrPct)} versus its five-year average, ${qualifier(storageState,
-            "a tight balance that is directionally supportive for gas pricing.",
-            "close to normal, not a clear price signal on its own.",
-            "a moderate surplus that can pressure near-term gas pricing.",
-            "a large surplus that is a significant headwind for near-term gas pricing."
-          )}`
+      reason: storageReason,
+      interpretation: storageInterpretation
     },
     {
       driver: "us_gas_supply",
@@ -221,14 +323,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: usGasSupplyPressure,
       period: inputs.usGasSupply.period,
       metrics: [metricOrUnavailable("U.S. dry gas production", inputs.usGasSupply.value, "Bcf/d", 1), pctMetric("year over year", inputs.usGasSupply.yoyPct)],
-      reason: usGasSupplyState === "UNAVAILABLE"
-        ? "U.S. dry gas production trend data is currently unavailable."
-        : `U.S. dry gas production is ${formatPct(inputs.usGasSupply.yoyPct)} year over year, ${qualifier(usGasSupplyState,
-            "supply growth cooling enough to be directionally supportive for the broader gas balance.",
-            "not yet a clear signal for the broader gas balance.",
-            "supply growth that can loosen the broader gas balance and pressure pricing.",
-            "supply growth accelerating enough to be a significant pressure on the broader gas balance."
-          )}`
+      reason: usGasSupplyReason,
+      interpretation: usGasSupplyInterpretation
     },
     {
       driver: "appalachia_supply",
@@ -238,14 +334,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: appalachiaPressure,
       period: inputs.appalachiaSupply.period,
       metrics: [metricOrUnavailable("PA + WV + OH marketed production", inputs.appalachiaSupply.value, "MMcf/mo", 0), pctMetric("year over year", inputs.appalachiaSupply.yoyPct)],
-      reason: appalachiaState === "UNAVAILABLE"
-        ? "PA + WV + OH marketed production trend data is currently unavailable."
-        : `PA + WV + OH marketed production is ${formatPct(inputs.appalachiaSupply.yoyPct)} year over year, ${qualifier(appalachiaState,
-            "regional supply growth easing enough to be directionally supportive for regional takeaway/basis competition.",
-            "not yet a clear signal for regional takeaway/basis competition.",
-            "regional supply growth that can increase competition for regional takeaway capacity.",
-            "regional supply growth accelerating enough to be a significant pressure on regional takeaway capacity and basis."
-          )}`
+      reason: appalachiaReason,
+      interpretation: appalachiaInterpretation
     },
     {
       driver: "lng_demand",
@@ -255,14 +345,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: lngPressure,
       period: inputs.lngDemand.period,
       metrics: [metricOrUnavailable("U.S. LNG exports", inputs.lngDemand.value, "MMcf/mo", 0), pctMetric("year over year", inputs.lngDemand.yoyPct)],
-      reason: (lngState === "UNAVAILABLE"
-        ? "U.S. LNG export trend data is currently unavailable."
-        : `U.S. LNG exports are ${formatPct(inputs.lngDemand.yoyPct)} year over year, ${qualifier(lngState,
-            "a supportive source of structural natural-gas demand.",
-            "not yet a clear directional signal.",
-            "a moderate reduction in a key source of structural natural-gas demand.",
-            "a sharp reduction in a key source of structural natural-gas demand."
-          )}`) + (inputs.lngDemand.forecastDirection ? ` EIA's STEO forecast horizon is ${inputs.lngDemand.forecastDirection} for this series.` : "")
+      reason: lngReason,
+      interpretation: lngInterpretation
     },
     {
       driver: "power_data_center_demand",
@@ -272,14 +356,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: powerPressure,
       period: inputs.powerDemand.period,
       metrics: [metricOrUnavailable("Electric power gas demand", inputs.powerDemand.value, "MMcf/mo", 0), pctMetric("year over year", inputs.powerDemand.yoyPct)],
-      reason: powerState === "UNAVAILABLE"
-        ? "Electric power sector gas demand trend data is currently unavailable."
-        : `Electric power sector gas demand is ${formatPct(inputs.powerDemand.yoyPct)} year over year, ${qualifier(powerState,
-            "a supportive incremental source of gas demand.",
-            "not yet a clear directional signal.",
-            "a moderate reduction in an incremental source of gas demand.",
-            "a sharp reduction in an incremental source of gas demand."
-          )} EIA's STEO power-sector forecast is tracked separately (Phase 6C left it forecast-only; its unit convention could not be safely combined with this actual figure).`
+      reason: powerReason,
+      interpretation: powerInterpretation
     },
     {
       driver: "industrial_demand",
@@ -289,14 +367,8 @@ export function buildRangeMacroSignals(inputs: RangeMacroSignalInputs): RangeMac
       pressurePct: industrialPressure,
       period: inputs.industrialDemand.period,
       metrics: [metricOrUnavailable("Industrial gas demand", inputs.industrialDemand.value, "MMcf/mo", 0), pctMetric("year over year", inputs.industrialDemand.yoyPct)],
-      reason: (industrialState === "UNAVAILABLE"
-        ? "Industrial gas demand trend data is currently unavailable."
-        : `Industrial gas demand is ${formatPct(inputs.industrialDemand.yoyPct)} year over year, ${qualifier(industrialState,
-            "a supportive incremental source of gas demand.",
-            "not yet a clear directional signal.",
-            "a moderate reduction in an incremental source of gas demand.",
-            "a sharp reduction in an incremental source of gas demand."
-          )}`) + (inputs.industrialDemand.forecastDirection ? ` EIA's STEO forecast horizon is ${inputs.industrialDemand.forecastDirection} for this series.` : "")
+      reason: industrialReason,
+      interpretation: industrialInterpretation
     }
   ];
 }

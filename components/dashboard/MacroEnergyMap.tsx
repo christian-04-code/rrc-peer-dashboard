@@ -12,6 +12,7 @@ import { HistoricalLineChart } from "@/components/dashboard/MacroVisuals";
 import { getRigDataset, getRigState, getRigStateMax } from "@/lib/rigs/rig-data";
 import { DrillingActivityModule } from "@/components/dashboard/DrillingActivity";
 import { BasinRigActivity } from "@/components/dashboard/BasinRigActivity";
+import { DataInfoTooltip } from "@/components/dashboard/DataInfoTooltip";
 
 type Position = [number, number];
 type StateGeometry =
@@ -94,6 +95,12 @@ function regionFor(data: MacroFundamentalsResponse | null, stateCode: string) {
   return regionId ? data?.storage.regions[regionId] ?? null : null;
 }
 
+/** Sign-only directional class for a change/delta value -- never applied to an absolute observation. Reuses the global `.positive`/`.negative` classes (app/globals.css) rather than a map-specific palette. */
+function directionClass(value: number | null): string {
+  if (value === null || value === 0) return "";
+  return value > 0 ? "positive" : "negative";
+}
+
 export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | null }) {
   const [mode, setMode] = useState<MapMode>("storage");
   const [productionView, setProductionView] = useState<ProductionView>("current");
@@ -108,6 +115,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
   const production = data?.production.states[activeState] ?? null;
   const activeRig = getRigState(activeState);
   const selectedRegion = regionFor(data, selected);
+  const selectedRegionId = getStorageRegionForState(selected);
   const selectedProduction = data?.production.states[selected] ?? null;
   const selectedName = getStateName(selected) ?? selected;
   const rigReportDate = getRigDataset().source.reportDate;
@@ -143,12 +151,19 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               const stateProduction = data?.production.states[state.code] ?? null;
               const value = mode === "storage" ? stateRegion?.fiveYearPct ?? null : productionView === "current" ? stateProduction?.current ?? null : stateProduction?.yearOverYearPct ?? null;
               const fill = mode === "storage" ? storageColor(value) : productionView === "current" ? productionColor(value, productionMax) : productionChangeColor(value);
+              // Storage is a regional geography -- clicking one state highlights every
+              // state that shares its EIA storage region, not just the clicked state,
+              // so the map never visually implies an individual state has its own
+              // storage observation. Production stays exactly state-first.
+              const isSelected = mode === "storage"
+                ? selectedRegionId !== null && getStorageRegionForState(state.code) === selectedRegionId
+                : selected === state.code;
               return (
                 <path
                   key={state.code}
                   d={state.path}
                   fill={fill}
-                  className={selected === state.code ? "macro-map-state selected" : "macro-map-state"}
+                  className={isSelected ? "macro-map-state selected" : "macro-map-state"}
                   tabIndex={0}
                   role="button"
                   aria-label={`${state.name}: ${value === null ? "unavailable" : mode === "storage" ? `${formatPct(value)} versus five-year regional average` : productionView === "current" ? `${formatNumber(value)} MMcf per month` : `${formatPct(value)} year over year`}`}
@@ -206,27 +221,31 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
       </div>
 
       <aside className="macro-map-detail">
-        <div className="macro-map-detail-head"><span>SELECTED GEOGRAPHY</span><button onClick={() => setSelected("PA")}>Reset to PA</button></div>
-        <h3>{selectedName}</h3>
+        <div className="macro-map-detail-head"><span>{mode === "storage" ? "SELECTED STORAGE REGION" : "SELECTED GEOGRAPHY"}</span><button onClick={() => setSelected("PA")}>Reset to PA</button></div>
         {mode === "storage" ? (
           <>
-            <p>EIA reports weekly storage for the <strong>{selectedRegion?.label ?? "unavailable"}</strong> region—not separately for {selectedName}.</p>
+            <div className="macro-map-detail-title">
+              <h3>{selectedRegion ? `${selectedRegion.label} Storage Region` : "No EIA Storage Region"}</h3>
+              <DataInfoTooltip caveat={`EIA reports weekly working gas storage by region—not separately for ${selectedName}. Every state sharing the ${selectedRegion?.label ?? "same"} region reports this identical regional observation.`} />
+            </div>
+            <p className="macro-map-detail-substate">Selected state: <strong>{selectedName}</strong></p>
             <dl>
               <div><dt>Regional working gas</dt><dd>{formatNumber(selectedRegion?.current ?? null)} Bcf</dd></div>
-              <div><dt>Weekly change</dt><dd>{formatNumber(selectedRegion?.weeklyChange ?? null)} Bcf</dd></div>
-              <div><dt>vs year ago</dt><dd>{formatPct(selectedRegion?.yearAgoPct ?? null)}</dd></div>
-              <div><dt>vs 5-year average</dt><dd>{formatPct(selectedRegion?.fiveYearPct ?? null)}</dd></div>
+              <div><dt>Weekly change</dt><dd className={directionClass(selectedRegion?.weeklyChange ?? null)}>{formatNumber(selectedRegion?.weeklyChange ?? null)} Bcf</dd></div>
+              <div><dt>vs year ago</dt><dd className={directionClass(selectedRegion?.yearAgoPct ?? null)}>{formatPct(selectedRegion?.yearAgoPct ?? null)}</dd></div>
+              <div><dt>vs 5-year average</dt><dd className={directionClass(selectedRegion?.fiveYearPct ?? null)}>{formatPct(selectedRegion?.fiveYearPct ?? null)}</dd></div>
               <div><dt>Observation week</dt><dd>{selectedRegion?.period ? formatWeekEnding(selectedRegion.period) : "--"}</dd></div>
             </dl>
             <div className="macro-map-history"><span>Regional storage history</span><HistoricalLineChart ariaLabel={`${selectedRegion?.label ?? selectedName} regional storage history`} unit="Bcf" limit={104} series={[{ id: "selected-storage", label: selectedRegion?.label ?? "Regional storage", color: "#3db3e3", history: selectedRegion?.history ?? [] }]} /></div>
           </>
         ) : (
           <>
+            <h3>{selectedName}</h3>
             <p>Source: U.S. EIA</p>
             <dl>
               <div><dt>Latest production</dt><dd>{formatNumber(selectedProduction?.current ?? null)} MMcf</dd></div>
-              <div><dt>Month over month</dt><dd>{formatPct(selectedProduction?.monthOverMonthPct ?? null)}</dd></div>
-              <div><dt>Year over year</dt><dd>{formatPct(selectedProduction?.yearOverYearPct ?? null)}</dd></div>
+              <div><dt>Month over month</dt><dd className={directionClass(selectedProduction?.monthOverMonthPct ?? null)}>{formatPct(selectedProduction?.monthOverMonthPct ?? null)}</dd></div>
+              <div><dt>Year over year</dt><dd className={directionClass(selectedProduction?.yearOverYearPct ?? null)}>{formatPct(selectedProduction?.yearOverYearPct ?? null)}</dd></div>
               <div><dt>Observation month</dt><dd>{selectedProduction?.period ? formatDataDate(selectedProduction.period) : "--"}</dd></div>
             </dl>
             <div className="macro-map-history"><span>State production history</span><HistoricalLineChart ariaLabel={`${selectedName} marketed production history`} unit="MMcf/month" limit={36} series={[{ id: "selected-production", label: selectedName, color: "#70c99a", history: selectedProduction?.history ?? [] }]} /></div>
