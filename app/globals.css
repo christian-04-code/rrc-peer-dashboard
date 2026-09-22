@@ -391,6 +391,14 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .appalachia-label-note { color: var(--muted); font-size: 10px; margin: 4px 0 0; }
 
 .macro-risk-widget { border: 1px solid var(--border); background: rgba(6,17,31,.55); border-radius: 9px; padding: 12px; margin-top: 12px; display: grid; gap: 12px; }
+/* Two-column on wide desktop: ranked drivers stay the visual anchor on the
+   left, "what changed" + the AI narrative sit in a dedicated right rail
+   instead of stacking full-width below the driver list -- the driver cards
+   never need the full container width, so a single column left a lot of
+   horizontal space unused on wide viewports. Collapses to one column at the
+   same breakpoint the rest of Macro's two-column layouts already use. */
+.macro-risk-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 16px; align-items: start; }
+.macro-risk-side { display: grid; gap: 12px; }
 .macro-risk-list { display: grid; gap: 8px; }
 .macro-risk-item { border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; padding: 9px 11px; display: grid; gap: 5px; background: rgba(6,17,31,.4); }
 .macro-risk-item.high-risk { border-left-color: var(--negative); }
@@ -410,7 +418,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-risk-item p { margin: 0; font-size: 11px; color: var(--text); line-height: 1.5; }
 .macro-risk-item p.macro-risk-reason { color: var(--muted); font-size: 10.5px; }
 .macro-risk-view { justify-self: start; border: 0; background: transparent; color: var(--accent); font-size: 10px; font-weight: 700; padding: 0; cursor: pointer; }
-.macro-risk-changes { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 4px; }
+.macro-risk-changes { display: grid; gap: 4px; }
 .macro-risk-changes > span { color: #75c7ee; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .macro-risk-changes ul { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text); }
 .macro-ai-summary { border-top: 1px solid var(--border); padding-top: 10px; display: grid; gap: 6px; }
@@ -608,6 +616,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
   .macro-snapshot-item:nth-child(-n+3) { border-bottom: 1px solid var(--border); }
   .macro-balance-grid, .macro-two-column { grid-template-columns: minmax(0, 1.4fr) minmax(220px, .7fr); }
   .macro-map-layout, .macro-two-column.production { grid-template-columns: 1fr; }
+  .macro-risk-body { grid-template-columns: 1fr; }
   .macro-grid-row-equal, .macro-grid-row-demand, .macro-grid-row-rrc { grid-template-columns: 1fr; }
   .macro-structural-outlook { grid-template-columns: 1fr 1fr; }
   .macro-rig-label text { font-size: 13px; }
