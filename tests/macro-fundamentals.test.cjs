@@ -126,17 +126,50 @@ test("interactive map exposes both metrics, semantic storage labeling, and point
   assert.match(source, /State production history/);
 });
 
-test("storage map selection is region-first: clicking a state highlights its whole EIA storage region and the detail panel leads with the region, not the state", () => {
+test("storage map selection is region-first: clicking a state resolves to its whole EIA storage region and the detail panel leads with the region, not the state", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
-  // Every state sharing the selected state's storage region gets the same
-  // "selected" visual treatment in storage mode -- not just the clicked state.
-  assert.match(source, /selectedRegionId !== null && getStorageRegionForState\(state\.code\) === selectedRegionId/, "storage mode highlights the whole region, not just the clicked state");
-  // Production mode's own selection stays purely state-based, independent of storage regions.
-  assert.match(source, /: selected === state\.code/, "production mode selection stays state-first");
+  // Per-state "selected" styling is now Production-only -- Storage mode's
+  // region-wide highlight is a single merged overlay path (see the boundary
+  // hierarchy test below), not a per-state class toggle, so it never also
+  // draws a thick line at the internal seams between same-region states.
+  assert.match(source, /const isSelected = mode === "production" && selected === state\.code/, "storage mode must not apply the per-state selected stroke -- that would double-draw internal region seams");
   // The detail panel's primary heading is the region ("<Label> Storage Region"), with the
   // clicked state demoted to secondary context ("Selected state: ...") -- never the reverse.
   assert.match(source, /\$\{selectedRegion\.label\} Storage Region/, "storage mode's detail heading names the region");
   assert.match(source, /Selected state: <strong>\{selectedName\}<\/strong>/, "the clicked state is shown as secondary context, not the primary heading");
+});
+
+test("storage map region boundaries are derived from the real topology + state-to-region mapping (topojson mesh/merge), never hand-authored duplicate SVG paths", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
+  assert.match(source, /import \{ feature, mesh, merge \} from "topojson-client"/, "must reuse topojson-client's own mesh/merge utilities, not a second geometry implementation");
+  assert.match(source, /mesh\(topology, topology\.objects\.states,/, "the inter-region boundary line is topojson-client's mesh() over the same topology the choropleth itself uses");
+  assert.match(source, /merge\(topology, geometries\)/, "the selected-region outline is topojson-client's merge() -- a single dissolved shape, no manual path authoring");
+  assert.doesNotMatch(source, /"M[\d.]+ [\d.]+ ?L[\d.]+ [\d.]+.*Z"/, "no hardcoded/hand-authored SVG path literal for a region shape");
+});
+
+test("the three-level boundary hierarchy (state < EIA region < selected region) is gated correctly by map mode", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components", "dashboard", "MacroEnergyMap.tsx"), "utf8");
+  // The regional boundary layer (all 5 regions) renders only in Storage mode.
+  assert.match(source, /mode === "storage" \? \(\s*<path\s*\n\s*d=\{REGION_BOUNDARY_PATH\}\s*\n\s*className="macro-map-region-boundary"/, "regional boundary layer must be gated on mode === \"storage\"");
+  // The stronger selected-region outline also renders only in Storage mode, and only once a region is actually resolved.
+  assert.match(source, /mode === "storage" && selectedRegionId \? \(\s*<path\s*\n\s*d=\{REGION_OUTLINE_PATHS\[selectedRegionId\]\}\s*\n\s*className="macro-map-region-selected"/, "selected-region outline must be gated on mode === \"storage\" && selectedRegionId");
+  // Both overlay layers are non-interactive so clicks/keyboard still resolve to the state path beneath them.
+  assert.match(source, /className="macro-map-region-boundary"[\s\S]{0,80}pointerEvents="none"/, "regional boundary layer must not intercept pointer events");
+  assert.match(source, /className="macro-map-region-selected"[\s\S]{0,80}pointerEvents="none"/, "selected-region overlay must not intercept pointer events");
+});
+
+test("region boundary CSS establishes a strictly increasing visual hierarchy: state border < regional boundary < selected region", () => {
+  const css = fs.readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
+  const stateWidth = Number(css.match(/\.macro-map-state \{[^}]*stroke-width:\s*([\d.]+)/)?.[1]);
+  const boundaryWidth = Number(css.match(/\.macro-map-region-boundary \{[^}]*stroke-width:\s*([\d.]+)/)?.[1]);
+  const selectedWidth = Number(css.match(/\.macro-map-region-selected \{[^}]*stroke-width:\s*([\d.]+)/)?.[1]);
+  assert.ok(stateWidth > 0 && boundaryWidth > 0 && selectedWidth > 0, "all three stroke widths must be defined");
+  assert.ok(stateWidth < boundaryWidth, "the EIA regional boundary must be visibly thicker than an ordinary state border");
+  assert.ok(boundaryWidth < selectedWidth, "the selected-region outline must be visibly thicker than an unselected regional boundary");
+  // Selected-region uses full opacity while the ordinary regional boundary is deliberately muted --
+  // "do not rely exclusively on the same line style used for unselected regional borders."
+  assert.match(css, /\.macro-map-region-boundary \{[^}]*rgba\(241, 247, 251, \.55\)/, "unselected regional boundaries must be a muted (non-full-opacity) line");
+  assert.match(css, /\.macro-map-region-selected \{[^}]*stroke:\s*#f1f7fb/, "the selected region must use a full-opacity, undiluted stroke color");
 });
 
 test("Macro renders the required evidence chart datasets, in the restored long-form (e61e0ac-structured) section order", () => {

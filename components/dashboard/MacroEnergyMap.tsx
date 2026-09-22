@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { feature } from "topojson-client";
-import type { GeometryCollection, Topology } from "topojson-specification";
+import { feature, mesh, merge } from "topojson-client";
+import type { GeometryCollection, MultiPolygon, Polygon, Topology } from "topojson-specification";
 import statesAtlas from "us-atlas/states-albers-10m.json";
 import type { MacroFundamentalsResponse, StorageRegionId } from "@/lib/market/macro-types";
 import { formatPct } from "@/lib/market/macro-analytics";
@@ -53,6 +53,62 @@ function geometryCentroid(geometry: StateGeometry): Position {
   }
   return [(minX + maxX) / 2, (minY + maxY) / 2];
 }
+
+/** Same "M x y L x y... " builder as geometryPath, but for an open line (no closing "Z") -- used for the mesh() result below, which is a MultiLineString of shared arcs, not closed rings. */
+function meshPath(lines: Position[][]): string {
+  return lines.map((line) => line.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ")).join(" ");
+}
+
+function regionIdForGeometryName(name: string | undefined): StorageRegionId | null {
+  if (!name) return null;
+  const code = getStateCode(name);
+  return code ? getStorageRegionForState(code) : null;
+}
+
+/**
+ * Derived (never hand-authored) region boundary geometry, computed once at
+ * module load from the exact same topology + state-to-region mapping the
+ * choropleth itself already uses -- so these lines always match the actual
+ * state membership and stay correct if the map's dimensions/projection ever
+ * change (Section: "must remain correct if the map dimensions/responsiveness
+ * change").
+ *
+ * - `REGION_BOUNDARY_PATH`: topojson-client's `mesh()`, the standard idiom
+ *   for exactly this ("draw a line only where two adjacent polygons differ
+ *   by some property") -- shared arcs between two DIFFERENT storage regions
+ *   only; arcs between two states in the SAME region, or on the true
+ *   exterior/coastline, are excluded, so this never duplicates the ordinary
+ *   per-state border.
+ * - `REGION_OUTLINE_PATHS`: topojson-client's `merge()`, one dissolved
+ *   (no internal state seams) outline per region, for the stronger
+ *   currently-selected-region treatment.
+ */
+const REGION_BOUNDARY_PATH = meshPath(
+  (mesh(topology, topology.objects.states, (a, b) => {
+    if (!b) return false;
+    const regionA = regionIdForGeometryName((a.properties as { name?: string } | undefined)?.name);
+    const regionB = regionIdForGeometryName((b.properties as { name?: string } | undefined)?.name);
+    return regionA !== null && regionB !== null && regionA !== regionB;
+  }) as unknown as { coordinates: Position[][] }).coordinates
+);
+
+const REGION_OUTLINE_PATHS: Record<StorageRegionId, string> = (() => {
+  const geometriesByRegion = new Map<StorageRegionId, Array<Polygon | MultiPolygon>>();
+  for (const geometry of topology.objects.states.geometries) {
+    if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") continue;
+    const regionId = regionIdForGeometryName((geometry.properties as { name?: string } | undefined)?.name);
+    if (!regionId) continue;
+    const list = geometriesByRegion.get(regionId) ?? [];
+    list.push(geometry);
+    geometriesByRegion.set(regionId, list);
+  }
+  const result = {} as Record<StorageRegionId, string>;
+  for (const regionId of ["east", "midwest", "southCentral", "mountain", "pacific"] as StorageRegionId[]) {
+    const geometries = geometriesByRegion.get(regionId) ?? [];
+    result[regionId] = geometries.length > 0 ? geometryPath(merge(topology, geometries) as unknown as StateGeometry) : "";
+  }
+  return result;
+})();
 
 function storageColor(value: number | null): string {
   if (value === null) return "#26384b";
@@ -151,13 +207,15 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
               const stateProduction = data?.production.states[state.code] ?? null;
               const value = mode === "storage" ? stateRegion?.fiveYearPct ?? null : productionView === "current" ? stateProduction?.current ?? null : stateProduction?.yearOverYearPct ?? null;
               const fill = mode === "storage" ? storageColor(value) : productionView === "current" ? productionColor(value, productionMax) : productionChangeColor(value);
-              // Storage is a regional geography -- clicking one state highlights every
-              // state that shares its EIA storage region, not just the clicked state,
-              // so the map never visually implies an individual state has its own
-              // storage observation. Production stays exactly state-first.
-              const isSelected = mode === "storage"
-                ? selectedRegionId !== null && getStorageRegionForState(state.code) === selectedRegionId
-                : selected === state.code;
+              // Storage mode's selected-region treatment is drawn as a single
+              // dissolved outline (REGION_OUTLINE_PATHS, below the rig overlay)
+              // rather than per-state strokes here -- a per-state "selected"
+              // stroke on every same-region state would also draw thick lines
+              // at the internal seams between them, which is exactly the
+              // visual clutter the region-boundary hierarchy is meant to
+              // avoid. Production keeps its own single-state stroke exactly
+              // as before.
+              const isSelected = mode === "production" && selected === state.code;
               return (
                 <path
                   key={state.code}
@@ -180,6 +238,24 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
                 />
               );
             })}
+            {mode === "storage" ? (
+              <path
+                d={REGION_BOUNDARY_PATH}
+                className="macro-map-region-boundary"
+                fill="none"
+                pointerEvents="none"
+                aria-hidden="true"
+              />
+            ) : null}
+            {mode === "storage" && selectedRegionId ? (
+              <path
+                d={REGION_OUTLINE_PATHS[selectedRegionId]}
+                className="macro-map-region-selected"
+                fill="none"
+                pointerEvents="none"
+                aria-hidden="true"
+              />
+            ) : null}
             {rigOverlay ? MAP_STATES.flatMap((state) => {
               const rig = getRigState(state.code);
               if (!rig || !rig.current) return [];
@@ -210,7 +286,7 @@ export function MacroEnergyMap({ data }: { data: MacroFundamentalsResponse | nul
         </div>
         <div className="macro-map-legend">
           {mode === "storage" ? (
-            <><span><i style={{ background: storageColor(-12) }} />≤−10%</span><span><i style={{ background: storageColor(-7) }} />−10% to −5%</span><span><i style={{ background: storageColor(0) }} />Near avg</span><span><i style={{ background: storageColor(7) }} />+5% to +10%</span><span><i style={{ background: storageColor(12) }} />≥+10%</span><small>EIA weekly storage region—not independent state storage.</small></>
+            <><span><i style={{ background: storageColor(-12) }} />≤−10%</span><span><i style={{ background: storageColor(-7) }} />−10% to −5%</span><span><i style={{ background: storageColor(0) }} />Near avg</span><span><i style={{ background: storageColor(7) }} />+5% to +10%</span><span><i style={{ background: storageColor(12) }} />≥+10%</span><span className="macro-map-legend-line"><i className="macro-map-legend-line-swatch" />EIA storage region boundary</span><small>EIA weekly storage region—not independent state storage.</small></>
           ) : (
             productionView === "current"
               ? <><span><i style={{ background: "#506779" }} />Lower</span><span><i style={{ background: "#35a3cb" }} />Mid</span><span><i style={{ background: "#0079b5" }} />Highest</span><small>Relative state-volume scale; unavailable states are gray.</small></>

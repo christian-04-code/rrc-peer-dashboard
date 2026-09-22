@@ -485,6 +485,17 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-state { stroke: #07111e; stroke-width: 1.1; vector-effect: non-scaling-stroke; cursor: pointer; transition: filter 120ms ease, opacity 120ms ease; }
 .macro-map-state:hover, .macro-map-state:focus { filter: brightness(1.35); outline: none; }
 .macro-map-state.selected { stroke: #f1f7fb; stroke-width: 2.2; }
+/*
+ * Three-level Storage-mode boundary hierarchy (state < region < selected
+ * region): .macro-map-state's own stroke above is the thin/subtle state
+ * line; the two rules below sit strictly above it in visual weight. Both
+ * are non-interactive overlay paths (pointer-events:none in the JSX) drawn
+ * on top of the state fills so clicks still pass through to the state
+ * paths beneath them, and both use non-scaling-stroke so their line
+ * thickness stays constant across the map's responsive width.
+ */
+.macro-map-region-boundary { stroke: rgba(241, 247, 251, .55); stroke-width: 1.8; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.macro-map-region-selected { stroke: #f1f7fb; stroke-width: 3.2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .macro-map-tooltip { position: absolute; left: 10px; top: 10px; min-width: 175px; display: grid; gap: 2px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 7px; background: rgba(6,17,31,.94); pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.28); }
 .macro-map-tooltip strong { font-size: 12px; }
 .macro-map-tooltip span, .macro-map-tooltip small { color: var(--muted); font-size: 9px; }
@@ -492,6 +503,7 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-map-legend { display: flex; flex-wrap: wrap; gap: 7px 12px; align-items: center; margin-top: 8px; color: var(--muted); font-size: 9px; }
 .macro-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .macro-map-legend i { width: 13px; height: 8px; border-radius: 2px; }
+.macro-map-legend-line-swatch { width: 16px; height: 0; border-top: 2px solid rgba(241, 247, 251, .55); border-radius: 0; background: none; }
 .macro-map-detail { display: grid; grid-template-columns: 1fr; align-content: start; gap: 10px; }
 .macro-map-detail-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .macro-map-detail-head span { color: #75c7ee; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
