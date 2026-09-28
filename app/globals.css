@@ -332,11 +332,12 @@ aside { display: flex; flex-direction: column; gap: 14px; }
 .macro-weekly-report > div:first-child > strong small { color: var(--muted); font-size: 9px; }
 .macro-weekly-report p, .macro-weekly-report > small { margin: 0; color: var(--muted); font-size: 9px; }
 .macro-subsection-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-top: 14px; padding: 11px 2px 0; border-top: 1px solid var(--border); }
-.macro-subsection-head h3 { margin: 3px 0 0; font-size: 13px; }
-.macro-subsection-title { display: inline-flex; align-items: center; gap: 2px; }
+.macro-subsection-head h3 { margin: 3px 0 0; font-size: 13px; color: var(--text); }
+.macro-subsection-title { display: flex; align-items: center; gap: 6px; }
 .macro-subsection-title h3 { margin: 3px 0 0; }
 .macro-subsection-head p { margin: 0; color: var(--muted); font-size: 10px; }
 .macro-subsection-head.compact { margin-top: 12px; padding-top: 10px; }
+.macro-subsection-head--demand-forecast > div { display: flex; flex-direction: column; gap: 4px; }
 .macro-stat { min-width: 0; display: grid; align-content: center; gap: 3px; border: 1px solid var(--border); background: rgba(16,32,53,.5); border-radius: 7px; padding: 9px; }
 .macro-stat span, .macro-stat small { color: var(--muted); font-size: 9px; }
 .macro-stat strong { font-size: 13px; overflow-wrap: anywhere; }
