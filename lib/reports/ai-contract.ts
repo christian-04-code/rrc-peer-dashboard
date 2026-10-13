@@ -70,14 +70,46 @@ export type WeeklyAnalystInput = {
   sourcesFreshness: WeeklyAnalystSourceFreshness[];
   /** The previous published report's own bottom line, for change-detection framing only -- never part of the analysis fingerprint and never treated as current data. Null until at least one prior report has been published. */
   previousReportContext: { storageWeekEnding: string; bottomLine: string } | null;
+  /**
+   * Range's own published guidance records (plain-English report pass,
+   * 2026-10-13) -- the ONLY evidence a risk-table "announced action" may
+   * cite besides analyzed News. Optional so inputs built before this field
+   * existed still validate; treated as empty when absent.
+   */
+  rangeAnnouncements?: WeeklyAnalystEvidenceRef[];
   /** Every evidence id appearing anywhere above, union'd -- the complete, explicit allowlist the AI may cite. Nothing outside this set may appear in the output. */
   evidenceAllowlist: string[];
 };
+
+export const WEEKLY_ANALYST_IMPACTS = ["positive", "negative", "mixed"] as const;
+export type WeeklyAnalystImpact = (typeof WEEKLY_ANALYST_IMPACTS)[number];
 
 export type WeeklyAnalystNarrativeItem = {
   title: string;
   assessment: string;
   evidenceIds: string[];
+  /** whatChanged only (plain-English report pass): is this change good or bad for Range? Optional -- assessments generated before this field existed simply render without the tag. */
+  impact?: WeeklyAnalystImpact;
+};
+
+/**
+ * One row of the report's "Key Risks" table (plain-English report pass,
+ * 2026-10-13). The risk itself and its High/Medium/Low level are NOT chosen
+ * by the AI -- both come from the deterministic risk engine candidate this
+ * row cites (render-model-builder.ts maps the engine's own state to a
+ * level). The AI only explains why it matters and what Range can do, and
+ * must keep two things strictly apart:
+ *  - announcedAction: something Range has ACTUALLY announced, citing a
+ *    supplied Range guidance record or analyzed News item;
+ *  - possibleResponse: an option Range could consider -- never presented
+ *    as a decision, commitment, or plan.
+ */
+export type WeeklyAnalystRiskRow = {
+  evidenceId: string;
+  whyItMatters: string;
+  announcedAction?: string;
+  announcedActionEvidenceIds?: string[];
+  possibleResponse?: string;
 };
 
 export type WeeklyAnalystWatchItem = {
@@ -123,9 +155,11 @@ export type WeeklyAnalystAssessment = {
   selectedEvidenceIds: string[];
   /** May be empty -- zero is the normal, expected value for a quiet week (see WeeklyAnalystInvestorQuestion's own header). Never padded to a minimum count. */
   investorQuestions: WeeklyAnalystInvestorQuestion[];
+  /** Optional for backward compatibility with assessments persisted before 1.3.0; the renderer falls back to the risk engine's own reason text when absent. */
+  riskTable?: WeeklyAnalystRiskRow[];
 };
 
-export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.2.0";
+export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.3.0";
 
 export class WeeklyAnalystValidationError extends Error {}
 
@@ -139,8 +173,13 @@ export class WeeklyAnalystValidationError extends Error {}
 // than a point estimate, while staying tight enough that the executive
 // assessment reads in the intended ~30-60 seconds and the PDF's 5-page hard
 // maximum stays honest.
-const MIN_EXECUTIVE_ASSESSMENT_WORDS = 120;
-const MAX_EXECUTIVE_ASSESSMENT_WORDS = 320;
+// Plain-English report pass (2026-10-13): target lowered again to ~90-150
+// words of short sentences, so the bounds keep the same proportional buffer
+// around that smaller target.
+const MIN_EXECUTIVE_ASSESSMENT_WORDS = 70;
+const MAX_EXECUTIVE_ASSESSMENT_WORDS = 220;
+/** "1-2 sentences" per risk-table cell, enforced as a generous character ceiling rather than a sentence parser. */
+const MAX_RISK_CELL_CHARS = 320;
 
 // Rejects a technically-non-empty but meaningless bottomLine (e.g. "N/A",
 // a stray period) that isNonEmptyString alone would let through.
@@ -244,6 +283,9 @@ function validateNarrativeItem(value: unknown, fieldName: string): WeeklyAnalyst
   // otherwise suppress Henry Hub prices") appeared in biggestOpportunity, which
   // this check did not previously cover at all.
   checkGuardedText(record.assessment as string, `${fieldName}.assessment`);
+  if (record.impact !== undefined && !(WEEKLY_ANALYST_IMPACTS as readonly unknown[]).includes(record.impact)) {
+    fail(`Weekly analyst response "${fieldName}.impact", if present, must be one of ${WEEKLY_ANALYST_IMPACTS.join("/")}.`);
+  }
   return record as WeeklyAnalystNarrativeItem;
 }
 
@@ -280,6 +322,24 @@ function validateInvestorQuestion(value: unknown, index: number): WeeklyAnalystI
   checkGuardedText(record.question as string, `investorQuestions[${index}].question`);
   checkGuardedText(record.whyNow as string, `investorQuestions[${index}].whyNow`);
   return record as unknown as WeeklyAnalystInvestorQuestion;
+}
+
+function validateRiskRow(value: unknown, index: number): WeeklyAnalystRiskRow {
+  if (typeof value !== "object" || value === null) fail(`Weekly analyst response riskTable[${index}] is not an object.`);
+  const record = value as Record<string, unknown>;
+  if (!isNonEmptyString(record.evidenceId)) fail(`Weekly analyst response riskTable[${index}].evidenceId is missing or empty.`);
+  if (!isNonEmptyString(record.whyItMatters)) fail(`Weekly analyst response riskTable[${index}].whyItMatters is missing or empty.`);
+  for (const field of ["whyItMatters", "announcedAction", "possibleResponse"] as const) {
+    const val = record[field];
+    if (val === undefined) continue;
+    if (!isNonEmptyString(val)) fail(`Weekly analyst response riskTable[${index}].${field}, if present, must be a non-empty string.`);
+    if (val.length > MAX_RISK_CELL_CHARS) fail(`Weekly analyst response riskTable[${index}].${field} is ${val.length} chars -- keep it to 1-2 short sentences (max ${MAX_RISK_CELL_CHARS}).`);
+    checkGuardedText(val, `riskTable[${index}].${field}`);
+  }
+  if (record.announcedAction !== undefined && (!isStringArray(record.announcedActionEvidenceIds) || record.announcedActionEvidenceIds.length === 0)) {
+    fail(`Weekly analyst response riskTable[${index}].announcedAction must cite announcedActionEvidenceIds -- an "announced" action has to trace to a real Range guidance record or News item.`);
+  }
+  return record as unknown as WeeklyAnalystRiskRow;
 }
 
 function checkGuardedText(text: string, fieldName: string): void {
@@ -359,6 +419,14 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
   }
   const investorQuestions = rawInvestorQuestions.map((item, index) => validateInvestorQuestion(item, index));
 
+  // riskTable: optional (absent = renderer's deterministic fallback), but when
+  // present each row must explain a real supplied risk candidate, once.
+  const rawRiskTable = record.riskTable === undefined ? [] : record.riskTable;
+  if (!Array.isArray(rawRiskTable) || rawRiskTable.length > input.riskCandidates.length) {
+    fail(`Weekly analyst response "riskTable" must be an array of at most ${input.riskCandidates.length} item(s) (one per supplied risk candidate).`);
+  }
+  const riskTable = rawRiskTable.map((row, index) => validateRiskRow(row, index));
+
   if (!isStringArray(record.selectedEvidenceIds)) fail('Weekly analyst response "selectedEvidenceIds" must be a string array.');
   const selectedEvidenceIds = record.selectedEvidenceIds as string[];
   if (new Set(selectedEvidenceIds).size !== selectedEvidenceIds.length) {
@@ -373,6 +441,7 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
     ...whatChanged.flatMap((item) => item.evidenceIds),
     ...managementWatchItems.flatMap((item) => item.evidenceIds),
     ...investorQuestions.flatMap((item) => item.evidenceIds),
+    ...riskTable.flatMap((row) => [row.evidenceId, ...(row.announcedActionEvidenceIds ?? [])]),
     ...selectedEvidenceIds
   ];
   const unknownIds = [...new Set(allCitedIds)].filter((id) => !allowlist.has(id));
@@ -389,6 +458,21 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
   if (!biggestOpportunity.evidenceIds.some((id) => opportunityCandidateIds.has(id))) {
     fail('Weekly analyst response "biggestOpportunity" does not cite any of the supplied deterministic opportunity candidates -- the AI may not invent an opportunity outside the risk engine\'s own ranking.');
   }
+
+  // --- Grounding: each risk-table row explains exactly one supplied risk candidate, and an "announced" action cites only Range guidance or News. ---
+  const seenRiskRows = new Set<string>();
+  const announcementIds = new Set([...(input.rangeAnnouncements ?? []).map((ref) => ref.evidenceId), ...input.news.map((ref) => ref.evidenceId)]);
+  riskTable.forEach((row, index) => {
+    if (!riskCandidateIds.has(row.evidenceId)) {
+      fail(`Weekly analyst response "riskTable[${index}]" cites ${row.evidenceId}, which is not one of the supplied deterministic risk candidates.`);
+    }
+    if (seenRiskRows.has(row.evidenceId)) fail(`Weekly analyst response "riskTable" lists risk ${row.evidenceId} more than once.`);
+    seenRiskRows.add(row.evidenceId);
+    const badAnnouncementIds = (row.announcedActionEvidenceIds ?? []).filter((id) => !announcementIds.has(id));
+    if (badAnnouncementIds.length > 0) {
+      fail(`Weekly analyst response "riskTable[${index}].announcedAction" cites ${badAnnouncementIds.join(", ")} -- an announced action may cite only supplied Range guidance or News evidence.`);
+    }
+  });
 
   // --- Grounding: each whatChanged narrative item must trace to at least one real supplied change. ---
   const changeIds = new Set(input.whatChanged.map((change) => change.evidenceId));
@@ -410,6 +494,7 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
     managementWatchItems,
     bottomLine: record.bottomLine as string,
     selectedEvidenceIds,
-    investorQuestions
+    investorQuestions,
+    riskTable
   };
 }

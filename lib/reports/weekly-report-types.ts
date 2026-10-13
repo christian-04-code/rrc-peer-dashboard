@@ -137,6 +137,28 @@ export type WeeklyReportPayload = {
    */
   modules: WeeklyReportModules;
   sourceManifest: SourceFreshnessManifest;
+  /**
+   * Added for the plain-English report pass (2026-10-13): short, already-
+   * fetched historical series frozen alongside the evidence so the PDF can
+   * draw real trend lines instead of 2-bar "current vs. 1wk ago" charts.
+   * Optional and additive -- snapshots frozen before this field existed
+   * simply render without these charts. Deliberately NOT part of the input
+   * fingerprint (fingerprint.ts hashes `modules` only), so it never changes
+   * report identity or triggers a re-analysis on its own.
+   */
+  chartSeries?: WeeklyReportChartSeries;
+};
+
+/** One observed point, oldest-first in every series below. Never interpolated, never zero-filled -- a missing observation is simply absent. */
+export type ChartSeriesPoint = { period: string; value: number };
+
+export type WeeklyReportChartSeries = {
+  /** EIA Henry Hub daily spot, the same history the Macro dashboard's Henry Hub metric fetches. */
+  henryHubDaily?: { unit: "$/MMBtu"; sourceId: string; points: ChartSeriesPoint[] };
+  /** EIA Lower 48 working gas, with each week's trailing five-year average computed by the SAME buildStorageComparison() the Macro dashboard and the storage evidence item use. `fiveYearAverage` is null for a week without all 5 prior-year references (never estimated). */
+  storageWeekly?: { unit: "Bcf"; sourceId: string; points: { period: string; value: number; fiveYearAverage: number | null }[] };
+  /** RRC reported quarterly free cash flow (same getQuarterlyFreeCashFlow() the dashboard's FCF chart and the range_company evidence item use). Actuals only. */
+  rangeFcfQuarterly?: { unit: "$MM"; sourceId: string; points: ChartSeriesPoint[] };
 };
 
 // ---------------------------------------------------------------------------

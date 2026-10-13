@@ -35,7 +35,8 @@ export const WEEKLY_ANALYST_MODEL = "claude-haiku-4-5";
  * next time this budget proves too tight instead of a confusing
  * "missing bottomLine" message.
  */
-export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 4096;
+// 4096 -> 5120 (2026-10-13): headroom for the new riskTable field (~5 rows).
+export const WEEKLY_ANALYST_MAX_OUTPUT_TOKENS = 5120;
 
 /** Anthropic per-million-token pricing for WEEKLY_ANALYST_MODEL, used only for cost estimates in reporting -- not sent to the API. */
 export const WEEKLY_ANALYST_MODEL_PRICING = {
@@ -56,4 +57,4 @@ export const WEEKLY_ANALYST_MODEL_PRICING = {
  * rewording (SYSTEM_PROMPT text changed; the output shape itself did not,
  * hence WEEKLY_ANALYST_SCHEMA_VERSION bumping independently in ai-contract.ts).
  */
-export const WEEKLY_ANALYST_PROMPT_VERSION = "1.1.0";
+export const WEEKLY_ANALYST_PROMPT_VERSION = "1.2.0";

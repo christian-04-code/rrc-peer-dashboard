@@ -29,13 +29,27 @@ test("SYSTEM_PROMPT establishes the analyst persona and the never-invent-evidenc
   assert.match(SYSTEM_PROMPT, /never invent/i);
 });
 
-test("SYSTEM_PROMPT specifies the Phase 7C.1 150-250 word target for executiveAssessment", () => {
-  assert.match(SYSTEM_PROMPT, /150-250 words/);
+test("SYSTEM_PROMPT specifies the plain-English 90-150 word target for executiveAssessment", () => {
+  assert.match(SYSTEM_PROMPT, /90-150 words/);
 });
 
-test("SYSTEM_PROMPT instructs a 2-3 paragraph structure, not a bulleted list", () => {
-  assert.match(SYSTEM_PROMPT, /2-3 concise paragraphs/);
-  assert.match(SYSTEM_PROMPT, /not a bulleted list|Do not write this as a bulleted list/i);
+test("SYSTEM_PROMPT instructs a 2-3 short-paragraph structure, not a bulleted list", () => {
+  assert.match(SYSTEM_PROMPT, /2-3 very short paragraphs/);
+  assert.match(SYSTEM_PROMPT, /No bullet points/);
+});
+
+test("SYSTEM_PROMPT asks for plain English, helps-or-hurts framing, and separates announced actions from possible responses", () => {
+  assert.match(SYSTEM_PROMPT, /plain English and short sentences/);
+  assert.match(SYSTEM_PROMPT, /whether it helps or hurts Range/);
+  assert.match(SYSTEM_PROMPT, /announcedAction: ONLY something Range has actually announced/);
+  assert.match(SYSTEM_PROMPT, /never as a decision Range has made/);
+});
+
+test("formatAnalystInputForPrompt lists Range announced guidance as its own section", () => {
+  const text = formatAnalystInputForPrompt(
+    baseInput({ rangeAnnouncements: [{ evidenceId: "range_company:guidance:RRC:hedging_summary:2H 2026", category: "range_company", label: "RRC Guidance: hedging_summary", displayValue: ">25% hedged", period: "2H 2026" }] })
+  );
+  assert.match(text, /Range announced guidance[^\n]*:\n- \[range_company:guidance:RRC:hedging_summary:2H 2026\]/);
 });
 
 test("formatAnalystInputForPrompt includes every evidence id in brackets so the model can cite it precisely", () => {

@@ -8,6 +8,7 @@ import type {
   WeeklyEvidenceItem,
   WeeklyReportModules,
   WeeklyReportPayload,
+  WeeklyReportChartSeries,
   WeeklyReportSnapshotRecord
 } from "@/lib/reports/weekly-report-types";
 import { evaluateReadiness, type ReadinessInputs, type ReadinessResult } from "@/lib/reports/readiness";
@@ -159,8 +160,21 @@ export function annotateMateriality(modules: WeeklyReportModules, previousModule
   return annotated;
 }
 
-export function buildWeeklyReportPayload(storageWeekEnding: string, dataCutoffAt: string, modules: WeeklyReportModules, sourceManifest: SourceFreshnessManifest): WeeklyReportPayload {
-  return { schemaVersion: WEEKLY_REPORT_SCHEMA_VERSION, storageWeekEnding, dataCutoffAt, modules, sourceManifest };
+export function buildWeeklyReportPayload(
+  storageWeekEnding: string,
+  dataCutoffAt: string,
+  modules: WeeklyReportModules,
+  sourceManifest: SourceFreshnessManifest,
+  chartSeries?: WeeklyReportChartSeries
+): WeeklyReportPayload {
+  const payload: WeeklyReportPayload = { schemaVersion: WEEKLY_REPORT_SCHEMA_VERSION, storageWeekEnding, dataCutoffAt, modules, sourceManifest };
+  if (chartSeries && Object.keys(chartSeries).length > 0) payload.chartSeries = chartSeries;
+  return payload;
+}
+
+/** Chart history from every adapter that supplies one -- see WeeklyReportChartSeries. */
+export function mergeChartSeries(collected: CollectedWeeklyInputs): WeeklyReportChartSeries {
+  return { ...collected.macro.chartSeries, ...collected.rangeCompany.chartSeries };
 }
 
 export type WeeklySnapshotBuildResult =
@@ -243,7 +257,7 @@ export async function runWeeklySnapshotBuild(pool: Pool, now: Date = new Date())
   const previousModules = previousSnapshot?.payload?.modules ?? null;
   const modules = annotateMateriality(rawModules, previousModules);
 
-  const payload = buildWeeklyReportPayload(storageWeekEnding, dataCutoffAt, modules, sourceManifest);
+  const payload = buildWeeklyReportPayload(storageWeekEnding, dataCutoffAt, modules, sourceManifest, mergeChartSeries(collected));
   const fingerprint = computeWeeklyReportFingerprint({ schemaVersion: payload.schemaVersion, storageWeekEnding, modules });
   const changes = computeWeeklyChanges(modules, previousModules);
 

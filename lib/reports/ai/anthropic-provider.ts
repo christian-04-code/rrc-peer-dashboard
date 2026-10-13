@@ -28,6 +28,27 @@ const WATCH_ITEM_SCHEMA = {
   required: ["item", "reason", "evidenceIds"]
 };
 
+const WHAT_CHANGED_ITEM_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    ...NARRATIVE_ITEM_SCHEMA.properties,
+    impact: { type: "string", enum: ["positive", "negative", "mixed"], description: "Does this change help (positive) or hurt (negative) Range, or both (mixed)?" }
+  },
+  required: ["title", "assessment", "evidenceIds", "impact"]
+};
+
+const RISK_ROW_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    evidenceId: { type: "string", description: "The evidenceId of ONE supplied risk candidate." },
+    whyItMatters: { type: "string", description: "1-2 short plain-English sentences: how this risk affects Range." },
+    announcedAction: { type: "string", description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none." },
+    announcedActionEvidenceIds: { type: "array", items: { type: "string" }, description: "Required with announcedAction: the Range guidance / News evidence ids it comes from." },
+    possibleResponse: { type: "string", description: "Optional. One short sentence on an option Range could consider -- phrased as an option, never as a decision." }
+  },
+  required: ["evidenceId", "whyItMatters"]
+};
+
 const INVESTOR_QUESTION_SCHEMA = {
   type: "object" as const,
   properties: {
@@ -82,12 +103,12 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
           input_schema: {
             type: "object",
             properties: {
-              executiveAssessment: { type: "string", description: "~150-250 word, 2-3 paragraph opening assessment synthesizing the week for Range Resources -- a fast read, not the full analysis." },
+              executiveAssessment: { type: "string", description: "~90-150 word, 2-3 short-paragraph plain-English summary of the week for Range Resources: what happened, why it matters, helps or hurts." },
               biggestRisk: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied riskCandidates." },
               biggestOpportunity: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied opportunityCandidates." },
               whatChanged: {
                 type: "array",
-                items: NARRATIVE_ITEM_SCHEMA,
+                items: WHAT_CHANGED_ITEM_SCHEMA,
                 maxItems: 5,
                 description:
                   "At most 5 items, each grounded in one or more of the supplied deterministic change records. Never more items than the number of change records actually supplied -- combine related records into one item rather than inventing an extra one. Zero items is correct and expected when no real change was supplied (e.g. the first-ever report)."
@@ -95,6 +116,12 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
               managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 6 },
               bottomLine: { type: "string", minLength: 20, description: "1-3 sentence closing synthesis. Required and must not be left empty." },
               selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." },
+              riskTable: {
+                type: "array",
+                items: RISK_ROW_SCHEMA,
+                maxItems: 5,
+                description: "One row per important supplied risk candidate (most important first). Keep announced actions and possible responses strictly separate."
+              },
               investorQuestions: {
                 type: "array",
                 items: INVESTOR_QUESTION_SCHEMA,
@@ -103,7 +130,7 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
                   "Investor questions IR should prepare for, ONLY when a real, credible triggering development exists in the supplied evidence. Zero items is correct and expected most weeks -- do not invent a question merely to fill this field, and never force a fixed count."
               }
             },
-            required: ["executiveAssessment", "biggestRisk", "biggestOpportunity", "whatChanged", "managementWatchItems", "bottomLine", "selectedEvidenceIds", "investorQuestions"]
+            required: ["executiveAssessment", "biggestRisk", "biggestOpportunity", "whatChanged", "managementWatchItems", "bottomLine", "selectedEvidenceIds", "investorQuestions", "riskTable"]
           }
         }
       ]

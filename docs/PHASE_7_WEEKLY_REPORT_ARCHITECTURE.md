@@ -1059,3 +1059,13 @@ Targeted: 211 tests across every changed subsystem, all pass. Full suite: **1465
 ### 32.9 Release status
 
 Not yet promoted. Two independent blockers, both requiring the project owner's own action (see `docs/CURRENT_HANDOFF.md` for full detail): `CRON_SECRET`'s missing Production scope, and PR #13's own draft status / explicit "do not merge automatically" instruction combined with its now heavily stale (Phase 5.1-era) description against a 52-commit, 27k+-line diff.
+
+## Plain-English report pass (2026-10-13)
+
+Redesigned the PDF for readability without touching the Macro dashboard, rig map, peer pages, risk scoring, or financial formulas.
+
+- **Layout** (`render/html-template.ts`): compact masthead instead of a full cover page; "The Short Version", 4 headline numbers, "What Changed This Week?" (top 3, each tagged Helps / Hurts / Mixed for Range); Gas Market charts; Range and Its Peers; Key Risks table; appendix (investor questions, sources, catalysts). Body text 11pt. Still a hard 5-page maximum; the reduced tier now drops the Biggest Risk/Opportunity callouts and caps the risk table at 3 rows.
+- **Real trend charts**: the "future path" noted under Phase 7D is now in place. `WeeklyReportPayload.chartSeries` (optional, additive, NOT fingerprinted) freezes Henry Hub daily (60 obs), Lower 48 storage with each week's 5-yr average via the same `buildStorageComparison()`, and RRC quarterly FCF via `getQuarterlyFreeCashFlow()`. Re-slices data the adapters already fetch; no new API calls. Older snapshots render without these charts and say so.
+- **Risk table**: Risk and Risk Level come from the deterministic risk engine (HIGH_RISK→High, MODERATE_RISK→Medium, WATCH→Low; SUPPORTIVE never listed). The AI (schema 1.3.0, prompt 1.2.0) only fills Why This Matters / What Range Can Do; an "Announced" action must cite a Range guidance record (`rangeAnnouncements` in the analyst input) or a News item, validated in `ai-contract.ts`. "Possible option" text is labeled as an idea, not a plan.
+- **Not charted**: Appalachian hub prices vs. Henry Hub. No verified Appalachian price feed exists in the dashboard; the report says so and shows Range's own differential guidance instead.
+- **Bug fixed**: point-estimate guidance (low/high null, midpoint set) displayed as `----- Bcfe/d` in the report and AI input; now shows management's wording. Display string only, values unchanged.

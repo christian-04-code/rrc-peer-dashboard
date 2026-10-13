@@ -39,6 +39,18 @@ const OUTLOOK_MAX = 6;
 // then synthesize/prioritize down to at most 5 narrative whatChanged items
 // (enforced by ai-contract.ts's MAX_WHAT_CHANGED_ITEMS).
 const CHANGES_MAX = 8;
+// Range guidance records offered as the only citable source for a risk-table
+// "announced action" (alongside News) -- RRC typically carries well under
+// this many guidance line items per reporting cycle.
+const RANGE_ANNOUNCEMENTS_MAX = 12;
+// Guidance most likely to answer "what is Range doing about this risk?"
+// first (hedging, sales/takeaway, pricing, spending, activity); a fixed,
+// documented ordering, not a relevance score.
+const ANNOUNCEMENT_PRIORITY = ["hedging_summary", "gas_takeaway", "gas_differential", "capex", "production", "production_exit_rate", "rig_count", "frac_crew_count", "processing_capacity", "ngl_export_capacity", "fcf", "maintenance_capex"];
+function announcementPriority(item: WeeklyEvidenceItem): number {
+  const index = ANNOUNCEMENT_PRIORITY.indexOf(item.metricKey.replace(/^guidance:/, ""));
+  return index === -1 ? ANNOUNCEMENT_PRIORITY.length : index;
+}
 
 const MARKET_BACKDROP_CATEGORIES: EvidenceModuleKey[] = [
   "gas_pricing",
@@ -143,6 +155,11 @@ export function selectAnalystEvidence(payload: WeeklyReportPayload, changes: Wee
   const peers = peersItems.map(toEvidenceRef);
   const news = newsItems.map(toEvidenceRef);
   const outlook = outlookItems.map(toEvidenceRef);
+  const rangeAnnouncements = (payload.modules.range_company ?? [])
+    .filter((item) => item.metricKey.startsWith("guidance:"))
+    .sort((a, b) => announcementPriority(a) - announcementPriority(b) || a.evidenceId.localeCompare(b.evidenceId))
+    .slice(0, RANGE_ANNOUNCEMENTS_MAX)
+    .map(toEvidenceRef);
   const whatChanged = selectedChanges.map(toChangeRef);
 
   const evidenceAllowlist = [
@@ -154,7 +171,8 @@ export function selectAnalystEvidence(payload: WeeklyReportPayload, changes: Wee
       ...range.map((ref) => ref.evidenceId),
       ...peers.map((ref) => ref.evidenceId),
       ...news.map((ref) => ref.evidenceId),
-      ...outlook.map((ref) => ref.evidenceId)
+      ...outlook.map((ref) => ref.evidenceId),
+      ...rangeAnnouncements.map((ref) => ref.evidenceId)
     ])
   ];
 
@@ -171,6 +189,7 @@ export function selectAnalystEvidence(payload: WeeklyReportPayload, changes: Wee
     outlook,
     sourcesFreshness: toSourceFreshness(payload),
     previousReportContext,
+    rangeAnnouncements,
     evidenceAllowlist
   };
 }

@@ -30,6 +30,10 @@ export type ContentBudget = {
   maxKeyMetricsToWatch: number;
   maxGuidanceRows: number;
   maxInvestorQuestions: number;
+  /** Key Risks table rows (plain-English report pass, 2026-10-13). */
+  maxRiskRows: number;
+  /** Biggest Risk / Biggest Opportunity callouts above the risk table. They restate the risk table's top row and the summary, so they are the first thing the reduced tier drops. */
+  showRiskOpportunityCallouts: boolean;
 };
 
 export const STANDARD_BUDGET: ContentBudget = {
@@ -46,12 +50,15 @@ export const STANDARD_BUDGET: ContentBudget = {
   // above the realistic total source count so this table is effectively
   // never truncated in practice; still a real, documented cap, not removed.
   maxSourceRows: 20,
-  maxWhatChangedItems: 5,
+  // "What Changed This Week?" shows the three biggest changes (plain-English report pass, 2026-10-13).
+  maxWhatChangedItems: 3,
   maxWatchItems: 6,
   maxCommentarySentences: 3,
   maxKeyMetricsToWatch: 6,
   maxGuidanceRows: 8,
-  maxInvestorQuestions: 5
+  maxInvestorQuestions: 5,
+  maxRiskRows: 5,
+  showRiskOpportunityCallouts: true
 };
 
 /**
@@ -87,7 +94,9 @@ export const REDUCED_BUDGET: ContentBudget = {
   // `omittedContentLabels`, never silently.
   maxKeyMetricsToWatch: 3,
   maxGuidanceRows: 4,
-  maxInvestorQuestions: 1
+  maxInvestorQuestions: 1,
+  maxRiskRows: 3,
+  showRiskOpportunityCallouts: false
 };
 
 export function budgetForTier(tier: RenderBudgetTier): ContentBudget {

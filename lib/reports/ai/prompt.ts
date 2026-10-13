@@ -33,11 +33,26 @@ Your job is prioritization, synthesis, interpretation, and narrative framing -- 
 17. Every investorQuestions item's evidenceIds must justify why the question is credible RIGHT NOW (whyNow) -- cite the specific supplied evidence that makes it timely, the same grounding discipline as biggestRisk/biggestOpportunity/whatChanged.
 18. investorQuestions.responseFramework, if you include one, must explicitly read as IR preparation based on public information -- never as an official Range position, management commitment, confirmed guidance, or a statement Range has actually made. Do not invent what management would say. If the evidence doesn't support a reasonable preparation framework, omit responseFramework entirely for that question rather than guessing one.
 
-The executiveAssessment should read as the opening "Executive Assessment" section of a document titled "Weekly Range Resources AI Report" -- a fast, tight synthesis, not the report's full analysis (the report's own evidence sections/charts carry the detailed evidence and analyst commentary; your job here is the headline read a reader gets through in about 30-60 seconds before deciding what to read next). Write it as 2-3 concise paragraphs, targeting approximately 150-250 words total:
-- Paragraph 1: the current gas-market/backdrop setup and the most important thing(s) that changed, and whether the setup improved, deteriorated, or was mixed for Range.
-- Paragraph 2: the specific implication for Range, referencing the biggest risk and/or biggest opportunity where useful.
-- Paragraph 3 (optional, only if it adds real content beyond paragraphs 1-2): a brief note on outlook direction or what management should watch.
-Do not write this as a bulleted list -- flowing prose paragraphs only. Do not try to restate every supplied fact; that is what the evidence sections are for. Prioritize the 2-4 most material developments over broad coverage. Separate each paragraph with a blank line (two newline characters) so the paragraph breaks are unambiguous to a downstream renderer.`;
+19. Each whatChanged item must include "impact": "positive" if the change helps Range, "negative" if it hurts Range, or "mixed" if it genuinely cuts both ways. Base this only on the supplied evidence. The first sentence of the assessment should say what happened; the next should say why it helps or hurts Range.
+20. riskTable: write one row for each of the supplied risk candidates you consider most important (at most one row per candidate, cite its evidenceId; you do NOT choose the risk level -- the report takes it from the risk engine). For each row:
+   - whyItMatters: 1-2 short sentences on how this risk affects Range's cash flow, prices, or plans.
+   - announcedAction: ONLY something Range has actually announced, taken from the supplied "Range announced guidance" records or an analyzed News item, and cite those ids in announcedActionEvidenceIds. If nothing announced addresses this risk, leave announcedAction out. Never present a guess as an announcement.
+   - possibleResponse: 1 short sentence on an option Range could consider (for example hedging more volumes, adjusting activity, or using sales agreements). Phrase it as an option ("could consider..."), never as a decision Range has made.
+
+WRITING STYLE -- the report is read by busy managers who are not all finance specialists:
+- Use plain English and short sentences (aim for under 20 words each). One idea per sentence.
+- For every point, say what happened, why it matters to Range, and whether it helps or hurts Range.
+- Avoid jargon. Do not use phrases like "binding constraint," "fortress balance sheet," "optionality," "basis compression," "tailwind/headwind," "structural," or "layered signal." If you must use a technical term (for example "basis" or "EBITDAX"), explain it in a few plain words the first time.
+- Prefer concrete numbers from the evidence over adjectives.
+- Never state that a figure "benefits from" or "reflects" a price from a different period (e.g. a past quarter's realized price does not reflect this week's spot price).
+
+The executiveAssessment is the report's "The Short Version" section -- what a reader gets in 30 seconds. Write 2-3 very short paragraphs, about 90-150 words total:
+- Paragraph 1: what happened in the gas market this week, in plain words.
+- Paragraph 2: what it means for Range -- does it help or hurt, and by how much where the evidence says.
+- Paragraph 3 (optional): the one thing to watch next.
+No bullet points. Separate each paragraph with a blank line (two newline characters) so the paragraph breaks are unambiguous to a downstream renderer.
+
+bottomLine: 1-2 plain sentences a manager could repeat in a meeting.`;
 
 function formatRef(ref: WeeklyAnalystEvidenceRef): string {
   return `- [${ref.evidenceId}] ${ref.label}: ${ref.displayValue}${ref.period ? ` (period: ${ref.period})` : ""}`;
@@ -75,6 +90,7 @@ export function formatAnalystInputForPrompt(input: WeeklyAnalystInput): string {
       )
     ),
     formatSection("Range Resources company evidence", input.range.map(formatRef)),
+    formatSection("Range announced guidance (the only Range-announced actions you may cite in riskTable.announcedAction, besides News)", (input.rangeAnnouncements ?? []).map(formatRef)),
     formatSection("Peer evidence", input.peers.map(formatRef)),
     formatSection("Analyzed News", input.news.map(formatRef)),
     formatSection("Outlook / forecast evidence (STEO, scenario)", input.outlook.map(formatRef)),

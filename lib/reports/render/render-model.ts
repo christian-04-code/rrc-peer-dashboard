@@ -72,6 +72,62 @@ export type ReportIdentity = {
 export type CalloutItem = {
   title: string;
   body: string;
+  /** "What Changed This Week?" cards only: helps / hurts / mixed for Range, from the AI's validated `impact` tag. Null when the assessment predates that field. */
+  impact?: "positive" | "negative" | "mixed" | null;
+};
+
+// ---------------------------------------------------------------------------
+// Plain-English report pass (2026-10-13) -- trend charts, KPI tiles, risk table
+// ---------------------------------------------------------------------------
+
+/** A real time series from WeeklyReportPayload.chartSeries. `y` is null where a reference line has no value for that point (drawn as a gap, never bridged). */
+export type LineSeries = { label: string; style: "primary" | "reference"; points: { x: string; y: number | null }[] };
+
+export type LineChartPlan = {
+  id: string;
+  title: string;
+  valueFormat: "usd_per_mmbtu" | "bcf";
+  series: LineSeries[];
+  /** One plain-English, deterministic sentence of what the chart shows. */
+  caption: string;
+  sourceLine: string;
+};
+
+export type ColumnChartPlan = {
+  id: string;
+  title: string;
+  bars: ChartBar[];
+  caption: string;
+  sourceLine: string;
+};
+
+export type PeerBarPanel = {
+  id: string;
+  title: string;
+  /** A short plain-English reading guide, e.g. "Lower = less debt". */
+  hint: string;
+  bars: { label: string; value: number; displayValue: string; isRange: boolean }[];
+};
+
+export type KpiTile = {
+  label: string;
+  value: string;
+  /** e.g. "Down 4.7% vs. last week" -- straight from the item's own comparison, never recomputed. */
+  change: string | null;
+  period: string | null;
+};
+
+export type RiskLevel = "High" | "Medium" | "Low";
+
+export type RiskTableRow = {
+  risk: string;
+  /** Mapped 1:1 from the deterministic risk engine's own state (HIGH_RISK -> High, MODERATE_RISK -> Medium, WATCH -> Low) -- never AI-chosen. */
+  level: RiskLevel;
+  whyItMatters: string;
+  /** Only something Range has actually announced (AI-cited Range guidance/News). */
+  announced: string | null;
+  /** An option Range could consider -- always rendered with "Could consider" framing. */
+  possible: string | null;
 };
 
 /**
@@ -112,4 +168,14 @@ export type WeeklyReportRenderModel = {
   investorQuestions: InvestorQuestionItem[];
   /** Null whenever no reliably-dated future event exists (see buildCatalystsCalendarTable) -- never an empty placeholder table. */
   catalystsCalendarTable: TablePlan | null;
+  /** Fixed headline numbers for page 1 (Henry Hub, storage vs. 5-yr avg, RRC FCF, RRC leverage) -- whichever exist this week. */
+  kpiTiles: KpiTile[];
+  /** Henry Hub + storage trend charts; empty for snapshots frozen before chartSeries existed. */
+  marketCharts: LineChartPlan[];
+  rangeFcfChart: ColumnChartPlan | null;
+  peerPanels: PeerBarPanel[];
+  peerPanelsPeriod: string | null;
+  riskTable: RiskTableRow[];
+  /** Charts the brief asked for that this dashboard has no verified data for -- printed as an honest note, never drawn from guessed values. */
+  chartGaps: string[];
 };

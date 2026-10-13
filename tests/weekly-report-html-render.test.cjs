@@ -30,16 +30,15 @@ test("renderReportHtml uses an <img> tag when a logo data URI is supplied", () =
   assert.match(html, /<img class="cover-logo" src="data:image\/png;base64,AAAA"/);
 });
 
-test("renderReportHtml renders the cover page per the DOCX-derived visual spec (kicker, vertical stack, controlling sources)", () => {
+test("renderReportHtml opens with a compact masthead and the plain-English section order", () => {
   const model = buildWeeklyReportRenderModel(SAMPLE_WEEKLY_REPORT_PAYLOAD, SAMPLE_WEEKLY_ANALYST_ASSESSMENT);
   const html = renderReportHtml(model, null);
-  assert.match(html, /class="cover-kicker">Investor Relations Briefing \| Internal</);
-  assert.match(html, /class="cover-title"/);
-  assert.match(html, /class="cover-subtitle"/);
-  assert.match(html, /class="cover-divider"/);
-  assert.match(html, /class="cover-meta-label">Week Ending/);
-  assert.match(html, /class="cover-meta-label">Data As Of/);
-  assert.match(html, /class="cover-meta-label">Controlling Sources/);
+  assert.match(html, /class="kicker">Internal Weekly Briefing</);
+  assert.match(html, /class="report-title"/);
+  assert.match(html, /class="report-meta">Week Ending August 28, 2026/);
+  const order = ["The Short Version", "What Changed This Week?", "Gas Market", "Range and Its Peers", "Key Risks", "Appendix"].map((heading) => html.indexOf(heading));
+  assert.ok(order.every((index) => index > 0), "every section heading must be present");
+  assert.deepEqual([...order].sort((a, b) => a - b), order, "sections must appear in reading order");
 });
 
 test("renderReportHtml escapes HTML-significant characters in evidence-derived text -- never raw-interpolates untrusted content", () => {

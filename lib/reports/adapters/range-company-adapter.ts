@@ -5,7 +5,7 @@ import { getCompanyGuidanceRecords, type GuidanceRecord } from "@/lib/dashboard/
 import { compareQuarterly } from "@/lib/reports/comparisons";
 import { describeFinancialSource } from "@/lib/reports/adapters/source-labels";
 import { moneyDisplay } from "@/lib/reports/adapters/format";
-import type { SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/weekly-report-types";
+import type { SourceManifestEntry, WeeklyEvidenceItem, WeeklyReportChartSeries } from "@/lib/reports/weekly-report-types";
 
 /**
  * Range's own quarterly financial/operating results + management guidance
@@ -84,6 +84,19 @@ const METRICS: MetricSpec[] = [
   { metricKey: "capex_per_mcfe", label: "RRC CapEx / Mcfe", unit: "$/Mcfe", driver: "gas_pricing", getValue: (q) => getCapexPerMcfe(TICKER, q), displayValue: perMcfeDisplay }
 ];
 
+/**
+ * A low-high range when both ends exist; otherwise management's own wording
+ * (or the single point value). Fixes a display bug where a point-estimate
+ * record (low/high null, midpoint set -- e.g. "approximately 2.6 Bcfe/d in
+ * 2027") rendered as "----- Bcfe/d" in the report and in the AI's input.
+ * Display string only: currentValue is unchanged.
+ */
+function guidanceDisplayValue(record: GuidanceRecord): string {
+  if ([record.low, record.midpoint, record.high].every((v) => v === null)) return record.managementWording ?? record.note ?? "Qualitative guidance";
+  if (record.low === null && record.high === null) return record.managementWording ?? `${record.midpoint} ${record.unit}`.trim();
+  return `${record.low ?? "--"}-${record.high ?? "--"} ${record.unit}`.trim();
+}
+
 function guidanceEvidenceId(record: GuidanceRecord): string {
   return `range_company:guidance:${record.company}:${record.metric}:${record.period}`;
 }
@@ -92,7 +105,26 @@ export type RangeCompanyCollection = {
   items: WeeklyEvidenceItem[];
   manifestEntries: SourceManifestEntry[];
   present: boolean;
+  chartSeries: Pick<WeeklyReportChartSeries, "rangeFcfQuarterly">;
 };
+
+const FCF_CHART_QUARTERS = 10;
+
+/** Last FCF_CHART_QUARTERS quarters of RRC free cash flow, oldest first, from the same getQuarterlyFreeCashFlow() the "free_cash_flow" evidence item uses. A quarter with no stored value is skipped, never zero-filled. */
+function buildRangeFcfSeries(): RangeCompanyCollection["chartSeries"] {
+  const points = quarters
+    .map((quarter) => {
+      try {
+        const value = getQuarterlyFreeCashFlow(TICKER, quarter).value;
+        return value === null ? null : { period: quarter, value };
+      } catch {
+        return null;
+      }
+    })
+    .filter((point): point is { period: Quarter; value: number } => point !== null)
+    .slice(-FCF_CHART_QUARTERS);
+  return points.length >= 2 ? { rangeFcfQuarterly: { unit: "$MM", sourceId: "range_company_financials", points } } : {};
+}
 
 export function collectRangeCompanyEvidence(now = new Date()): RangeCompanyCollection {
   const freshness = quarterFreshness(LATEST_QUARTER, now);
@@ -128,7 +160,7 @@ export function collectRangeCompanyEvidence(now = new Date()): RangeCompanyColle
       metricKey: `guidance:${record.metric}`,
       label: `RRC Guidance: ${record.metric} (${record.period})`,
       currentValue: record.midpoint ?? record.reportedValue ?? null,
-      displayValue: [record.low, record.midpoint, record.high].every((v) => v === null) ? (record.managementWording ?? record.note ?? "Qualitative guidance") : `${record.low ?? "--"}-${record.high ?? "--"} ${record.unit}`.trim(),
+      displayValue: guidanceDisplayValue(record),
       unit: record.unit,
       period: record.period,
       asOfDate: /^\d{4}-\d{2}-\d{2}$/.test(record.sourceDate) ? record.sourceDate : null,
@@ -146,5 +178,5 @@ export function collectRangeCompanyEvidence(now = new Date()): RangeCompanyColle
     { key: "range_company_guidance", label: "RRC management guidance", period: guidanceRecords[0]?.reportingCycle ?? null, freshness: guidanceRecords.length > 0 ? "current" : "unavailable", included: guidanceRecords.length > 0 }
   ];
 
-  return { items, manifestEntries, present: items.length > 0 };
+  return { items, manifestEntries, present: items.length > 0, chartSeries: buildRangeFcfSeries() };
 }

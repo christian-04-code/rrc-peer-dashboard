@@ -3,7 +3,7 @@ import { buildNormalizedMarketMetrics } from "@/lib/market/build-market-metrics"
 import { fetchDemandTable, fetchStateMarketedProductionTable, fetchSteoTable } from "@/lib/eia/macro-fundamentals";
 import { normalizeDemand, normalizeStateProduction } from "@/lib/market/macro-fundamentals";
 import { normalizeSteoTable, computeForecastRevisions } from "@/lib/market/macro-steo";
-import { buildAppalachiaProduction, calculateFreshness, filterToForecastHorizon, shiftMonth } from "@/lib/market/macro-analytics";
+import { buildAppalachiaProduction, buildStorageComparison, calculateFreshness, filterToForecastHorizon, shiftMonth } from "@/lib/market/macro-analytics";
 import {
   buildMacroRiskPayload,
   buildRangeMacroSignals,
@@ -23,7 +23,7 @@ import type { NormalizedMarketMetric } from "@/lib/market/types";
 import type { DemandMetric } from "@/lib/market/macro-types";
 import type { SteoNormalizedSeries, SteoSeriesKey } from "@/lib/market/macro-steo-types";
 import { compareDailyWeekly, compareMonthlySeries, compareStorageWeekly, compareSteoVintage } from "@/lib/reports/comparisons";
-import type { EvidenceModuleKey, SourceManifestEntry, WeeklyEvidenceItem } from "@/lib/reports/weekly-report-types";
+import type { EvidenceModuleKey, SourceManifestEntry, WeeklyEvidenceItem, WeeklyReportChartSeries } from "@/lib/reports/weekly-report-types";
 
 /**
  * Macro evidence collection (Phase 7B). Deliberately re-implements the same
@@ -95,7 +95,43 @@ export type MacroCollection = {
   storageObservationPresent: boolean;
   fundamentalsSnapshotPresent: boolean;
   steoRevisionHistoryPresent: boolean;
+  /** Henry Hub + storage history for the PDF's trend charts -- see WeeklyReportChartSeries. */
+  chartSeries: Pick<WeeklyReportChartSeries, "henryHubDaily" | "storageWeekly">;
 };
+
+// Weeks of storage history drawn in the PDF chart. Each week's own 5-year
+// average needs 5 prior years of the same ISO week, so 26 weeks back still
+// fits comfortably inside the 320-week history build-market-metrics fetches.
+const STORAGE_CHART_WEEKS = 26;
+
+/**
+ * Re-slices histories this adapter already fetched (no extra EIA call) into
+ * oldest-first chart series. Storage reuses buildStorageComparison() once
+ * per week -- the exact methodology behind the storage evidence item's own
+ * vs5yrAvg comparison -- so the chart line and the headline number can
+ * never disagree. A metric that isn't fresh/ok contributes no series at all.
+ */
+export function buildMacroChartSeries(henryHubMetric: NormalizedMarketMetric | undefined, storageMetric: NormalizedMarketMetric | undefined): MacroCollection["chartSeries"] {
+  const usable = (metric: NormalizedMarketMetric | undefined): metric is NormalizedMarketMetric =>
+    metric !== undefined && metric.status === "ok" && metric.freshness !== "stale" && metric.freshness !== "unavailable" && metric.history.length > 1;
+  const series: MacroCollection["chartSeries"] = {};
+  if (usable(henryHubMetric)) {
+    series.henryHubDaily = {
+      unit: "$/MMBtu",
+      sourceId: "macro_henry_hub",
+      points: [...henryHubMetric.history].reverse().map((point) => ({ period: point.period, value: point.value }))
+    };
+  }
+  if (usable(storageMetric)) {
+    const points: { period: string; value: number; fiveYearAverage: number | null }[] = [];
+    for (let i = Math.min(STORAGE_CHART_WEEKS, storageMetric.history.length) - 1; i >= 0; i -= 1) {
+      const point = storageMetric.history[i];
+      points.push({ period: point.period, value: point.value, fiveYearAverage: buildStorageComparison(storageMetric.history.slice(i))?.fiveYearAverage ?? null });
+    }
+    series.storageWeekly = { unit: "Bcf", sourceId: "macro_storage", points };
+  }
+  return series;
+}
 
 export async function collectMacroEvidence(pool: Pool | null, now: Date = new Date()): Promise<MacroCollection> {
   const generatedAt = generatedAtNow();
@@ -423,6 +459,7 @@ export async function collectMacroEvidence(pool: Pool | null, now: Date = new Da
     storageWeekEndingCandidate: storageMetric && storageMetric.status === "ok" ? storageMetric.period : null,
     storageObservationPresent: storageMetric !== undefined && storageMetric.status === "ok" && freshValue(storageMetric) !== null,
     fundamentalsSnapshotPresent: [henryHubMetric, productionMetric, lngMetric].some((metric) => metric && metric.status === "ok"),
-    steoRevisionHistoryPresent
+    steoRevisionHistoryPresent,
+    chartSeries: buildMacroChartSeries(henryHubMetric, storageMetric)
   };
 }

@@ -4,6 +4,7 @@ import { budgetForTier } from "@/lib/reports/render/content-budget";
 import type { RenderBudgetTier, WeeklyReportRenderModel } from "@/lib/reports/render/render-model";
 import { buildAtAGlanceTable, buildCatalystsCalendarTable, buildRisksOpportunitiesTable, buildSourcesFreshnessTable } from "@/lib/reports/render/table-builder";
 import { buildEvidenceSections } from "@/lib/reports/render/evidence-sections";
+import { buildChartGaps, buildKpiTiles, buildMarketCharts, buildPeerPanels, buildRangeFcfChart, buildRiskTable } from "@/lib/reports/render/plain-report-sections";
 
 /**
  * Phase 7D -- the ONE place a WeeklyReportRenderModel is constructed, from
@@ -67,6 +68,7 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
   const budget = budgetForTier(tier);
 
   const { sections: evidenceSections, omittedLabels } = buildEvidenceSections(payload, budget);
+  const peerPanels = buildPeerPanels(payload);
 
   return {
     identity: {
@@ -77,9 +79,9 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
     },
     executiveAssessmentParagraphs: splitIntoParagraphs(assessment.executiveAssessment),
     atAGlanceTable: buildAtAGlanceTable(payload, budget),
-    biggestRisk: { title: assessment.biggestRisk.title, body: assessment.biggestRisk.assessment },
-    biggestOpportunity: { title: assessment.biggestOpportunity.title, body: assessment.biggestOpportunity.assessment },
-    whatChanged: assessment.whatChanged.slice(0, budget.maxWhatChangedItems).map((item) => ({ title: item.title, body: item.assessment })),
+    biggestRisk: budget.showRiskOpportunityCallouts ? { title: assessment.biggestRisk.title, body: assessment.biggestRisk.assessment } : null,
+    biggestOpportunity: budget.showRiskOpportunityCallouts ? { title: assessment.biggestOpportunity.title, body: assessment.biggestOpportunity.assessment } : null,
+    whatChanged: assessment.whatChanged.slice(0, budget.maxWhatChangedItems).map((item) => ({ title: item.title, body: item.assessment, impact: item.impact ?? null })),
     evidenceSections,
     keyRisksAndOpportunitiesTable: buildRisksOpportunitiesTable(payload, budget),
     managementWatchItems: assessment.managementWatchItems.slice(0, budget.maxWatchItems).map((item) => ({ title: item.item, body: item.reason })),
@@ -95,6 +97,13 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
       responseFramework: q.responseFramework ?? null,
       followUpNeeded: q.followUpNeeded ?? null
     })),
-    catalystsCalendarTable: buildCatalystsCalendarTable(payload)
+    catalystsCalendarTable: buildCatalystsCalendarTable(payload),
+    kpiTiles: buildKpiTiles(payload),
+    marketCharts: buildMarketCharts(payload),
+    rangeFcfChart: buildRangeFcfChart(payload),
+    peerPanels: peerPanels.panels,
+    peerPanelsPeriod: peerPanels.period,
+    riskTable: buildRiskTable(payload, assessment, budget.maxRiskRows),
+    chartGaps: buildChartGaps(payload)
   };
 }
