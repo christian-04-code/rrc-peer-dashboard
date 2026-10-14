@@ -1,5 +1,14 @@
 # Current Handoff
 
+## PENDING IMPROVEMENTS — approved for the list, NOT to be implemented yet (added 2026-10-13)
+
+Branch `feat/weekly-report-plain-english` (plain-English weekly report, RRC guidance correction, Preview-only report test route). Not merged; awaiting real-AI Preview verification and owner approval.
+
+1. **Update the RRC hedge book from Q1 to the latest verified Q2 2026 filing.** `lib/forecast/data/rrc-hedges.ts` is still "as of 2026-03-31" (Q1 2026 10-Q, Note 7). The Q2 2026 10-Q (filed 2026-07-21) is available. Affects the forecast's gas/oil hedge settlement (2027 gas hedge impact currently +$0.065/Mcf).
+2. **Review the 2027 Henry Hub $3.75 assumption.** The default RRC scenario carries $3.75/MMBtu forward from a prior guidance cycle's pricing case; the Q2 2026 cycle does not restate one. The 2027 default FCF ($926.0MM after the gas-differential correction) depends on it.
+3. **Add an automatic peer earnings calendar** after weekly-report verification. Today the report's catalysts table omits earnings dates because no calendar source exists.
+
+
 ## MACRO PHASE 2 -- PEER ANALYTICS FIX, DIRECTIONAL COLORS, REGION-FIRST STORAGE MAP, GAS NEWS, RISK DE-DUP (2026-09-22, later same day) — READ THIS FIRST
 
 This section supersedes the "MACRO DASHBOARD PRODUCTION REPAIR + UI CLEANUP" section directly below it (still accurate for its own commits, kept for history) for Macro/Peer-Analytics purposes. Everything further below is the older, unrelated IR Report Enhancement workstream.
