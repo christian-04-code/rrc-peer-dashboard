@@ -75,21 +75,37 @@ const INVESTOR_QUESTION_SCHEMA = {
  * non-JSON, but a tool call must supply every required field in a
  * type-checked shape.
  */
+/**
+ * Non-sensitive per-call metadata (no prompt or response text) for diagnostics only --
+ * used by the Preview-only test route (lib/reports/preview-test-report.ts). The
+ * production orchestrator never passes a callback, so its behavior is unchanged.
+ */
+export type WeeklyAnalystResponseMeta = {
+  stopReason: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  maxOutputTokens: number;
+  durationMs: number;
+};
+
 export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
   readonly providerName = "anthropic";
   readonly modelName: string;
   private readonly client: Anthropic;
+  private readonly onResponseMeta?: (meta: WeeklyAnalystResponseMeta) => void;
 
-  constructor(options: { apiKey?: string; model?: string } = {}) {
+  constructor(options: { apiKey?: string; model?: string; onResponseMeta?: (meta: WeeklyAnalystResponseMeta) => void } = {}) {
     const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       throw new WeeklyAnalystProviderError("ANTHROPIC_API_KEY is not set. Add it before constructing AnthropicWeeklyAnalystProvider.");
     }
     this.modelName = options.model ?? WEEKLY_ANALYST_MODEL;
     this.client = new Anthropic({ apiKey });
+    this.onResponseMeta = options.onResponseMeta;
   }
 
   async analyze(input: WeeklyAnalystInput): Promise<WeeklyAnalystAssessment> {
+    const startedAt = Date.now();
     const response = await this.client.messages.create({
       model: this.modelName,
       max_tokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS,
@@ -134,6 +150,14 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
           }
         }
       ]
+    });
+
+    this.onResponseMeta?.({
+      stopReason: response.stop_reason ?? null,
+      inputTokens: response.usage?.input_tokens ?? null,
+      outputTokens: response.usage?.output_tokens ?? null,
+      maxOutputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS,
+      durationMs: Date.now() - startedAt
     });
 
     const toolUse = response.content.find((block) => block.type === "tool_use" && block.name === ASSESSMENT_TOOL_NAME);
