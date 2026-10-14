@@ -163,7 +163,7 @@ test("the Anthropic provider reports stop reason / token usage to an optional ho
   const minimalInput = { report: { storageWeekEnding: "2026-10-02", dataCutoffAt: "2026-10-09T17:00:00.000Z" }, riskCandidates: [], opportunityCandidates: [], marketBackdrop: [], whatChanged: [], range: [], peers: [], news: [], outlook: [], sourcesFreshness: [], previousReportContext: null, evidenceAllowlist: [] };
   await assert.rejects(provider.analyze(minimalInput), /truncated by the max_tokens limit/);
   assert.equal(metas.length, 1);
-  assert.deepEqual({ ...metas[0], durationMs: 0 }, { stopReason: "max_tokens", inputTokens: 9000, outputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, maxOutputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, durationMs: 0 });
+  assert.deepEqual({ ...metas[0], durationMs: 0 }, { stopReason: "max_tokens", inputTokens: 9000, outputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, maxOutputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, durationMs: 0, decodedFields: [] });
 });
 
 test("the provider hook carries metadata only -- never prompt or response text", () => {

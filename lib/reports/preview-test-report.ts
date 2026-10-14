@@ -122,6 +122,8 @@ export type AiAttemptDiagnostic = {
   inputTokens: number | null;
   outputTokens: number | null;
   maxOutputTokens: number | null;
+  /** Fields decoded from JSON text before validation (decode-tool-input.ts). */
+  decodedFields: string[];
   durationMs: number;
 };
 
@@ -293,12 +295,12 @@ export async function runPreviewTestReport(deps: {
       try {
         assessment = await timed("ai_generation", () => provider.analyze(collected.analystInput));
         const meta = lastMeta as WeeklyAnalystResponseMeta | null;
-        diagnostics.aiAttempts.push({ attempt, outcome: "ok", stage: null, errorClass: null, message: null, httpStatus: null, timedOut: false, truncated: false, stopReason: meta?.stopReason ?? null, inputTokens: meta?.inputTokens ?? null, outputTokens: meta?.outputTokens ?? null, maxOutputTokens: meta?.maxOutputTokens ?? null, durationMs: Date.now() - started });
+        diagnostics.aiAttempts.push({ attempt, outcome: "ok", stage: null, errorClass: null, message: null, httpStatus: null, timedOut: false, truncated: false, stopReason: meta?.stopReason ?? null, inputTokens: meta?.inputTokens ?? null, outputTokens: meta?.outputTokens ?? null, maxOutputTokens: meta?.maxOutputTokens ?? null, decodedFields: meta?.decodedFields ?? [], durationMs: Date.now() - started });
       } catch (error) {
         const meta = lastMeta as WeeklyAnalystResponseMeta | null;
         const failedStage: "ai_generation" | "ai_validation" = error instanceof WeeklyAnalystValidationError ? "ai_validation" : "ai_generation";
         const truncated = meta?.stopReason === "max_tokens" || /max_tokens/.test(error instanceof Error ? error.message : "");
-        diagnostics.aiAttempts.push({ attempt, outcome: "failed", stage: failedStage, errorClass: errorClassOf(error), message: sanitizeDiagnosticMessage(error), httpStatus: httpStatusOf(error), timedOut: isTimeout(error), truncated, stopReason: meta?.stopReason ?? null, inputTokens: meta?.inputTokens ?? null, outputTokens: meta?.outputTokens ?? null, maxOutputTokens: meta?.maxOutputTokens ?? null, durationMs: Date.now() - started });
+        diagnostics.aiAttempts.push({ attempt, outcome: "failed", stage: failedStage, errorClass: errorClassOf(error), message: sanitizeDiagnosticMessage(error), httpStatus: httpStatusOf(error), timedOut: isTimeout(error), truncated, stopReason: meta?.stopReason ?? null, inputTokens: meta?.inputTokens ?? null, outputTokens: meta?.outputTokens ?? null, maxOutputTokens: meta?.maxOutputTokens ?? null, decodedFields: meta?.decodedFields ?? [], durationMs: Date.now() - started });
         lastError = error;
         lastFailedStage = failedStage;
         if (attempt < AI_MAX_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, AI_BASE_DELAY_MS * attempt));

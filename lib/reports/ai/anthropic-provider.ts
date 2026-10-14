@@ -5,6 +5,7 @@ import type { WeeklyAnalystAssessment, WeeklyAnalystInput } from "@/lib/reports/
 import { WEEKLY_ANALYST_SCHEMA_VERSION, validateWeeklyAnalystAssessment } from "@/lib/reports/ai-contract";
 import { WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, WEEKLY_ANALYST_MODEL } from "@/lib/reports/ai/model-config";
 import { SYSTEM_PROMPT, formatAnalystInputForPrompt } from "@/lib/reports/ai/prompt";
+import { decodeTextEncodedObjects } from "@/lib/reports/ai/decode-tool-input";
 
 const ASSESSMENT_TOOL_NAME = "submit_weekly_range_analyst_assessment";
 
@@ -41,10 +42,10 @@ const RISK_ROW_SCHEMA = {
   type: "object" as const,
   properties: {
     evidenceId: { type: "string", description: "The evidenceId of ONE supplied deterministic RISK candidate (listed under \"Deterministic risk candidates\"). Never an opportunity candidate or SUPPORTIVE signal." },
-    whyItMatters: { type: "string", description: "1-2 short plain-English sentences: how this risk affects Range." },
-    announcedAction: { type: "string", description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none." },
+    whyItMatters: { type: "string", maxLength: 250, description: "1-2 short plain-English sentences: how this risk affects Range. At most 250 characters." },
+    announcedAction: { type: "string", maxLength: 250, description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none. At most 250 characters." },
     announcedActionEvidenceIds: { type: "array", items: { type: "string" }, description: "Required with announcedAction: the Range guidance / News evidence ids it comes from." },
-    possibleResponse: { type: "string", description: "Optional. One short sentence on an option Range could consider -- phrased as an option, never as a decision." }
+    possibleResponse: { type: "string", maxLength: 250, description: "Optional. One short sentence on an option Range could consider -- phrased as an option, never as a decision. At most 250 characters." }
   },
   required: ["evidenceId", "whyItMatters"]
 };
@@ -86,6 +87,8 @@ export type WeeklyAnalystResponseMeta = {
   outputTokens: number | null;
   maxOutputTokens: number;
   durationMs: number;
+  /** Fields the model returned as JSON text and that were decoded before validation (see decode-tool-input.ts). */
+  decodedFields: string[];
 };
 
 export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
@@ -153,16 +156,20 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
       ]
     });
 
+    const toolUse = response.content.find((block) => block.type === "tool_use" && block.name === ASSESSMENT_TOOL_NAME);
+    // Decode before the hook so diagnostics can report it; the hook fires for every
+    // response (including truncated/invalid ones) before any check can throw.
+    const decoded = toolUse && toolUse.type === "tool_use" ? decodeTextEncodedObjects(toolUse.input as Record<string, unknown>) : null;
     this.onResponseMeta?.({
       stopReason: response.stop_reason ?? null,
       inputTokens: response.usage?.input_tokens ?? null,
       outputTokens: response.usage?.output_tokens ?? null,
       maxOutputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
+      decodedFields: decoded?.decodedFields ?? []
     });
 
-    const toolUse = response.content.find((block) => block.type === "tool_use" && block.name === ASSESSMENT_TOOL_NAME);
-    if (!toolUse || toolUse.type !== "tool_use") {
+    if (!toolUse || toolUse.type !== "tool_use" || !decoded) {
       throw new WeeklyAnalystProviderError("Anthropic response did not include the expected tool_use block.");
     }
     // Caught here, before validation, so a truncated response produces a
@@ -179,7 +186,7 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
 
     return validateWeeklyAnalystAssessment(
       {
-        ...(toolUse.input as Record<string, unknown>),
+        ...decoded.input,
         aiProvider: this.providerName,
         aiModel: this.modelName,
         schemaVersion: WEEKLY_ANALYST_SCHEMA_VERSION,
