@@ -34,7 +34,7 @@ const METRIC_MAP: Partial<Record<string, { key: GuidanceMetricKey; label: string
   opex_net_interest: { key: "cashInterestPerMcfe", label: "Net interest" },
   opex_exploration_expense: { key: "explorationMillion", label: "Exploration expense" },
   opex_taxes_other_than_income: { key: "productionTaxPerMcfe", label: "Production / ad valorem taxes" },
-  gas_differential: { key: "gasBasisPerMcf", label: "Natural gas differential vs. Henry Hub" },
+  gas_differential: { key: "gasBasisPerMcf", label: "Natural gas differential vs. NYMEX" },
   ngl_differential: { key: "nglDifferentialPerBbl", label: "NGL differential vs. Mont Belvieu" }
 };
 

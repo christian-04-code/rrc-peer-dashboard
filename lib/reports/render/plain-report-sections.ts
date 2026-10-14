@@ -204,11 +204,28 @@ export function buildRiskTable(payload: WeeklyReportPayload, assessment: WeeklyA
   });
 }
 
+/**
+ * Plain-English sentence for Range's guided gas differential, read from the guidance
+ * record's own low/high and sign (negative = below the NYMEX benchmark). Falls back to the
+ * record's display string when the bounds are missing or straddle zero.
+ */
+function describeGasDifferential(item: WeeklyEvidenceItem): string {
+  const low = typeof item.metadata.low === "number" ? item.metadata.low : null;
+  const high = typeof item.metadata.high === "number" ? item.metadata.high : null;
+  const source = String(item.metadata.source ?? "company guidance");
+  const period = item.period ? `${item.period} ` : "";
+  if (low !== null && high !== null && Math.sign(low) === Math.sign(high) && low !== 0) {
+    const [a, b] = [Math.abs(low), Math.abs(high)].sort((x, y) => x - y);
+    return `Range guides its ${period}natural gas price to average $${a.toFixed(2)} to $${b.toFixed(2)} per Mcf ${low < 0 ? "below" : "above"} NYMEX (${source}).`;
+  }
+  return `Range's ${period}gas differential guidance is ${item.displayValue} (${source}).`;
+}
+
 export function buildChartGaps(payload: WeeklyReportPayload): string[] {
   const differential = (payload.modules.range_company ?? []).find((item) => item.metricKey === "guidance:gas_differential");
   const gaps = [
     "Appalachian gas prices vs. Henry Hub: not charted. The dashboard has no verified Appalachian hub price feed (for example Eastern Gas South or Tetco M2); adding one requires a licensed price source." +
-      (differential ? ` For reference, Range's own ${differential.period ?? ""} guidance for its realized gas price is ${differential.displayValue} (${String(differential.metadata.source ?? "company guidance")}).`.replace("  ", " ") : "")
+      (differential ? ` For reference: ${describeGasDifferential(differential)}` : "")
   ];
   if (!payload.chartSeries) gaps.push("Trend charts are unavailable for this snapshot because it was frozen before chart history was stored.");
   return gaps;

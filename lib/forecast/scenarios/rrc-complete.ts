@@ -122,8 +122,8 @@ function unavailable(unit: string, period: string, notes: string): SourcedValue 
 /**
  * Looks up a management-guided value (differential, per-Mcfe cost, annual total, ...) for
  * a given year directly from the canonical guidance adapter, using the sign/units exactly
- * as disclosed (e.g. a guided "0.35-0.40/Mcf premium vs. Henry Hub" resolves to a +0.375
- * midpoint; an old "NYMEX minus $0.35-$0.45/Mcf" framing would have resolved to -0.40 --
+ * as disclosed (e.g. RRC's FY 2026 guided "($0.35) to ($0.40) relative to NYMEX" resolves to
+ * a -0.375 midpoint; a guided premium would resolve to a positive midpoint --
  * whichever the CURRENT guidance cycle actually says). Returns null when RRC did not guide
  * that metric for that year, so the caller falls back to the existing modeled/reported
  * anchor rather than fabricating a guided figure. Because this reads rrcManagementGuidance

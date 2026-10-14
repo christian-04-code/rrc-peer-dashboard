@@ -51,11 +51,14 @@ test("guidance midpoint math: a single point estimate is never turned into a fab
 
 // --- 6. Newest Q2 guidance supersedes stale Q1 guidance where updated ---
 
-test("gas differential guidance uses the current (Q2 2026, 'raised') cycle's sign and value -- a positive premium, not the prior cycle's discount", () => {
+// Corrected 2026-10-13: the Q2 2026 earnings release (Form 8-K Ex. 99.1) says Range "is
+// improving its 2026 natural gas differential to average ($0.35) to ($0.40) relative to
+// NYMEX" -- a DISCOUNT. The data had recorded it as a +$0.35-$0.40 premium vs. Henry Hub.
+test("gas differential guidance uses the current (Q2 2026, 'raised') cycle's official sign and value -- a ($0.35)-($0.40) discount to NYMEX", () => {
   const gas = guidanceTypes.findGuidance(guidance.rrcManagementGuidance, "gasBasisPerMcf", "2026");
-  assert.equal(gas.low, 0.35);
-  assert.equal(gas.high, 0.4);
-  assert.ok(Math.abs(gas.midpoint - 0.375) < 1e-9);
+  assert.equal(gas.low, -0.4);
+  assert.equal(gas.high, -0.35);
+  assert.ok(Math.abs(gas.midpoint - -0.375) < 1e-9);
   assert.match(gas.notes, /raised/);
 });
 
@@ -326,15 +329,15 @@ test("2028 maintenance strategy is the one case with a source-backed category: t
 
 // --- Realized pricing: management differential midpoints flow into realized gas/oil pricing ---
 
-test("management gas differential midpoint (current Q2 2026 cycle: +0.375 premium) flows into realized gas pricing for a guided year (2026, non-actual)", () => {
+test("management gas differential midpoint (current Q2 2026 cycle: -0.375 discount to NYMEX) flows into realized gas pricing for a guided year (2026, non-actual)", () => {
   const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
   const q3_2026 = scenario.periods.find((p) => p.period === "2026Q3");
-  assert.ok(Math.abs(q3_2026.pricing.gasBasisPerMcf.value - 0.375) < 1e-9);
+  assert.ok(Math.abs(q3_2026.pricing.gasBasisPerMcf.value - -0.375) < 1e-9);
   assert.equal(q3_2026.pricing.gasBasisPerMcf.source.classification, "guided");
   // Realized gas price = Henry Hub (3.75 modeled default, no live/custom price supplied) + guided differential.
   const { calculatePricing } = load("lib/forecast/calculations.ts");
   const result = calculatePricing(q3_2026, []);
-  assert.ok(Math.abs(result.realizedGasPerMcf - (3.75 + 0.375)) < 1e-9);
+  assert.ok(Math.abs(result.realizedGasPerMcf - (3.75 - 0.375)) < 1e-9);
 });
 
 test("oil differential is not guided this cycle, so it falls back to the existing modeled (Q2 2026 reported, held flat) anchor rather than the prior cycle's guided figure", () => {
@@ -347,7 +350,7 @@ test("oil differential is not guided this cycle, so it falls back to the existin
 // Precedence corrected (feat/rrc-q2-baseline follow-up, 2026-08-12): a year RRC did not
 // separately guide (2027) no longer falls straight to the single-quarter Q2 2026 REALIZED
 // differential for a metric management DOES currently guide -- gasBasisPerMcf instead
-// extends the current cycle's own guided figure (FY 2026, +0.375) flat, still classified
+// extends the current cycle's own guided figure (FY 2026, -0.375) flat, still classified
 // "guided" (not "modeled"), because management's own forward view is better evidence than
 // one volatile realized quarter. oilDifferentialPerBbl is unaffected: RRC guides no oil
 // differential in any year of the current cycle, so it still falls through to the Q2 2026
@@ -355,7 +358,7 @@ test("oil differential is not guided this cycle, so it falls back to the existin
 test("a year RRC did not separately guide (2027) extends the current cycle's own guided gas differential rather than falling back to the single-quarter Q2 2026 realized outcome; oil (unguided any year) still falls back to the reported anchor", () => {
   const scenario = rrcComplete.buildRrcCompleteScenario("maintenance", {});
   const q2_2027 = scenario.periods.find((p) => p.period === "2027Q2");
-  assert.ok(Math.abs(q2_2027.pricing.gasBasisPerMcf.value - 0.375) < 1e-9);
+  assert.ok(Math.abs(q2_2027.pricing.gasBasisPerMcf.value - -0.375) < 1e-9);
   assert.equal(q2_2027.pricing.gasBasisPerMcf.source.classification, "guided");
   assert.match(q2_2027.pricing.gasBasisPerMcf.source.notes, /did not separately guide this differential for 2027/);
   assert.equal(q2_2027.pricing.oilDifferentialPerBbl.value, -9.62);
@@ -371,10 +374,10 @@ test("a user-entered pricing differential supersedes guidance and is classified 
   const overridden = rrcAnnual.runRrcAnnualForecast(baseRequest({ pricing: { 2026: { gasBasisPerMcf: -0.2 } } }));
   const q3Guided = guided.quarterly.find((p) => p.period === "2026Q3");
   const q3Overridden = overridden.quarterly.find((p) => p.period === "2026Q3");
-  // Guided differential is +0.375; user override is -0.2 -- a -0.575 shift in the differential
-  // should produce exactly a -0.575 shift in realized gas price (all else held equal).
+  // Guided differential is -0.375; user override is -0.2 -- a +0.175 shift in the differential
+  // should produce exactly a +0.175 shift in realized gas price (all else held equal).
   const delta = q3Overridden.pricing.realizedGasPerMcf - q3Guided.pricing.realizedGasPerMcf;
-  assert.ok(Math.abs(delta - (-0.2 - 0.375)) < 1e-9, `expected realized gas price to shift by exactly the differential change (-0.575), got ${delta}`);
+  assert.ok(Math.abs(delta - (-0.2 - -0.375)) < 1e-9, `expected realized gas price to shift by exactly the differential change (+0.175), got ${delta}`);
 
   const resolved = rrcAnnual.resolveRrcAnnualInputs(baseRequest({ pricing: { 2026: { gasBasisPerMcf: -0.2 } } }));
   assert.equal(resolved.annualOverrides["2026"].gasBasisPerMcf.value, -0.2);
@@ -465,15 +468,17 @@ test("negative forecast net debt (net cash) is floored to $0 for the EV/EBITDAX 
 // Expected values below were regenerated twice on feat/rrc-q2-baseline (2026-08-12): once
 // when the forecast engine's detailed anchor moved from Q1 2026 to Q2 2026 (rrc-baseline.ts's
 // rrcQ2_2026Baseline), and again when the gas differential's no-guidance fallback was
-// corrected to extend RRC's own current guidance (+0.375, FY 2026) into 2027 rather than
+// corrected to extend RRC's own current guidance (FY 2026) into 2027 rather than
 // carrying the single-quarter Q2 2026 realized differential (-0.47) flat -- see
-// guidedOrCurrentCycleValue in rrc-complete.ts.
+// guidedOrCurrentCycleValue in rrc-complete.ts. Regenerated a third time 2026-10-13 when that
+// FY 2026 guidance was corrected from a +0.375 premium (data-entry error) to the officially
+// released -0.375 discount to NYMEX, and NGL guidance from 2.50 to the +2.00-2.50 range.
 test("operating forecast outputs (production/revenue/EBITDAX/CapEx/FCF) are completely unaffected by the net-debt floor", () => {
   const result = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
-  assert.equal(result.annual["2027"].revenueMillion, 3996.842541304887);
-  assert.equal(result.annual["2027"].ebitdaxMillion, 2238.0841069637336);
+  assert.equal(result.annual["2027"].revenueMillion, 3516.7827022917186);
+  assert.equal(result.annual["2027"].ebitdaxMillion, 1760.791288894423);
   assert.equal(result.annual["2027"].capexMillion, 675);
-  assert.equal(result.annual["2027"].freeCashFlowMillion, 1374.65506054591);
+  assert.equal(result.annual["2027"].freeCashFlowMillion, 925.9998115607575);
 });
 
 test("displayed forecast net cash (forecastEndingNetDebtMillion) is identical whether or not the floor binds elsewhere -- the floor never touches the reported balance-sheet figure", () => {
@@ -481,8 +486,8 @@ test("displayed forecast net cash (forecastEndingNetDebtMillion) is identical wh
   const result2027 = rrcAnnual.runRrcAnnualForecast(baseRequest({ valuation: { targetEvToEbitdax: 5.5, forwardYear: "2027" } }));
   // 2026 (floor does not bind) and 2027 (floor binds) both report their own true ending net
   // debt figure unmodified -- confirms the floor is scoped to the valuation bridge only.
-  assert.equal(result2026.valuation.forecastEndingNetDebtMillion, 238.39067471711746);
-  assert.equal(result2027.valuation.forecastEndingNetDebtMillion, -1041.0643858287926);
+  assert.equal(result2026.valuation.forecastEndingNetDebtMillion, 464.7395170984609);
+  assert.equal(result2027.valuation.forecastEndingNetDebtMillion, -366.06029446229695);
 });
 
 test("implied share price no longer increases solely because unallocated forecast cash accumulates beyond zero net debt (2027 vs. 2028, both net-cash years, same multiple)", () => {

@@ -94,7 +94,8 @@ const METRICS: MetricSpec[] = [
 function guidanceDisplayValue(record: GuidanceRecord): string {
   if ([record.low, record.midpoint, record.high].every((v) => v === null)) return record.managementWording ?? record.note ?? "Qualitative guidance";
   if (record.low === null && record.high === null) return record.managementWording ?? `${record.midpoint} ${record.unit}`.trim();
-  return `${record.low ?? "--"}-${record.high ?? "--"} ${record.unit}`.trim();
+  const separator = (record.low ?? 0) < 0 || (record.high ?? 0) < 0 ? " to " : "-";
+  return `${record.low ?? "--"}${separator}${record.high ?? "--"} ${record.unit}`.trim();
 }
 
 function guidanceEvidenceId(record: GuidanceRecord): string {
@@ -169,7 +170,7 @@ export function collectRangeCompanyEvidence(now = new Date()): RangeCompanyColle
       comparisons: [],
       rangeDrivers: ["gas_pricing"],
       materialityInputs: { isNewThisWeek: false, changedSincePreviousReport: false, riskSeverityRank: null, riskState: null, rangeImpactDirection: null, rangeImpactStrength: null, comparisonMagnitudePct: null },
-      metadata: { source: record.source, status: record.status ?? null, reportingCycle: record.reportingCycle ?? null }
+      metadata: { source: record.source, status: record.status ?? null, reportingCycle: record.reportingCycle ?? null, low: record.low, high: record.high }
     });
   }
 

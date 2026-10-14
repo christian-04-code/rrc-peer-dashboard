@@ -119,7 +119,10 @@ function formattedRecordValue(record: GuidanceRecord): string {
   }
   if (record.low !== null && record.high !== null) {
     if (record.unit === "$MM") return `$${formatNumber(record.low)}–$${formatNumber(record.high)}MM`;
-    return `${formatNumber(record.low)}–${formatNumber(record.high)} ${record.unit}`;
+    // "to" rather than a dash when either end is negative, so a discount range reads
+    // "-0.4 to -0.35" instead of the ambiguous "-0.4–-0.35".
+    const separator = record.low < 0 || record.high < 0 ? " to " : "–";
+    return `${formatNumber(record.low)}${separator}${formatNumber(record.high)} ${record.unit}`;
   }
   const point = record.midpoint ?? record.reportedValue ?? record.high ?? record.low;
   if (point !== null && point !== undefined) {

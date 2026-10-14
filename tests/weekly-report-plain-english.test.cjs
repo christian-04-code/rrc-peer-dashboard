@@ -216,3 +216,31 @@ test("rendered report has the 4-column risk table and keeps announced vs. possib
   assert.match(html, /Helps Range/);
   assert.match(html, /Hurts Range/);
 });
+
+// Guidance correction (2026-10-13) against Range's Q2 2026 earnings release (Form 8-K Ex. 99.1)
+// and Q2 2026 10-Q -- the report and the dashboard must both show the official figures.
+test("Range gas differential guidance is the released ($0.35)-($0.40) discount to NYMEX in the report and on the dashboard", () => {
+  const { items } = collectRangeCompanyEvidence(new Date("2026-10-13T00:00:00Z"));
+  const gas = items.find((i) => i.metricKey === "guidance:gas_differential");
+  assert.equal(gas.displayValue, "-0.4 to -0.35 $/Mcf vs. NYMEX");
+  assert.ok(Math.abs(gas.currentValue - -0.375) < 1e-9);
+  const note = buildChartGaps({ modules: { range_company: items }, chartSeries: {} })[0];
+  assert.match(note, /average \$0\.35 to \$0\.40 per Mcf below NYMEX/);
+  assert.doesNotMatch(note, /premium/);
+
+  const { getCompanyGuidanceSections } = load("lib/dashboard/guidance.ts");
+  const rows = getCompanyGuidanceSections("RRC").flatMap((s) => s.rows ?? s.items ?? []);
+  const dashGas = rows.find((r) => /Gas Differential/.test(r.label));
+  assert.equal(dashGas.value, "-0.4 to -0.35 $/Mcf vs. NYMEX");
+  assert.match(dashGas.detail, /Form 8-K, Ex\. 99\.1.*2026-07-21/);
+});
+
+test("NGL guidance is the released +$2.00 to +$2.50 range and the hedging claim carries only what the 10-Q states", () => {
+  const { items } = collectRangeCompanyEvidence(new Date("2026-10-13T00:00:00Z"));
+  const ngl = items.find((i) => i.metricKey === "guidance:ngl_differential");
+  assert.equal(ngl.displayValue, "2-2.5 $/bbl premium vs. Mont Belvieu");
+  const hedge = items.find((i) => i.metricKey === "guidance:hedging_summary");
+  assert.equal(hedge.period, "2H 2026", "the unsupported '/ FY 2027' period label was removed");
+  assert.match(hedge.displayValue, /more than 25% of its projected natural gas production for the remainder of 2026/);
+  assert.match(hedge.displayValue, /settle through December 2030/);
+});
