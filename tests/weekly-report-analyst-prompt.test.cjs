@@ -126,7 +126,8 @@ test("SYSTEM_PROMPT restricts riskTable to the supplied risk candidates -- never
 });
 
 test("formatAnalystInputForPrompt repeats the exact riskTable-eligible ids and excludes opportunity ids from that line", () => {
-  const input = baseInput();
+  const input = baseInput({ opportunityCandidates: [{ evidenceId: "deterministic_risk_opportunity:gas_pricing", driver: "gas_pricing", label: "Natural Gas Pricing", state: "SUPPORTIVE", rank: 5, reason: "Henry Hub up." }] });
+  assert.ok(input.riskCandidates.length > 0 && input.opportunityCandidates.length > 0);
   const text = formatAnalystInputForPrompt(input);
   const line = text.split("\n").find((l) => l.startsWith("riskTable rows may cite ONLY"));
   assert.ok(line, "the riskTable allowed-ids line must be present");
