@@ -1,5 +1,6 @@
 import type { CalloutItem, KpiTile, PeerBarPanel, RiskTableRow, TablePlan, WeeklyReportRenderModel } from "@/lib/reports/render/render-model";
 import { renderColumnChartSvg, renderLineChartSvg, renderPeerPanelSvg } from "@/lib/reports/render/report-charts";
+import { REPORT_FONT_FAMILY, loadReportFontFaceCss } from "@/lib/reports/render/report-font";
 
 /**
  * Weekly report HTML/CSS template -- a pure function of a
@@ -34,7 +35,9 @@ const NEGATIVE = "#b42318";
 const NEGATIVE_BG = "#fdecea";
 const MIXED = "#9a6700";
 const MIXED_BG = "#fff4d6";
-const SANS = "Arial, Helvetica, sans-serif";
+// Embedded Arimo first (Arial-metric-compatible, see report-font.ts), so local and
+// Vercel serverless renders lay out identically; Arial only as a fallback.
+const SANS = `"${REPORT_FONT_FAMILY}", Arial, Helvetica, sans-serif`;
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -220,6 +223,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
 <meta charset="utf-8" />
 <title>${escapeHtml(model.identity.title)}</title>
 <style>
+  ${loadReportFontFaceCss()}
   @page { size: Letter; margin: 0.5in 0.6in 0.6in 0.6in; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }

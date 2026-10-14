@@ -9,7 +9,9 @@ import type { ColumnChartPlan, LineChartPlan, PeerBarPanel } from "@/lib/reports
  * gap (the line simply breaks) rather than being bridged.
  */
 
-const FONT = "Arial, Helvetica, sans-serif";
+// Same embedded font as the page body (report-font.ts); single quotes because this is
+// interpolated into double-quoted SVG attributes.
+const FONT = "'Report Sans', Arial, Helvetica, sans-serif";
 const INK = "#0b2947";
 const AXIS_TEXT = "#5b7288";
 const GRID = "#e3eaf1";

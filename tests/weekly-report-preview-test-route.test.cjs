@@ -171,3 +171,13 @@ test("the provider hook carries metadata only -- never prompt or response text",
   const hookCall = source.slice(source.indexOf("this.onResponseMeta?.("), source.indexOf("});", source.indexOf("this.onResponseMeta?.(")));
   assert.doesNotMatch(hookCall, /content|SYSTEM_PROMPT|formatAnalystInputForPrompt|toolUse/);
 });
+
+test("over-length PDF artifacts go only into the authenticated response body, never into logs", () => {
+  const source = fs.readFileSync("app/api/reports/preview-test/route.ts", "utf8");
+  const summary = source.slice(source.indexOf("const summary ="), source.indexOf('console.log("[reports/preview-test]", JSON.stringify(summary));'));
+  assert.ok(summary.length > 0);
+  assert.doesNotMatch(summary, /pdf\b|pdfBase64|html|assessment|payload|renderModel|overflow\.(standard|reduced)\.pdf/i);
+  assert.match(summary, /overflowPages/);
+  const logCalls = source.match(/console\.log\([^;]*;/g) ?? [];
+  for (const call of logCalls) assert.doesNotMatch(call, /pdf|html|assessment|payload|result\)/i, call);
+});

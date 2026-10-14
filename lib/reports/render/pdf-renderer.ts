@@ -108,6 +108,9 @@ export class ChromiumPdfRenderer implements PdfRenderer {
     try {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "load" });
+      // The report embeds its font as a data-URI @font-face (report-font.ts); wait until
+      // it is actually loaded so the PDF never prints with a fallback font's metrics.
+      await page.evaluate("document.fonts.ready.then(() => true)");
       const pdf = Buffer.from(
         await page.pdf({
           format: "Letter",

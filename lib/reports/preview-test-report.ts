@@ -14,6 +14,9 @@ import { WeeklyAnalystProviderError } from "@/lib/reports/ai/provider";
 import { PdfRendererError } from "@/lib/reports/render/pdf-renderer";
 import type { WeeklyAnalystResponseMeta } from "@/lib/reports/ai/anthropic-provider";
 import { renderWeeklyReportPdf } from "@/lib/reports/render/weekly-report-pdf-service";
+import { buildWeeklyReportRenderModel } from "@/lib/reports/render/render-model-builder";
+import { renderReportHtml } from "@/lib/reports/render/html-template";
+import { loadReportFontFaceCss } from "@/lib/reports/render/report-font";
 import type { PdfRenderer } from "@/lib/reports/render/pdf-renderer";
 import type { WeeklyReportRenderModel } from "@/lib/reports/render/render-model";
 import { isValidStorageWeekEnding, type WeeklyReportPayload } from "@/lib/reports/weekly-report-types";
@@ -130,6 +133,21 @@ export type AiAttemptDiagnostic = {
 export type PreviewTestDiagnostics = {
   timingsMs: Partial<Record<PreviewTestStage, number>>;
   aiAttempts: AiAttemptDiagnostic[];
+  /** True when the Arimo @font-face was loaded into the report HTML (report-font.ts) -- false means the bundle is missing the font file. */
+  reportFontEmbedded: boolean;
+};
+
+/**
+ * Inspection artifacts for an over-length PDF -- returned ONLY in the authenticated
+ * Preview test response (never logged, never stored): both tiers' real PDFs and page
+ * counts, the standard tier's exact HTML and render model, and the validated AI output
+ * and payload, so the overflow can be reproduced locally with the identical input.
+ */
+export type PdfOverflowArtifacts = {
+  standard: { pageCount: number; pdf: Buffer; html: string; renderModel: WeeklyReportRenderModel };
+  reduced: { pageCount: number; pdf: Buffer };
+  assessment: WeeklyAnalystAssessment;
+  payload: WeeklyReportPayload;
 };
 
 export type PreviewTestReportResult =
@@ -150,7 +168,7 @@ export type PreviewTestReportResult =
       pdf: Buffer;
       diagnostics: PreviewTestDiagnostics;
     }
-  | { status: "not_ready"; stage: PreviewTestStage; reason: string; diagnostics: PreviewTestDiagnostics }
+  | { status: "not_ready"; stage: PreviewTestStage; reason: string; diagnostics: PreviewTestDiagnostics; overflow?: PdfOverflowArtifacts }
   | { status: "failed"; stage: PreviewTestStage; error: { errorClass: string; message: string }; diagnostics: PreviewTestDiagnostics };
 
 const MAX_DIAGNOSTIC_MESSAGE_CHARS = 400;
@@ -224,7 +242,7 @@ export async function runPreviewTestReport(deps: {
 }): Promise<PreviewTestReportResult> {
   const now = deps.now ?? new Date();
   const deadlineMs = deps.deadlineMs ?? Date.now() + 280_000;
-  const diagnostics: PreviewTestDiagnostics = { timingsMs: {}, aiAttempts: [] };
+  const diagnostics: PreviewTestDiagnostics = { timingsMs: {}, aiAttempts: [], reportFontEmbedded: loadReportFontFaceCss().length > 0 };
   let stage: PreviewTestStage = "read_only_check";
   const timed = async <T>(name: PreviewTestStage, fn: () => Promise<T>): Promise<T> => {
     stage = name;
@@ -310,7 +328,23 @@ export async function runPreviewTestReport(deps: {
     const finalAssessment: WeeklyAnalystAssessment = assessment;
 
     const rendered = await timed("pdf_render", () => renderWeeklyReportPdf(collected.payload, finalAssessment, deps.pdfRenderer, deps.logoDataUri));
-    if (rendered.status !== "rendered") return { status: "not_ready", stage: "pdf_render", reason: rendered.reason, diagnostics };
+    if (rendered.status !== "rendered") {
+      // Re-render both tiers once more (same inputs, same renderer) to hand back the actual
+      // over-length PDFs for inspection; renderWeeklyReportPdf itself returns no bytes on failure.
+      const overflow = await timed("pdf_render", async (): Promise<PdfOverflowArtifacts> => {
+        const standardModel = buildWeeklyReportRenderModel(collected.payload, finalAssessment, "standard");
+        const standardHtml = renderReportHtml(standardModel, deps.logoDataUri);
+        const standardPdf = await deps.pdfRenderer.renderPdf(standardHtml);
+        const reducedPdf = await deps.pdfRenderer.renderPdf(renderReportHtml(buildWeeklyReportRenderModel(collected.payload, finalAssessment, "reduced"), deps.logoDataUri));
+        return {
+          standard: { pageCount: standardPdf.pageCount, pdf: standardPdf.pdf, html: standardHtml, renderModel: standardModel },
+          reduced: { pageCount: reducedPdf.pageCount, pdf: reducedPdf.pdf },
+          assessment: finalAssessment,
+          payload: collected.payload
+        };
+      });
+      return { status: "not_ready", stage: "pdf_render", reason: rendered.reason, diagnostics, overflow };
+    }
 
     return {
       status: "rendered",

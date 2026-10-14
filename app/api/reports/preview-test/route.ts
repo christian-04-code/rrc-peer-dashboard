@@ -53,12 +53,31 @@ export async function POST(request: Request) {
       deadlineMs: requestStartedAt + maxDuration * 1000 - DEADLINE_MARGIN_MS
     });
 
+    // Logs carry status/stage/reason/diagnostics only -- never PDFs, HTML, AI output, or payload.
     const summary =
       result.status === "rendered"
         ? { status: result.status, week: result.storageWeekEnding, pages: result.pageCount, model: result.aiModel, diagnostics: result.diagnostics }
-        : result;
+        : result.status === "not_ready"
+          ? { status: result.status, stage: result.stage, reason: result.reason, diagnostics: result.diagnostics, overflowPages: result.overflow ? { standard: result.overflow.standard.pageCount, reduced: result.overflow.reduced.pageCount } : null }
+          : { status: result.status, stage: result.stage, error: result.error, diagnostics: result.diagnostics };
     console.log("[reports/preview-test]", JSON.stringify(summary));
 
+    if (result.status === "not_ready" && result.overflow) {
+      const { overflow, ...rest } = result;
+      return NextResponse.json(
+        {
+          ...rest,
+          publishedOrPersisted: false,
+          overflow: {
+            standard: { pageCount: overflow.standard.pageCount, pdfBase64: overflow.standard.pdf.toString("base64"), html: overflow.standard.html, renderModel: overflow.standard.renderModel },
+            reduced: { pageCount: overflow.reduced.pageCount, pdfBase64: overflow.reduced.pdf.toString("base64") },
+            assessment: overflow.assessment,
+            payload: overflow.payload
+          }
+        },
+        { status: 422 }
+      );
+    }
     if (result.status !== "rendered") return NextResponse.json(result, { status: result.status === "failed" ? 500 : 422 });
     const { pdf, ...rest } = result;
     return NextResponse.json({ ...rest, publishedOrPersisted: false, pdfBase64: pdf.toString("base64") });

@@ -24,9 +24,11 @@ const nextConfig = {
     // per-route rather than global so unrelated API routes never carry
     // chromium's ~65MB of binary assets into their own deployment bundle.
     outputFileTracingIncludes: {
-      "/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"],
+      // assets/fonts/** -- the report's embedded Arimo font (lib/reports/render/report-font.ts),
+      // read at runtime via fs, so it must be traced into both report routes' bundles.
+      "/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**", "./assets/fonts/**"],
       // Preview-only, non-publishing report test route (lib/reports/preview-test-report.ts).
-      "/api/reports/preview-test": ["./node_modules/@sparticuz/chromium/bin/**"]
+      "/api/reports/preview-test": ["./node_modules/@sparticuz/chromium/bin/**", "./assets/fonts/**"]
     }
   }
 };
