@@ -99,6 +99,23 @@ test("errorClassOf names custom error classes even though none of them set .name
   assert.equal(errorClassOf(new TypeError("x")), "TypeError");
 });
 
+test("errorClassOf stays readable when the production build minifies class names (real run reported 't' and 'r')", () => {
+  // Simulate minification: subclasses whose constructor names are single letters.
+  class t extends WeeklyAnalystValidationError {}
+  class r extends WeeklyAnalystProviderError {}
+  assert.equal(errorClassOf(new t("x")), "WeeklyAnalystValidationError");
+  assert.equal(errorClassOf(new r("x")), "WeeklyAnalystProviderError");
+  const Anthropic = require("@anthropic-ai/sdk").default ?? require("@anthropic-ai/sdk");
+  assert.equal(errorClassOf(new Anthropic.APIConnectionTimeoutError()), "AnthropicTimeoutError");
+});
+
+test("sanitizeDiagnosticMessage keeps configuration setting NAMES readable while still hiding secret-like values", () => {
+  const msg = sanitizeDiagnosticMessage(new Error("Anthropic response was truncated by the max_tokens limit -- raise WEEKLY_ANALYST_MAX_OUTPUT_TOKENS."));
+  assert.match(msg, /WEEKLY_ANALYST_MAX_OUTPUT_TOKENS/);
+  assert.doesNotMatch(sanitizeDiagnosticMessage("token 9f2c4e7a1b3d5f6e8a0c2e4f6a8b0d1c3e5f7a9b"), /9f2c4e7a/);
+  assert.doesNotMatch(sanitizeDiagnosticMessage("secret QWxhZGRpbjpvcGVuIHNlc2FtZSBhbmQgbW9yZSBzdHVmZg=="), /QWxhZGRp/);
+});
+
 test("ReadOnlyClient switches the session to read-only BEFORE connect() resolves, and a failed SET fails the connection", async () => {
   const { Client } = require("pg");
   const original = { connect: Client.prototype.connect, query: Client.prototype.query };
@@ -135,17 +152,18 @@ test("the read-only pool opens every session through ReadOnlyClient (no fire-and
 
 test("the Anthropic provider reports stop reason / token usage to an optional hook, and still rejects a truncated response", async () => {
   const { AnthropicWeeklyAnalystProvider } = load("lib/reports/ai/anthropic-provider.ts");
+  const { WEEKLY_ANALYST_MAX_OUTPUT_TOKENS } = load("lib/reports/ai/model-config.ts");
   const metas = [];
   const provider = new AnthropicWeeklyAnalystProvider({ apiKey: "test-key", onResponseMeta: (m) => metas.push(m) });
   provider.client.messages.create = async () => ({
     stop_reason: "max_tokens",
-    usage: { input_tokens: 9000, output_tokens: 5120 },
+    usage: { input_tokens: 9000, output_tokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS },
     content: [{ type: "tool_use", name: "submit_weekly_range_analyst_assessment", input: {} }]
   });
   const minimalInput = { report: { storageWeekEnding: "2026-10-02", dataCutoffAt: "2026-10-09T17:00:00.000Z" }, riskCandidates: [], opportunityCandidates: [], marketBackdrop: [], whatChanged: [], range: [], peers: [], news: [], outlook: [], sourcesFreshness: [], previousReportContext: null, evidenceAllowlist: [] };
   await assert.rejects(provider.analyze(minimalInput), /truncated by the max_tokens limit/);
   assert.equal(metas.length, 1);
-  assert.deepEqual({ ...metas[0], durationMs: 0 }, { stopReason: "max_tokens", inputTokens: 9000, outputTokens: 5120, maxOutputTokens: 5120, durationMs: 0 });
+  assert.deepEqual({ ...metas[0], durationMs: 0 }, { stopReason: "max_tokens", inputTokens: 9000, outputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, maxOutputTokens: WEEKLY_ANALYST_MAX_OUTPUT_TOKENS, durationMs: 0 });
 });
 
 test("the provider hook carries metadata only -- never prompt or response text", () => {

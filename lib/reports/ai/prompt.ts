@@ -34,7 +34,7 @@ Your job is prioritization, synthesis, interpretation, and narrative framing -- 
 18. investorQuestions.responseFramework, if you include one, must explicitly read as IR preparation based on public information -- never as an official Range position, management commitment, confirmed guidance, or a statement Range has actually made. Do not invent what management would say. If the evidence doesn't support a reasonable preparation framework, omit responseFramework entirely for that question rather than guessing one.
 
 19. Each whatChanged item must include "impact": "positive" if the change helps Range, "negative" if it hurts Range, or "mixed" if it genuinely cuts both ways. Base this only on the supplied evidence. The first sentence of the assessment should say what happened; the next should say why it helps or hurts Range.
-20. riskTable: write one row for each of the supplied risk candidates you consider most important (at most one row per candidate, cite its evidenceId; you do NOT choose the risk level -- the report takes it from the risk engine). For each row:
+20. riskTable: write one row for each of the supplied risk candidates you consider most important (at most one row per candidate, cite its evidenceId; you do NOT choose the risk level -- the report takes it from the risk engine). Each row's evidenceId MUST be one of the ids listed under "Deterministic risk candidates" -- the exact allowed ids are repeated in the riskTable line at the end of the evidence. NEVER put an opportunity candidate or any SUPPORTIVE signal in riskTable, even if it is also a concern: opportunities belong only in biggestOpportunity. If there are no risk candidates, return an empty riskTable. For each row:
    - whyItMatters: 1-2 short sentences on how this risk affects Range's cash flow, prices, or plans.
    - announcedAction: ONLY something Range has actually announced, taken from the supplied "Range announced guidance" records or an analyzed News item, and cite those ids in announcedActionEvidenceIds. If nothing announced addresses this risk, leave announcedAction out. Never present a guess as an announcement.
    - possibleResponse: 1 short sentence on an option Range could consider (for example hedging more volumes, adjusting activity, or using sales agreements). Phrase it as an option ("could consider..."), never as a decision Range has made.
@@ -101,6 +101,9 @@ export function formatAnalystInputForPrompt(input: WeeklyAnalystInput): string {
     input.previousReportContext
       ? `Previous published report's bottom line (context only, for identifying what changed -- not current data): "${input.previousReportContext.bottomLine}" (week ending ${input.previousReportContext.storageWeekEnding})`
       : "No previous published report exists -- this is the first weekly report; do not claim anything changed from a prior report.",
+    input.riskCandidates.length > 0
+      ? `riskTable rows may cite ONLY these risk-candidate ids (never an opportunity/SUPPORTIVE id): ${input.riskCandidates.map((candidate) => candidate.evidenceId).join(", ")}`
+      : "riskTable: no risk candidates were supplied this week -- return an empty riskTable.",
     `Complete evidence id allowlist (${input.evidenceAllowlist.length} ids) -- you may cite ONLY ids from this list:\n${input.evidenceAllowlist.join(", ")}`
   ];
   return sections.join("\n\n");

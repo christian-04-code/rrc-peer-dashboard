@@ -8,7 +8,10 @@ import { computeWeeklyChanges } from "@/lib/reports/changes";
 import { selectAnalystEvidence } from "@/lib/reports/analyst-evidence-selection";
 import { getPreviousPublishedSnapshot } from "@/lib/reports/persistence/report-repo";
 import { getLatestAnalysisForSnapshot } from "@/lib/reports/persistence/analysis-repo";
+import Anthropic from "@anthropic-ai/sdk";
 import { DEFAULT_ANALYSIS_RETRY_CONFIG } from "@/lib/news/ai/retry";
+import { WeeklyAnalystProviderError } from "@/lib/reports/ai/provider";
+import { PdfRendererError } from "@/lib/reports/render/pdf-renderer";
 import type { WeeklyAnalystResponseMeta } from "@/lib/reports/ai/anthropic-provider";
 import { renderWeeklyReportPdf } from "@/lib/reports/render/weekly-report-pdf-service";
 import type { PdfRenderer } from "@/lib/reports/render/pdf-renderer";
@@ -162,13 +165,33 @@ export function sanitizeDiagnosticMessage(raw: unknown): string {
     .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, "[url]")
     .replace(/sk-ant-[A-Za-z0-9_-]+/g, "[key]")
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
-    .replace(/[A-Za-z0-9_+/=-]{32,}/g, "[redacted]")
+    // Long opaque runs (hex/base64 secrets, hashes) are hidden; SCREAMING_SNAKE_CASE
+    // config names like WEEKLY_ANALYST_MAX_OUTPUT_TOKENS are kept -- a setting's NAME
+    // is never a secret, and hiding it made a real failure message unreadable.
+    .replace(/[A-Za-z0-9_+/=-]{32,}/g, (run) => (/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/.test(run) ? run : "[redacted]"))
     .slice(0, MAX_DIAGNOSTIC_MESSAGE_CHARS);
 }
 
-/** Every custom error here extends Error without setting `name`, so the constructor name is the only reliable class label. */
+/**
+ * Readable error labels by instanceof -- NOT constructor.name, which Vercel's
+ * production build minifies (a real Preview run reported "t" and "r"). Most-specific
+ * classes first (Anthropic's timeout error extends its connection error, which
+ * extends APIError).
+ */
+const ERROR_LABELS: [new (...args: never[]) => Error, string][] = [
+  [WeeklyAnalystValidationError, "WeeklyAnalystValidationError"],
+  [WeeklyAnalystProviderError, "WeeklyAnalystProviderError"],
+  [PdfRendererError, "PdfRendererError"],
+  [PreviewTestSafetyError, "PreviewTestSafetyError"],
+  [Anthropic.APIConnectionTimeoutError, "AnthropicTimeoutError"],
+  [Anthropic.APIConnectionError, "AnthropicConnectionError"],
+  [Anthropic.RateLimitError, "AnthropicRateLimitError"],
+  [Anthropic.APIError, "AnthropicAPIError"]
+];
+
 export function errorClassOf(error: unknown): string {
-  if (error instanceof Error) return error.constructor?.name && error.constructor.name !== "Error" ? error.constructor.name : error.name;
+  for (const [cls, label] of ERROR_LABELS) if (error instanceof cls) return label;
+  if (error instanceof Error) return error.name || "Error";
   return typeof error;
 }
 
@@ -178,8 +201,7 @@ function httpStatusOf(error: unknown): number | null {
 }
 
 function isTimeout(error: unknown): boolean {
-  const cls = errorClassOf(error);
-  return /timeout/i.test(cls) || /timed? ?out/i.test(error instanceof Error ? error.message : "");
+  return error instanceof Anthropic.APIConnectionTimeoutError || /timed? ?out/i.test(error instanceof Error ? error.message : "");
 }
 
 /** Same attempt count / backoff as production's DEFAULT_ANALYSIS_RETRY_CONFIG -- only the bookkeeping differs. */

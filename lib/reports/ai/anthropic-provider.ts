@@ -40,7 +40,7 @@ const WHAT_CHANGED_ITEM_SCHEMA = {
 const RISK_ROW_SCHEMA = {
   type: "object" as const,
   properties: {
-    evidenceId: { type: "string", description: "The evidenceId of ONE supplied risk candidate." },
+    evidenceId: { type: "string", description: "The evidenceId of ONE supplied deterministic RISK candidate (listed under \"Deterministic risk candidates\"). Never an opportunity candidate or SUPPORTIVE signal." },
     whyItMatters: { type: "string", description: "1-2 short plain-English sentences: how this risk affects Range." },
     announcedAction: { type: "string", description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none." },
     announcedActionEvidenceIds: { type: "array", items: { type: "string" }, description: "Required with announcedAction: the Range guidance / News evidence ids it comes from." },
@@ -136,7 +136,8 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
                 type: "array",
                 items: RISK_ROW_SCHEMA,
                 maxItems: 5,
-                description: "One row per important supplied risk candidate (most important first). Keep announced actions and possible responses strictly separate."
+                description:
+                  "One row per important supplied deterministic RISK candidate (most important first) -- only ids from \"Deterministic risk candidates\"; never an opportunity candidate or SUPPORTIVE signal (those belong only in biggestOpportunity). Keep announced actions and possible responses strictly separate."
               },
               investorQuestions: {
                 type: "array",

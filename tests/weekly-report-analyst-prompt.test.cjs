@@ -119,3 +119,17 @@ test("SYSTEM_PROMPT requires hedged (not unconditional-certainty) language for d
 test("SYSTEM_PROMPT instructs keeping a News article's reported fact separate from the model's own impact assessment", () => {
   assert.match(SYSTEM_PROMPT, /keep the article's own reported fact.*separate from your own assessment/i);
 });
+
+test("SYSTEM_PROMPT restricts riskTable to the supplied risk candidates -- never an opportunity or SUPPORTIVE signal", () => {
+  assert.match(SYSTEM_PROMPT, /evidenceId MUST be one of the ids listed under "Deterministic risk candidates"/);
+  assert.match(SYSTEM_PROMPT, /NEVER put an opportunity candidate or any SUPPORTIVE signal in riskTable/);
+});
+
+test("formatAnalystInputForPrompt repeats the exact riskTable-eligible ids and excludes opportunity ids from that line", () => {
+  const input = baseInput();
+  const text = formatAnalystInputForPrompt(input);
+  const line = text.split("\n").find((l) => l.startsWith("riskTable rows may cite ONLY"));
+  assert.ok(line, "the riskTable allowed-ids line must be present");
+  for (const c of input.riskCandidates) assert.ok(line.includes(c.evidenceId));
+  for (const c of input.opportunityCandidates) assert.ok(!line.includes(c.evidenceId), `${c.evidenceId} must not be offered for riskTable`);
+});
