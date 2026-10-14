@@ -81,7 +81,7 @@ export async function collectWeeklyIntelligenceInputs(pool: Pool | null, cutoff:
   return { rigs, rangeCompany, peers, forecast, news, valuation };
 }
 
-function mergeModules(collected: CollectedWeeklyInputs): WeeklyReportModules {
+export function mergeModules(collected: CollectedWeeklyInputs): WeeklyReportModules {
   const merged: WeeklyReportModules = { ...collected.macro.modules };
   const addAll = (category: EvidenceModuleKey, items: WeeklyEvidenceItem[]) => {
     if (items.length === 0) return;

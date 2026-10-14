@@ -24,7 +24,9 @@ const nextConfig = {
     // per-route rather than global so unrelated API routes never carry
     // chromium's ~65MB of binary assets into their own deployment bundle.
     outputFileTracingIncludes: {
-      "/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"]
+      "/api/cron/reports": ["./node_modules/@sparticuz/chromium/bin/**"],
+      // Preview-only, non-publishing report test route (lib/reports/preview-test-report.ts).
+      "/api/reports/preview-test": ["./node_modules/@sparticuz/chromium/bin/**"]
     }
   }
 };

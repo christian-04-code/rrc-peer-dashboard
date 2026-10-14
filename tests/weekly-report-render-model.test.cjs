@@ -325,7 +325,18 @@ test("no file under lib/reports/render calls publishSnapshot -- publication rema
   }
 });
 
-test("no app/api route can trigger PDF generation -- the only lib/reports/render/* module any route may import is artifact-store (storage I/O, not a generator)", () => {
+// The ONE sanctioned exception (2026-10-13): app/api/reports/preview-test/route.ts, a
+// Preview-only, secret-gated, non-publishing test run (lib/reports/preview-test-report.ts).
+// It is exempt only while its POST handler's FIRST statement is the Preview/secret gate --
+// see tests/weekly-report-preview-test-route.test.cjs for that route's own safety tests.
+const PREVIEW_TEST_ROUTE = path.join("app", "api", "reports", "preview-test", "route.ts");
+function isGatedPreviewTestRoute(file) {
+  if (!file.endsWith(PREVIEW_TEST_ROUTE)) return false;
+  const source = fs.readFileSync(file, "utf8");
+  return /export async function POST\(request: Request\) \{\s*if \(!isPreviewTestRequestAuthorized\(process\.env, request\.headers\.get\("authorization"\)\)\) return notFound\(\);/.test(source);
+}
+
+test("no app/api route except the gated Preview-only test route can trigger PDF generation -- the only lib/reports/render/* module any other route may import is artifact-store (storage I/O, not a generator)", () => {
   // Phase 7D's original version of this guard blocked ANY import from
   // lib/reports/render/, back when nothing under it was meant to be
   // reachable from a route yet. Phase 7E legitimately arrived at the one
@@ -347,6 +358,7 @@ test("no app/api route can trigger PDF generation -- the only lib/reports/render
   const apiDir = path.resolve(__dirname, "../app/api");
   const files = listFilesRecursive(apiDir).filter((file) => /\.(ts|tsx|js)$/.test(file));
   for (const file of files) {
+    if (isGatedPreviewTestRoute(file)) continue;
     const source = fs.readFileSync(file, "utf8");
     const renderImports = [...source.matchAll(/from\s+["']@\/lib\/reports\/render\/([^"']+)["']/g)].map((m) => m[1]);
     for (const imported of renderImports) {
