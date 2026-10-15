@@ -23,7 +23,7 @@ const WATCH_ITEM_SCHEMA = {
   type: "object" as const,
   properties: {
     item: { type: "string", description: "A short, specific forward-looking monitoring priority." },
-    reason: { type: "string", description: "Why this matters, grounded in supplied evidence." },
+    reason: { type: "string", description: "ONE short, actionable sentence (about 120 characters): what to look for and why it matters to Range, grounded in supplied evidence." },
     evidenceIds: { type: "array", items: { type: "string" }, description: "Evidence ids this watch item is grounded in." }
   },
   required: ["item", "reason", "evidenceIds"]
@@ -33,6 +33,7 @@ const WHAT_CHANGED_ITEM_SCHEMA = {
   type: "object" as const,
   properties: {
     ...NARRATIVE_ITEM_SCHEMA.properties,
+    assessment: { type: "string", description: "Two short sentences, about 250 characters (max 300): what happened, then why it helps or hurts Range." },
     impact: { type: "string", enum: ["positive", "negative", "mixed"], description: "Does this change help (positive) or hurt (negative) Range, or both (mixed)?" }
   },
   required: ["title", "assessment", "evidenceIds", "impact"]
@@ -42,10 +43,10 @@ const RISK_ROW_SCHEMA = {
   type: "object" as const,
   properties: {
     evidenceId: { type: "string", description: "The evidenceId of ONE supplied deterministic RISK candidate (listed under \"Deterministic risk candidates\"). Never an opportunity candidate or SUPPORTIVE signal." },
-    whyItMatters: { type: "string", maxLength: 250, description: "1-2 short plain-English sentences: how this risk affects Range. At most 250 characters." },
-    announcedAction: { type: "string", maxLength: 250, description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none. At most 250 characters." },
+    whyItMatters: { type: "string", maxLength: 250, description: "1-2 short plain-English sentences: how this risk affects Range. About 140 characters; at most 250." },
+    announcedAction: { type: "string", maxLength: 250, description: "Optional. ONLY an action Range has actually announced, from the supplied Range guidance or News. Omit if none. About 120 characters; at most 250." },
     announcedActionEvidenceIds: { type: "array", items: { type: "string" }, description: "Required with announcedAction: the Range guidance / News evidence ids it comes from." },
-    possibleResponse: { type: "string", maxLength: 250, description: "Optional. One short sentence on an option Range could consider -- phrased as an option, never as a decision. At most 250 characters." }
+    possibleResponse: { type: "string", maxLength: 250, description: "Optional. One short sentence on an option Range could consider -- phrased as an option, never as a decision. About 110 characters; at most 250." }
   },
   required: ["evidenceId", "whyItMatters"]
 };
@@ -53,14 +54,14 @@ const RISK_ROW_SCHEMA = {
 const INVESTOR_QUESTION_SCHEMA = {
   type: "object" as const,
   properties: {
-    question: { type: "string", description: "A specific, credible investor question, only when a real triggering development in the supplied evidence justifies it." },
-    whyNow: { type: "string", description: "The specific development/evidence that makes this question timely right now -- not a generic recurring question." },
+    question: { type: "string", description: "One short, specific, credible investor question (about 100 characters), only when a real triggering development in the supplied evidence justifies it." },
+    whyNow: { type: "string", description: "Why it matters now (about 150 characters): the specific development/evidence that makes this question timely -- not a generic recurring question." },
     evidenceIds: { type: "array", items: { type: "string" }, description: "Evidence ids that justify why this question is credible right now, from the supplied allowlist only." },
     context: { type: "string", description: "Optional additional company/macro context relevant to the question." },
     responseFramework: {
       type: "string",
       description:
-        "Optional concise preparation framework for IR, ONLY if adequately supported by supplied evidence. Must read as preparation based on public information, never as an official Range statement, management position, guidance, or commitment."
+        "Optional practical preparation note for IR (about 180 characters), ONLY if adequately supported by supplied evidence. Must read as preparation based on public information, never as an official Range statement, management position, guidance, or commitment."
     },
     followUpNeeded: { type: "string", description: "Optional: specific data IR may need to gather/verify before being ready to answer this well." }
   },
@@ -122,30 +123,30 @@ export class AnthropicWeeklyAnalystProvider implements WeeklyAnalystProvider {
           input_schema: {
             type: "object",
             properties: {
-              executiveAssessment: { type: "string", description: "~90-150 word, 2-3 short-paragraph plain-English summary of the week for Range Resources: what happened, why it matters, helps or hurts." },
+              executiveAssessment: { type: "string", description: "100-130 words (hard maximum 150), 2-3 short-paragraph plain-English summary of the week for Range Resources: what happened, why it matters, helps or hurts." },
               biggestRisk: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied riskCandidates." },
               biggestOpportunity: { ...NARRATIVE_ITEM_SCHEMA, description: "Must explain one of the supplied opportunityCandidates." },
               whatChanged: {
                 type: "array",
                 items: WHAT_CHANGED_ITEM_SCHEMA,
-                maxItems: 5,
+                maxItems: 3,
                 description:
-                  "At most 5 items, each grounded in one or more of the supplied deterministic change records. Never more items than the number of change records actually supplied -- combine related records into one item rather than inventing an extra one. Zero items is correct and expected when no real change was supplied (e.g. the first-ever report)."
+                  "The three biggest changes at most, most important first. At most 3 items, each grounded in one or more of the supplied deterministic change records. Never more items than the number of change records actually supplied -- combine related records into one item rather than inventing an extra one. Zero items is correct and expected when no real change was supplied (e.g. the first-ever report)."
               },
-              managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 6 },
-              bottomLine: { type: "string", minLength: 20, description: "1-3 sentence closing synthesis. Required and must not be left empty." },
+              managementWatchItems: { type: "array", items: WATCH_ITEM_SCHEMA, minItems: 1, maxItems: 3 },
+              bottomLine: { type: "string", minLength: 20, maxLength: 300, description: "At most 2 sentences, about 220 characters (hard maximum 300). Required and must not be left empty." },
               selectedEvidenceIds: { type: "array", items: { type: "string" }, description: "Every evidence id relied on anywhere in the response." },
               riskTable: {
                 type: "array",
                 items: RISK_ROW_SCHEMA,
                 maxItems: 5,
                 description:
-                  "One row per important supplied deterministic RISK candidate (most important first) -- only ids from \"Deterministic risk candidates\"; never an opportunity candidate or SUPPORTIVE signal (those belong only in biggestOpportunity). Keep announced actions and possible responses strictly separate."
+                  "Exactly one row for EVERY supplied deterministic RISK candidate, in rank order -- only ids from \"Deterministic risk candidates\"; never an opportunity candidate or SUPPORTIVE signal (those belong only in biggestOpportunity). Keep announced actions and possible responses strictly separate."
               },
               investorQuestions: {
                 type: "array",
                 items: INVESTOR_QUESTION_SCHEMA,
-                maxItems: 6,
+                maxItems: 2,
                 description:
                   "Investor questions IR should prepare for, ONLY when a real, credible triggering development exists in the supplied evidence. Zero items is correct and expected most weeks -- do not invent a question merely to fill this field, and never force a fixed count."
               }

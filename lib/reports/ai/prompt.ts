@@ -33,11 +33,11 @@ Your job is prioritization, synthesis, interpretation, and narrative framing -- 
 17. Every investorQuestions item's evidenceIds must justify why the question is credible RIGHT NOW (whyNow) -- cite the specific supplied evidence that makes it timely, the same grounding discipline as biggestRisk/biggestOpportunity/whatChanged.
 18. investorQuestions.responseFramework, if you include one, must explicitly read as IR preparation based on public information -- never as an official Range position, management commitment, confirmed guidance, or a statement Range has actually made. Do not invent what management would say. If the evidence doesn't support a reasonable preparation framework, omit responseFramework entirely for that question rather than guessing one.
 
-19. Each whatChanged item must include "impact": "positive" if the change helps Range, "negative" if it hurts Range, or "mixed" if it genuinely cuts both ways. Base this only on the supplied evidence. The first sentence of the assessment should say what happened; the next should say why it helps or hurts Range.
-20. riskTable: write one row for each of the supplied risk candidates you consider most important (at most one row per candidate, cite its evidenceId; you do NOT choose the risk level -- the report takes it from the risk engine). Each row's evidenceId MUST be one of the ids listed under "Deterministic risk candidates" -- the exact allowed ids are repeated in the riskTable line at the end of the evidence. NEVER put an opportunity candidate or any SUPPORTIVE signal in riskTable, even if it is also a concern: opportunities belong only in biggestOpportunity. If there are no risk candidates, return an empty riskTable. For each row:
-   - whyItMatters: 1-2 short sentences on how this risk affects Range's cash flow, prices, or plans. At most 250 characters (hard limit -- count them; longer text is rejected).
-   - announcedAction: ONLY something Range has actually announced, taken from the supplied "Range announced guidance" records or an analyzed News item, and cite those ids in announcedActionEvidenceIds. If nothing announced addresses this risk, leave announcedAction out. Never present a guess as an announcement. At most 250 characters.
-   - possibleResponse: 1 short sentence on an option Range could consider (for example hedging more volumes, adjusting activity, or using sales agreements). Phrase it as an option ("could consider..."), never as a decision Range has made. At most 250 characters.
+19. Each whatChanged item must include "impact": "positive" if the change helps Range, "negative" if it hurts Range, or "mixed" if it genuinely cuts both ways. Base this only on the supplied evidence. The first sentence of the assessment should say what happened; the next should say why it helps or hurts Range. Two short sentences, about 250 characters (never more than 300). List the most important change first; at most 3 items.
+20. riskTable: write exactly one row for EVERY supplied risk candidate, in the supplied rank order (one row per candidate, cite its evidenceId; you do NOT choose the risk level -- the report takes it from the risk engine). Each row's evidenceId MUST be one of the ids listed under "Deterministic risk candidates" -- the exact allowed ids are repeated in the riskTable line at the end of the evidence. NEVER put an opportunity candidate or any SUPPORTIVE signal in riskTable, even if it is also a concern: opportunities belong only in biggestOpportunity. If there are no risk candidates, return an empty riskTable. For each row:
+   - whyItMatters: 1-2 short sentences on how this risk affects Range's cash flow, prices, or plans. Aim for about 140 characters; never more than 250.
+   - announcedAction: ONLY something Range has actually announced, taken from the supplied "Range announced guidance" records or an analyzed News item, and cite those ids in announcedActionEvidenceIds. If nothing announced addresses this risk, leave announcedAction out. Never present a guess as an announcement. Aim for about 120 characters; never more than 250.
+   - possibleResponse: 1 short sentence on an option Range could consider (for example hedging more volumes, adjusting activity, or using sales agreements). Phrase it as an option ("could consider..."), never as a decision Range has made. Aim for about 110 characters; never more than 250.
 
 WRITING STYLE -- the report is read by busy managers who are not all finance specialists:
 - Use plain English and short sentences (aim for under 20 words each). One idea per sentence.
@@ -46,13 +46,17 @@ WRITING STYLE -- the report is read by busy managers who are not all finance spe
 - Prefer concrete numbers from the evidence over adjectives.
 - Never state that a figure "benefits from" or "reflects" a price from a different period (e.g. a past quarter's realized price does not reflect this week's spot price).
 
-The executiveAssessment is the report's "The Short Version" section -- what a reader gets in 30 seconds. Write 2-3 very short paragraphs, about 90-150 words total:
+The executiveAssessment is the report's "The Short Version" section -- what a reader gets in 30 seconds. Write 2-3 very short paragraphs, 100-130 words total (hard maximum 150 words -- longer text is rejected):
 - Paragraph 1: what happened in the gas market this week, in plain words.
 - Paragraph 2: what it means for Range -- does it help or hurt, and by how much where the evidence says.
 - Paragraph 3 (optional): the one thing to watch next.
 No bullet points. Separate each paragraph with a blank line (two newline characters) so the paragraph breaks are unambiguous to a downstream renderer.
 
-bottomLine: 1-2 plain sentences a manager could repeat in a meeting.`;
+bottomLine: at most 2 plain sentences a manager could repeat in a meeting, about 220 characters (hard maximum 300).
+
+managementWatchItems: at most 3 items, most important first. Each "item" is a short, specific thing to watch (about 60 characters); each "reason" is ONE short, actionable sentence (about 120 characters) saying what to look for and why it matters to Range.
+
+investorQuestions: at most 2, and keep each concise -- question: one short question (about 100 characters); whyNow: why it matters now, one or two short sentences (about 150 characters); responseFramework: a practical preparation note (about 180 characters). Leave out context and followUpNeeded.`;
 
 function formatRef(ref: WeeklyAnalystEvidenceRef): string {
   return `- [${ref.evidenceId}] ${ref.label}: ${ref.displayValue}${ref.period ? ` (period: ${ref.period})` : ""}`;

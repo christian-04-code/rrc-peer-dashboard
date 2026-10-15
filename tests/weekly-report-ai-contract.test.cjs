@@ -41,7 +41,7 @@ function baseOutput(overrides = {}) {
     aiProvider: "anthropic",
     aiModel: "claude-haiku-4-5",
     generatedAt: "2026-09-03T19:00:00.000Z",
-    executiveAssessment: words(200),
+    executiveAssessment: words(130),
     biggestRisk: { title: "Storage surplus", assessment: "Storage remains above the 5-year average.", evidenceIds: ["deterministic_risk_opportunity:storage_levels"] },
     biggestOpportunity: { title: "LNG demand growth", assessment: "LNG exports continue to grow.", evidenceIds: ["deterministic_risk_opportunity:lng_demand"] },
     whatChanged: [{ title: "Storage rose", assessment: "Storage increased week over week.", evidenceIds: ["storage:lower48"] }],
@@ -75,18 +75,18 @@ test("rejects an executiveAssessment longer than the contract ceiling", () => {
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: words(2000) }), baseInput()), WeeklyAnalystValidationError);
 });
 
-test("accepts an executiveAssessment within the Phase 7C.1 150-250 word target range", () => {
-  const result = validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: words(180) }), baseInput());
-  assert.equal(result.executiveAssessment.trim().split(/\s+/).length, 180);
+test("accepts an executiveAssessment within the five-page layout's 100-150 word range", () => {
+  const result = validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: words(150) }), baseInput());
+  assert.equal(result.executiveAssessment.trim().split(/\s+/).length, 150);
 });
 
 test("rejects generic filler language in the executive assessment", () => {
-  const filler = `${words(190)} Market conditions remain dynamic and management should continue to monitor the situation.`;
+  const filler = `${words(110)} Market conditions remain dynamic and management should continue to monitor the situation.`;
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: filler }), baseInput()), WeeklyAnalystValidationError);
 });
 
 test("rejects guaranteed-outcome language (stock will rise/fall)", () => {
-  const guaranteed = `${words(190)} Range shares will outperform peers next quarter.`;
+  const guaranteed = `${words(110)} Range shares will outperform peers next quarter.`;
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: guaranteed }), baseInput()), WeeklyAnalystValidationError);
 });
 
@@ -100,7 +100,7 @@ test("rejects a bottomLine that is technically non-empty but too short to be a m
 });
 
 test("rejects a forecast mischaracterized as a price floor/ceiling/threshold in the executive assessment (real Preview PDF finding: '$3.00/Mcf forecast floor')", () => {
-  const overclaim = `${words(190)} Henry Hub remains below the EIA's $3.00/Mcf forecast floor this week.`;
+  const overclaim = `${words(110)} Henry Hub remains below the EIA's $3.00/Mcf forecast floor this week.`;
   assert.throws(() => validateWeeklyAnalystAssessment(baseOutput({ executiveAssessment: overclaim }), baseInput()), WeeklyAnalystValidationError);
 });
 

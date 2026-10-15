@@ -159,7 +159,7 @@ export type WeeklyAnalystAssessment = {
   riskTable?: WeeklyAnalystRiskRow[];
 };
 
-export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.3.0";
+export const WEEKLY_ANALYST_SCHEMA_VERSION = "1.4.0";
 
 export class WeeklyAnalystValidationError extends Error {}
 
@@ -176,20 +176,28 @@ export class WeeklyAnalystValidationError extends Error {}
 // Plain-English report pass (2026-10-13): target lowered again to ~90-150
 // words of short sentences, so the bounds keep the same proportional buffer
 // around that smaller target.
+// Five-page layout pass (2026-10-14, owner-approved): hard maximum 150 words,
+// prompt target 100-130. A real Preview response at 214 words pushed page 1 over.
 const MIN_EXECUTIVE_ASSESSMENT_WORDS = 70;
-const MAX_EXECUTIVE_ASSESSMENT_WORDS = 220;
+const MAX_EXECUTIVE_ASSESSMENT_WORDS = 150;
 /** "1-2 sentences" per risk-table cell, enforced as a generous character ceiling rather than a sentence parser. */
 const MAX_RISK_CELL_CHARS = 320;
 
 // Rejects a technically-non-empty but meaningless bottomLine (e.g. "N/A",
 // a stray period) that isNonEmptyString alone would let through.
 const MIN_BOTTOM_LINE_CHARS = 15;
+// Owner-approved (2026-10-14): two sentences, ~250 characters. Enforced as a
+// character ceiling with a small margin -- sentence counting is unreliable on
+// text like "U.S. supply", so the two-sentence rule lives in the prompt.
+const MAX_BOTTOM_LINE_CHARS = 300;
 
 const MAX_WHAT_CHANGED_ITEMS = 5;
-const MAX_WATCH_ITEMS = 6;
+// Owner-approved (2026-10-14): at most three watch items (was 6).
+const MAX_WATCH_ITEMS = 3;
 const MIN_WATCH_ITEMS = 1;
 /** No minimum -- 0 is the normal, expected value for a quiet week (see WeeklyAnalystInvestorQuestion's own header). This is a safety ceiling only, never a target the model should try to fill. */
-const MAX_INVESTOR_QUESTIONS = 6;
+// Owner-approved (2026-10-14): at most two concise investor questions (was 6).
+const MAX_INVESTOR_QUESTIONS = 2;
 
 /**
  * Known generic-filler phrasing this project has decided is never an
@@ -373,6 +381,10 @@ export function validateWeeklyAnalystAssessment(value: unknown, input: WeeklyAna
   if (!isNonEmptyString(record.bottomLine)) fail('Weekly analyst response is missing non-empty "bottomLine".');
   if ((record.bottomLine as string).trim().length < MIN_BOTTOM_LINE_CHARS) {
     fail(`Weekly analyst response "bottomLine" is too short (${(record.bottomLine as string).trim().length} chars) to be a meaningful closing synthesis -- must be at least ${MIN_BOTTOM_LINE_CHARS}.`);
+  }
+
+  if ((record.bottomLine as string).trim().length > MAX_BOTTOM_LINE_CHARS) {
+    fail(`Weekly analyst response "bottomLine" is ${(record.bottomLine as string).trim().length} chars -- keep it to two sentences, about 250 characters (max ${MAX_BOTTOM_LINE_CHARS}).`);
   }
 
   const words = wordCount(record.executiveAssessment as string);

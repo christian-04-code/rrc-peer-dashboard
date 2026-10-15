@@ -54,13 +54,13 @@ test("a 337-char whyItMatters (real run 3) is still rejected -- the 320-char val
   assert.doesNotThrow(() => validateWeeklyAnalystAssessment(withMeta(toolInput({ riskTable: [{ evidenceId: RISK, whyItMatters: "y".repeat(300) }] })), input()));
 });
 
-test("prompt and tool schema state the 250-character limit for every risk-table text field", () => {
+test("prompt and tool schema state a short target and the 250-character maximum for every risk-table text field", () => {
   for (const field of ["whyItMatters", "announcedAction", "possibleResponse"]) {
-    assert.match(SYSTEM_PROMPT, new RegExp(`${field}:[^\\n]*At most 250 characters`), `${field} prompt instruction`);
+    assert.match(SYSTEM_PROMPT, new RegExp(`${field}:[^\\n]*Aim for about 1[0-9]0 characters; never more than 250`), `${field} prompt instruction`);
   }
   const provider = fs.readFileSync("lib/reports/ai/anthropic-provider.ts", "utf8");
   for (const field of ["whyItMatters", "announcedAction", "possibleResponse"]) {
-    assert.match(provider, new RegExp(`${field}: \\{ type: "string", maxLength: 250, description: "[^"]*At most 250 characters`), `${field} schema`);
+    assert.match(provider, new RegExp(`${field}: \\{ type: "string", maxLength: 250, description: "[^"]*at most 250`), `${field} schema`);
   }
 });
 

@@ -4,6 +4,7 @@ import { budgetForTier } from "@/lib/reports/render/content-budget";
 import type { RenderBudgetTier, WeeklyReportRenderModel } from "@/lib/reports/render/render-model";
 import { buildAtAGlanceTable, buildCatalystsCalendarTable, buildRisksOpportunitiesTable, buildSourcesFreshnessTable } from "@/lib/reports/render/table-builder";
 import { buildEvidenceSections } from "@/lib/reports/render/evidence-sections";
+import { firstSentences } from "@/lib/reports/render/text-trim";
 import { buildChartGaps, buildKpiTiles, buildMarketCharts, buildPeerPanels, buildRangeFcfChart, buildRiskTable } from "@/lib/reports/render/plain-report-sections";
 
 /**
@@ -69,6 +70,10 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
 
   const { sections: evidenceSections, omittedLabels } = buildEvidenceSections(payload, budget);
   const peerPanels = buildPeerPanels(payload);
+  // Reduced tier: keep only leading whole sentences (verbatim prefixes) -- see text-trim.ts.
+  const trim = budget.textTrim;
+  const keep = (text: string, sentences: number | undefined): string => (trim && sentences ? firstSentences(text, sentences) : text);
+  const summaryParagraphs = splitIntoParagraphs(assessment.executiveAssessment);
 
   return {
     identity: {
@@ -77,24 +82,28 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
       weekEndingLabel: `Week Ending ${formatDateLabel(payload.storageWeekEnding)}`,
       dataCutoffLabel: `Data Cutoff: ${formatTimestampLabel(payload.dataCutoffAt)}`
     },
-    executiveAssessmentParagraphs: splitIntoParagraphs(assessment.executiveAssessment),
+    // The prompt makes paragraph 3 the optional "what to watch next" -- the reduced tier drops it (the watch list carries it).
+    executiveAssessmentParagraphs: trim?.dropOptionalSummaryParagraph && summaryParagraphs.length > 2 ? summaryParagraphs.slice(0, 2) : summaryParagraphs,
     atAGlanceTable: buildAtAGlanceTable(payload, budget),
-    biggestRisk: budget.showRiskOpportunityCallouts ? { title: assessment.biggestRisk.title, body: assessment.biggestRisk.assessment } : null,
-    biggestOpportunity: budget.showRiskOpportunityCallouts ? { title: assessment.biggestOpportunity.title, body: assessment.biggestOpportunity.assessment } : null,
-    whatChanged: assessment.whatChanged.slice(0, budget.maxWhatChangedItems).map((item) => ({ title: item.title, body: item.assessment, impact: item.impact ?? null })),
+    // Kept on the model for traceability; no longer rendered (owner-approved 2026-10-14 -- they duplicated the risk table's top row and the summary).
+    biggestRisk: { title: assessment.biggestRisk.title, body: assessment.biggestRisk.assessment },
+    biggestOpportunity: { title: assessment.biggestOpportunity.title, body: assessment.biggestOpportunity.assessment },
+    whatChanged: assessment.whatChanged.slice(0, budget.maxWhatChangedItems).map((item) => ({ title: item.title, body: keep(item.assessment, trim?.whatChangedSentences), impact: item.impact ?? null })),
     evidenceSections,
     keyRisksAndOpportunitiesTable: buildRisksOpportunitiesTable(payload, budget),
-    managementWatchItems: assessment.managementWatchItems.slice(0, budget.maxWatchItems).map((item) => ({ title: item.item, body: item.reason })),
-    bottomLine: assessment.bottomLine,
+    managementWatchItems: assessment.managementWatchItems
+      .slice(0, budget.maxWatchItems)
+      .map((item) => ({ title: item.item, body: trim && trim.watchReasonSentences === 0 ? "" : keep(item.reason, trim?.watchReasonSentences) })),
+    bottomLine: keep(assessment.bottomLine, trim?.bottomLineSentences),
     sourcesFreshnessTable: buildSourcesFreshnessTable(payload, budget),
     generatedAtLabel: formatTimestampLabel(assessment.generatedAt),
     budgetTier: tier,
     omittedContentLabels: [...new Set(omittedLabels)],
     investorQuestions: (assessment.investorQuestions ?? []).slice(0, budget.maxInvestorQuestions).map((q) => ({
       question: q.question,
-      whyNow: q.whyNow,
+      whyNow: keep(q.whyNow, trim?.investorQuestionSentences),
       context: q.context ?? null,
-      responseFramework: q.responseFramework ?? null,
+      responseFramework: q.responseFramework ? keep(q.responseFramework, trim?.investorQuestionSentences) : null,
       followUpNeeded: q.followUpNeeded ?? null
     })),
     catalystsCalendarTable: buildCatalystsCalendarTable(payload),
@@ -103,7 +112,11 @@ export function buildWeeklyReportRenderModel(payload: WeeklyReportPayload, asses
     rangeFcfChart: buildRangeFcfChart(payload),
     peerPanels: peerPanels.panels,
     peerPanelsPeriod: peerPanels.period,
-    riskTable: buildRiskTable(payload, assessment, budget.maxRiskRows),
+    riskTable: buildRiskTable(payload, assessment, budget.maxRiskRows).map((row) =>
+      trim
+        ? { ...row, whyItMatters: keep(row.whyItMatters, trim.riskCellSentences), announced: row.announced ? keep(row.announced, trim.riskCellSentences) : null, possible: row.possible ? keep(row.possible, trim.riskCellSentences) : null }
+        : row
+    ),
     chartGaps: buildChartGaps(payload)
   };
 }

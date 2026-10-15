@@ -10,15 +10,18 @@ import { REPORT_FONT_FAMILY, loadReportFontFaceCss } from "@/lib/reports/render/
  * pdf-renderer.ts hands to headless Chromium for printing -- a complete,
  * self-contained HTML document, since nothing else supplies its shell.
  *
- * Layout (plain-English report pass, 2026-10-13 -- replaces the Phase 7D
- * full cover page + stacked evidence sections, which in production printed
- * one 2-bar chart and dropped 14 sections for space):
- *   Page 1  compact masthead, "The Short Version", 4 headline numbers,
- *           "What Changed This Week?" (3 cards tagged helps/hurts Range)
+ * Layout (plain-English report pass 2026-10-13; five-page layout 2026-10-14,
+ * owner-approved after a real Preview run rendered 8 pages):
+ *   Page 1  compact masthead, "The Short Version" (<=150 words), 4 headline
+ *           numbers, "What Changed This Week?" (<=3 cards tagged helps/hurts)
  *   Page 2  Gas Market -- Henry Hub trend, storage vs. 5-year average
  *   Page 3  Range and Its Peers -- quarterly FCF, valuation/FCF yield/debt
- *   Page 4  Key Risks table, what to watch, bottom line
- *   Appendix  investor questions (when any), sources & freshness, catalysts
+ *   Page 4  Key Risks -- every risk-engine row (announced actions show their
+ *           source), up to 3 watch items, short bottom line
+ *   Page 5  Appendix -- up to 2 compact investor questions, sources, catalysts
+ * The Biggest Risk/Opportunity boxes were removed (they repeated the risk
+ * table's top row and the summary). The reduced tier shortens AI text to its
+ * leading sentences (text-trim.ts) rather than dropping risks or charts.
  * Body text is 11pt with short paragraphs; charts carry direct value labels
  * instead of legends/axes wherever possible, so they read without a key.
  */
@@ -65,6 +68,27 @@ function renderTable(table: TablePlan, extraClass = ""): string {
     </div>`;
 }
 
+/**
+ * Sources & Data Freshness as a compact two-column list (five-page layout pass,
+ * 2026-10-14) -- same rows, same 8.5pt text as the former table, but a 3-column
+ * table wrapped most long source names onto 2-3 lines and alone took ~4.8in of
+ * the appendix page. Every row is still printed; nothing is truncated.
+ */
+function renderSourcesList(table: TablePlan): string {
+  const items = table.rows
+    .map((row) => `<li><span class="source-name">${escapeHtml(row.source ?? "--")}</span> <span class="source-meta">${escapeHtml(row.period ?? "--")} &middot; ${escapeHtml(row.freshness ?? "--")}</span></li>`)
+    .join("");
+  const footnote = table.truncatedCount > 0 ? `<div class="small-note">+${table.truncatedCount} more not shown.</div>` : "";
+  const source = table.sourceLine ? `<div class="small-note">${escapeHtml(table.sourceLine)}</div>` : "";
+  return `
+    <div class="table-block sources-block">
+      <h3>${escapeHtml(table.title)}</h3>
+      <ul class="sources-list">${items}</ul>
+      ${footnote}
+      ${source}
+    </div>`;
+}
+
 function renderKpiTile(tile: KpiTile): string {
   return `
     <div class="kpi">
@@ -85,15 +109,6 @@ function renderChangeCard(item: CalloutItem, index: number): string {
     </div>`;
 }
 
-function renderCallout(label: string, item: CalloutItem, modifierClass: string): string {
-  return `
-    <div class="callout ${modifierClass}">
-      <div class="callout-label">${escapeHtml(label)}</div>
-      <div class="callout-title">${escapeHtml(item.title)}</div>
-      <p>${escapeHtml(item.body)}</p>
-    </div>`;
-}
-
 function renderPeerPanel(panel: PeerBarPanel): string {
   return `
     <div class="peer-panel">
@@ -105,7 +120,9 @@ function renderPeerPanel(panel: PeerBarPanel): string {
 
 function renderRiskRow(row: RiskTableRow): string {
   const actions = [
-    row.announced ? `<div class="action"><span class="action-tag action-announced">Announced</span>${escapeHtml(row.announced)}</div>` : "",
+    row.announced
+      ? `<div class="action"><span class="action-tag action-announced">Announced</span>${escapeHtml(row.announced)}${row.announcedSource ? ` <span class="action-source">(Source: ${escapeHtml(row.announcedSource)})</span>` : ""}</div>`
+      : "",
     row.possible ? `<div class="action"><span class="action-tag action-possible">Possible option</span>${escapeHtml(row.possible)}</div>` : ""
   ].join("");
   return `
@@ -161,20 +178,11 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
     <div class="small-note">EBITDAX = earnings before interest, taxes, depreciation and exploration costs, a common measure of cash earnings. Each company's free cash flow uses its own reported definition, so small differences should be read with care. Source: quarterly SEC filings, earnings materials and FactSet, as used on the dashboard.</div>`
       : "";
 
-  const riskOpportunityRow =
-    model.biggestRisk || model.biggestOpportunity
-      ? `
-    <div class="two-col">
-      ${model.biggestRisk ? renderCallout("Biggest Risk", model.biggestRisk, "callout-risk") : "<div></div>"}
-      ${model.biggestOpportunity ? renderCallout("Biggest Opportunity", model.biggestOpportunity, "callout-opportunity") : "<div></div>"}
-    </div>`
-      : "";
-
   const riskTable =
     model.riskTable.length > 0
       ? `
     <table class="risk-table">
-      <thead><tr><th style="width:18%">Risk</th><th style="width:9%">Risk Level</th><th style="width:34%">Why This Matters</th><th style="width:39%">What Range Can Do</th></tr></thead>
+      <thead><tr><th style="width:15%">Risk</th><th style="width:11%; white-space:nowrap">Risk Level</th><th style="width:31%">Why This Matters</th><th style="width:43%">What Range Can Do</th></tr></thead>
       <tbody>${model.riskTable.map(renderRiskRow).join("")}</tbody>
     </table>
     <div class="small-note"><strong>Announced</strong> = something Range has publicly stated (guidance or news). <strong>Possible option</strong> = an idea for discussion, not a Range plan. Risk levels come from the dashboard's rules-based risk engine, not the AI.</div>`
@@ -184,14 +192,14 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
     model.managementWatchItems.length > 0
       ? `
     <h3>What to Watch Next</h3>
-    <ul class="watch-list">${model.managementWatchItems.map((item) => `<li><strong>${escapeHtml(item.title)}.</strong> ${escapeHtml(item.body)}</li>`).join("")}</ul>`
+    <ul class="watch-list">${model.managementWatchItems.map((item) => `<li><strong>${escapeHtml(item.title)}${item.body ? "." : ""}</strong>${item.body ? ` ${escapeHtml(item.body)}` : ""}</li>`).join("")}</ul>`
       : "";
 
-  // "Investor Questions to Prepare For" (IR-report enhancement, 2026-09-08) --
-  // empty most weeks by design; the whole block is omitted rather than
-  // rendering an empty heading. Every responseFramework carries an explicit,
-  // un-skippable label that it is IR preparation based on public
-  // information, never an official Range statement.
+  // "Investor Questions to Prepare For" (IR-report enhancement, 2026-09-08; compact
+  // three-part format per the five-page layout pass, 2026-10-14) -- empty most weeks
+  // by design; the whole block is omitted rather than rendering an empty heading.
+  // Every preparation note carries an explicit, un-skippable label that it is IR
+  // preparation based on public information, never an official Range statement.
   const investorQuestions =
     model.investorQuestions.length > 0
       ? `
@@ -201,21 +209,19 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
         (q) => `
     <div class="investor-question">
       <div class="investor-question-text">${escapeHtml(q.question)}</div>
-      <div class="investor-question-line"><span class="investor-question-label">Why Now</span>${escapeHtml(q.whyNow)}</div>
-      ${q.context ? `<div class="investor-question-line"><span class="investor-question-label">Context</span>${escapeHtml(q.context)}</div>` : ""}
+      <div class="investor-question-line"><span class="investor-question-label">Why it matters</span>${escapeHtml(q.whyNow)}</div>
       ${
         q.responseFramework
           ? `<div class="investor-question-framework"><span class="framework-label">Preparation Note &mdash; based on public information only, not an official Range statement</span>${escapeHtml(q.responseFramework)}</div>`
           : ""
       }
-      ${q.followUpNeeded ? `<div class="investor-question-line"><span class="investor-question-label">Follow-Up for IR</span>${escapeHtml(q.followUpNeeded)}</div>` : ""}
     </div>`
       )
       .join("")}`
       : "";
 
   const catalystsCalendar = model.catalystsCalendarTable ? renderTable(model.catalystsCalendarTable) : "";
-  const sourcesTable = renderTable(model.sourcesFreshnessTable, "sources-table");
+  const sourcesTable = renderSourcesList(model.sourcesFreshnessTable);
 
   return `<!doctype html>
 <html lang="en">
@@ -234,9 +240,7 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .muted { color: ${MUTED}; }
   .small-note { font-size: 8.5pt; color: ${MUTED}; margin-top: 4px; line-height: 1.35; }
   .page { break-before: page; }
-  .risks { margin-top: 20px; }
   h2, h3 { break-after: avoid; }
-  .two-col { break-inside: avoid; }
 
   /* Masthead (page 1) */
   .masthead { display: flex; align-items: center; gap: 18px; padding-bottom: 12px; border-bottom: 1px solid ${BORDER}; margin-bottom: 16px; }
@@ -255,11 +259,11 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .kpi-value { font-size: 15pt; font-weight: 800; margin-top: 3px; }
   .kpi-change { font-size: 9pt; color: ${MUTED}; margin-top: 2px; line-height: 1.3; }
 
-  .change-card { border: 1px solid ${BORDER}; border-left: 4px solid ${MUTED}; padding: 9px 12px 4px; margin-bottom: 9px; break-inside: avoid; }
+  .change-card { border: 1px solid ${BORDER}; border-left: 4px solid ${MUTED}; padding: 7px 12px 2px; margin-bottom: 7px; break-inside: avoid; }
   .change-positive { border-left-color: ${POSITIVE}; }
   .change-negative { border-left-color: ${NEGATIVE}; }
   .change-mixed { border-left-color: ${MIXED}; }
-  .change-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .change-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
   .change-num { font-weight: 800; color: ${ACCENT}; }
   .change-title { font-weight: 700; font-size: 11.5pt; flex: 1; }
   .impact { font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
@@ -277,14 +281,6 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .peer-title { font-size: 10.5pt; font-weight: 700; }
   .peer-hint { font-size: 8.5pt; color: ${MUTED}; margin-bottom: 4px; }
 
-  .two-col { display: flex; gap: 12px; margin-bottom: 6px; }
-  .two-col > * { flex: 1 1 0; }
-  .callout { background: ${PANEL_BG}; border-left: 4px solid ${ACCENT}; padding: 9px 11px 3px; break-inside: avoid; }
-  .callout-risk { border-left-color: ${NEGATIVE}; }
-  .callout-opportunity { border-left-color: ${POSITIVE}; }
-  .callout-label { font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: ${MUTED}; }
-  .callout-title { font-weight: 700; margin: 2px 0 4px; }
-  .callout p { font-size: 10pt; }
 
   table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
   thead th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.03em; color: ${MUTED}; border-bottom: 2px solid ${ACCENT}; padding: 5px 7px; }
@@ -294,25 +290,28 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   .align-left { text-align: left; }
   .align-right { text-align: right; }
   .table-block { margin: 8px 0 12px; }
-  .sources-table table { font-size: 8.5pt; }
-  .sources-table tbody td { padding: 3px 7px; }
+  .sources-list { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 18px; font-size: 8.5pt; line-height: 1.3; }
+  .sources-list li { break-inside: avoid; padding: 2px 0 3px; border-bottom: 1px solid ${BORDER}; }
+  .source-name { color: ${NAVY}; }
+  .source-meta { color: ${MUTED}; white-space: nowrap; }
 
   .risk-table { font-size: 9.5pt; margin-top: 4px; }
-  .risk-table td { padding: 6px 7px; line-height: 1.36; }
+  .risk-table td { padding: 5px 7px; line-height: 1.3; }
   .risk-name { font-weight: 700; }
   .level { display: inline-block; font-size: 8.5pt; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
   .level-high { color: ${NEGATIVE}; background: ${NEGATIVE_BG}; }
   .level-medium { color: ${MIXED}; background: ${MIXED_BG}; }
   .level-low { color: ${ACCENT}; background: #e5f2fa; }
-  .action { margin-bottom: 4px; }
+  .action { margin-bottom: 3px; }
   .action-tag { display: inline-block; font-size: 7.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; padding: 1px 5px; border-radius: 3px; margin-right: 5px; }
   .action-announced { color: #fff; background: ${NAVY}; }
   .action-possible { color: ${NAVY}; border: 1px solid ${MUTED}; }
+  .action-source { font-size: 8.5pt; color: ${MUTED}; }
 
   .watch-list { margin: 0; padding-left: 18px; }
-  .watch-list li { margin-bottom: 6px; }
+  .watch-list li { margin-bottom: 4px; }
   .bottom-line { background: ${NAVY}; color: #fff; padding: 12px 14px; font-size: 11.5pt; font-weight: 600; margin-top: 14px; break-inside: avoid; }
-  .bottom-line-label { display: block; font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #9fd3f0; margin-bottom: 4px; }
+  .bottom-line-label { font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #9fd3f0; margin-right: 8px; }
 
   .investor-question { border: 1px solid ${BORDER}; border-left: 3px solid ${ACCENT}; padding: 8px 10px; margin-top: 8px; break-inside: avoid; font-size: 10pt; }
   .investor-question-text { font-weight: 700; margin-bottom: 4px; }
@@ -356,9 +355,8 @@ export function renderReportHtml(model: WeeklyReportRenderModel, logoDataUri: st
   ${peerPanels}
 </section>
 
-<section class="risks">
+<section class="page">
   <h2>Key Risks</h2>
-  ${riskOpportunityRow}
   ${riskTable}
   ${watchItems}
   <div class="bottom-line"><span class="bottom-line-label">Bottom Line</span>${escapeHtml(model.bottomLine)}</div>

@@ -60,4 +60,4 @@ export const WEEKLY_ANALYST_MODEL_PRICING = {
  * rewording (SYSTEM_PROMPT text changed; the output shape itself did not,
  * hence WEEKLY_ANALYST_SCHEMA_VERSION bumping independently in ai-contract.ts).
  */
-export const WEEKLY_ANALYST_PROMPT_VERSION = "1.2.2";
+export const WEEKLY_ANALYST_PROMPT_VERSION = "1.3.0";

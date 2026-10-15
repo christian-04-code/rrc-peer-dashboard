@@ -32,8 +32,20 @@ export type ContentBudget = {
   maxInvestorQuestions: number;
   /** Key Risks table rows (plain-English report pass, 2026-10-13). */
   maxRiskRows: number;
-  /** Biggest Risk / Biggest Opportunity callouts above the risk table. They restate the risk table's top row and the summary, so they are the first thing the reduced tier drops. */
-  showRiskOpportunityCallouts: boolean;
+  /**
+   * Reduced tier only (five-page layout pass, 2026-10-14): keep just the first N
+   * whole sentences of long AI-written fields (see text-trim.ts -- always a verbatim
+   * prefix, never a rewrite). Null = no trimming. Risk rows and charts are never
+   * dropped by either tier.
+   */
+  textTrim: {
+    dropOptionalSummaryParagraph: boolean;
+    whatChangedSentences: number;
+    riskCellSentences: number;
+    watchReasonSentences: number;
+    bottomLineSentences: number;
+    investorQuestionSentences: number;
+  } | null;
 };
 
 export const STANDARD_BUDGET: ContentBudget = {
@@ -52,13 +64,14 @@ export const STANDARD_BUDGET: ContentBudget = {
   maxSourceRows: 20,
   // "What Changed This Week?" shows the three biggest changes (plain-English report pass, 2026-10-13).
   maxWhatChangedItems: 3,
-  maxWatchItems: 6,
+  // Owner-approved five-page layout (2026-10-14): 3 watch items, 2 investor questions, every risk row.
+  maxWatchItems: 3,
   maxCommentarySentences: 3,
   maxKeyMetricsToWatch: 6,
   maxGuidanceRows: 8,
-  maxInvestorQuestions: 5,
+  maxInvestorQuestions: 2,
   maxRiskRows: 5,
-  showRiskOpportunityCallouts: true
+  textTrim: null
 };
 
 /**
@@ -80,8 +93,8 @@ export const REDUCED_BUDGET: ContentBudget = {
   maxRisksOpportunitiesRows: 5,
   maxNewsRows: 2,
   maxSourceRows: 20,
-  maxWhatChangedItems: 2,
-  maxWatchItems: 2,
+  maxWhatChangedItems: 3,
+  maxWatchItems: 3,
   maxCommentarySentences: 1,
   // The IR-enhancement fields below are the newest, most-optional content in
   // the report (see their own "empty most weeks by design" headers) -- a
@@ -94,9 +107,22 @@ export const REDUCED_BUDGET: ContentBudget = {
   // `omittedContentLabels`, never silently.
   maxKeyMetricsToWatch: 3,
   maxGuidanceRows: 4,
-  maxInvestorQuestions: 1,
-  maxRiskRows: 3,
-  showRiskOpportunityCallouts: false
+  maxInvestorQuestions: 2,
+  // Never fewer risk rows than standard -- the reduced tier shortens text instead.
+  maxRiskRows: 5,
+  textTrim: {
+    dropOptionalSummaryParagraph: true,
+    // First sentence = "what happened"; the card's Helps/Hurts badge still carries the impact.
+    whatChangedSentences: 1,
+    riskCellSentences: 1,
+    // 0 = title only: the watch-item titles are themselves specific ("LNG terminal
+    // availability and feedgas demand sustainability"); a real Preview response
+    // still overflowed page 4 by ~0.4in with one-sentence reasons.
+    watchReasonSentences: 0,
+    // Standard allows the approved two sentences; the fallback keeps the first.
+    bottomLineSentences: 1,
+    investorQuestionSentences: 1
+  }
 };
 
 export function budgetForTier(tier: RenderBudgetTier): ContentBudget {

@@ -126,6 +126,8 @@ export type RiskTableRow = {
   whyItMatters: string;
   /** Only something Range has actually announced (AI-cited Range guidance/News). */
   announced: string | null;
+  /** Where the announced action comes from -- the cited guidance record's / News item's own source label, resolved deterministically from the AI's cited evidence ids. */
+  announcedSource: string | null;
   /** An option Range could consider -- always rendered with "Could consider" framing. */
   possible: string | null;
 };

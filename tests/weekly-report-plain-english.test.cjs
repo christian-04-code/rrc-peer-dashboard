@@ -120,8 +120,10 @@ test("buildRiskTable takes risks and levels from the risk engine, in engine rank
 test("buildRiskTable uses the AI's explanation text but keeps the engine's level", () => {
   const payload = { ...SAMPLE_WEEKLY_REPORT_PAYLOAD, modules: { deterministic_risk_opportunity: [riskItem("us_gas_supply", "MODERATE_RISK", 1), riskItem("storage_levels", "WATCH", 2)] } };
   const rows = buildRiskTable(payload, { ...SAMPLE_WEEKLY_ANALYST_ASSESSMENT, riskTable: [{ evidenceId: RISK_A, whyItMatters: "AI why.", announcedAction: "Hedged.", announcedActionEvidenceIds: [HEDGING], possibleResponse: "Could consider more." }] }, 5);
-  assert.equal(rows.length, 1, "only rows the AI explained are listed when it supplied a table");
-  assert.deepEqual(rows[0], { risk: "U.S. gas supply growing faster than demand", level: "Medium", whyItMatters: "AI why.", announced: "Hedged.", possible: "Could consider more." });
+  // Five-page layout (owner-approved 2026-10-14): every engine risk keeps a row, even one the AI skipped.
+  assert.equal(rows.length, 2);
+  assert.deepEqual({ ...rows[0], announcedSource: undefined }, { risk: "U.S. gas supply growing faster than demand", level: "Medium", whyItMatters: "AI why.", announced: "Hedged.", announcedSource: undefined, possible: "Could consider more." });
+  assert.equal(rows[1].whyItMatters, "storage_levels engine reason");
 });
 
 function metric(id, points) {

@@ -178,27 +178,39 @@ const PLAIN_RISK_NAME: Record<string, string> = {
   industrial_demand: "Soft industrial gas demand"
 };
 
+/** Source label(s) of the guidance records / News items an announced action cites. */
+function announcedSourceLabel(payload: WeeklyReportPayload, evidenceIds: string[] | undefined): string | null {
+  if (!evidenceIds || evidenceIds.length === 0) return null;
+  const items = [...(payload.modules.range_company ?? []), ...(payload.modules.news ?? [])];
+  const labels = evidenceIds
+    .map((id) => items.find((item) => item.evidenceId === id))
+    .map((item) => (item ? String(item.metadata.source ?? item.metadata.publisher ?? "") : ""))
+    .filter((label) => label.length > 0);
+  return labels.length > 0 ? [...new Set(labels)].join("; ") : null;
+}
+
 /**
  * Rows come from the deterministic risk engine's own non-supportive signals,
- * in its own rank order, with its own state mapped to High/Medium/Low. The
- * AI's validated riskTable only supplies the explanation text; when an
- * assessment predates that field, the engine's own reason text is used and
- * the "What Range Can Do" cells stay empty rather than invented.
+ * in its own rank order, with its own state mapped to High/Medium/Low --
+ * EVERY such signal gets a row (owner-approved 2026-10-14: never drop a risk
+ * to save space). The AI's validated riskTable only supplies the explanation
+ * text; for a risk it didn't explain (or an assessment that predates the
+ * field), the engine's own reason text is used and the "What Range Can Do"
+ * cells stay empty rather than invented.
  */
 export function buildRiskTable(payload: WeeklyReportPayload, assessment: WeeklyAnalystAssessment, maxRows: number): RiskTableRow[] {
   const aiRows = new Map((assessment.riskTable ?? []).map((row) => [row.evidenceId, row]));
   const candidates = [...(payload.modules.deterministic_risk_opportunity ?? [])]
     .filter((item) => typeof item.metadata.riskState === "string" && RISK_LEVEL_BY_STATE[item.metadata.riskState] !== undefined)
     .sort((a, b) => Number(a.metadata.riskRank ?? 99) - Number(b.metadata.riskRank ?? 99));
-  const covered = aiRows.size > 0 ? candidates.filter((item) => aiRows.has(item.evidenceId)) : candidates;
-
-  return covered.slice(0, maxRows).map((item) => {
+  return candidates.slice(0, maxRows).map((item) => {
     const ai = aiRows.get(item.evidenceId);
     return {
       risk: PLAIN_RISK_NAME[item.metricKey] ?? item.label,
       level: RISK_LEVEL_BY_STATE[item.metadata.riskState as string],
       whyItMatters: ai?.whyItMatters ?? (typeof item.metadata.deterministicReason === "string" ? item.metadata.deterministicReason : item.label),
       announced: ai?.announcedAction ?? null,
+      announcedSource: ai?.announcedAction ? announcedSourceLabel(payload, ai.announcedActionEvidenceIds) : null,
       possible: ai?.possibleResponse ?? null
     };
   });

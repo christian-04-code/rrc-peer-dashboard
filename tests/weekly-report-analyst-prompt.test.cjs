@@ -29,8 +29,8 @@ test("SYSTEM_PROMPT establishes the analyst persona and the never-invent-evidenc
   assert.match(SYSTEM_PROMPT, /never invent/i);
 });
 
-test("SYSTEM_PROMPT specifies the plain-English 90-150 word target for executiveAssessment", () => {
-  assert.match(SYSTEM_PROMPT, /90-150 words/);
+test("SYSTEM_PROMPT specifies the 100-130 word target and 150-word hard maximum for executiveAssessment", () => {
+  assert.match(SYSTEM_PROMPT, /100-130 words total \(hard maximum 150 words/);
 });
 
 test("SYSTEM_PROMPT instructs a 2-3 short-paragraph structure, not a bulleted list", () => {

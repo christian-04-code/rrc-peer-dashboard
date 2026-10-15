@@ -73,6 +73,16 @@ export const PDF_FOOTER_TEMPLATE = `
     Weekly Range Resources AI Report &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span>
   </div>`;
 
+/** The ONE set of page.pdf() options -- shared with the local layout regression tests (tests/weekly-report-layout.test.cjs) so they measure exactly what production prints. */
+export const PDF_PAGE_OPTIONS = {
+  format: "Letter" as const,
+  printBackground: true,
+  displayHeaderFooter: true,
+  headerTemplate: "<span></span>",
+  footerTemplate: PDF_FOOTER_TEMPLATE,
+  margin: { top: "0.55in", bottom: "0.65in", left: "0.6in", right: "0.6in" }
+};
+
 export type ChromiumPdfRendererOptions = {
   /** Overrides Chromium's own resolved executable path -- for local development against a system-installed Chrome/Chromium. Production/serverless should leave this unset so @sparticuz/chromium resolves its own bundled binary. */
   executablePath?: string;
@@ -112,14 +122,7 @@ export class ChromiumPdfRenderer implements PdfRenderer {
       // it is actually loaded so the PDF never prints with a fallback font's metrics.
       await page.evaluate("document.fonts.ready.then(() => true)");
       const pdf = Buffer.from(
-        await page.pdf({
-          format: "Letter",
-          printBackground: true,
-          displayHeaderFooter: true,
-          headerTemplate: "<span></span>",
-          footerTemplate: PDF_FOOTER_TEMPLATE,
-          margin: { top: "0.55in", bottom: "0.65in", left: "0.6in", right: "0.6in" }
-        })
+        await page.pdf(PDF_PAGE_OPTIONS)
       );
       return { pdf, pageCount: countPdfPages(pdf) };
     } finally {
