@@ -636,6 +636,18 @@
           "primaryDocument": "exe-20260630.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/895126/000089512626000047/exe-20260630.htm",
           "repositoryPath": "data/sec/EXE/2026-06-30/0000895126-26-000047/filing.htm"
+        },
+        {
+          "companyName": "Expand Energy Corporation",
+          "ticker": "EXE",
+          "cik": "0000895126",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-10-27",
+          "accessionNumber": "0000895126-26-000068",
+          "primaryDocument": "exe-20260930.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/895126/000089512626000068/exe-20260930.htm",
+          "repositoryPath": "data/sec/EXE/2026-09-30/0000895126-26-000068/filing.htm"
         }
       ]
     },
@@ -890,6 +902,18 @@
           "primaryDocument": "rrc-20260630.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312526310446/rrc-20260630.htm",
           "repositoryPath": "data/sec/RRC/2026-06-30/0001193125-26-310446/filing.htm"
+        },
+        {
+          "companyName": "Range Resources Corporation",
+          "ticker": "RRC",
+          "cik": "0000315852",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-10-27",
+          "accessionNumber": "0001193125-26-434351",
+          "primaryDocument": "rrc-20260930.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/315852/000119312526434351/rrc-20260930.htm",
+          "repositoryPath": "data/sec/RRC/2026-09-30/0001193125-26-434351/filing.htm"
         }
       ]
     }
