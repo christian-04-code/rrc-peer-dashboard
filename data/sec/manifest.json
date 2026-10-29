@@ -128,6 +128,18 @@
           "primaryDocument": "ar-20260630x10q.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/1433270/000110465926088153/ar-20260630x10q.htm",
           "repositoryPath": "data/sec/AR/2026-06-30/0001104659-26-088153/filing.htm"
+        },
+        {
+          "companyName": "Antero Resources Corporation",
+          "ticker": "AR",
+          "cik": "0001433270",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-10-28",
+          "accessionNumber": "0001104659-26-119637",
+          "primaryDocument": "ar-20260930x10q.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/1433270/000110465926119637/ar-20260930x10q.htm",
+          "repositoryPath": "data/sec/AR/2026-09-30/0001104659-26-119637/filing.htm"
         }
       ]
     },
@@ -509,6 +521,18 @@
           "primaryDocument": "eqt-20260630.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/33213/000003321326000043/eqt-20260630.htm",
           "repositoryPath": "data/sec/EQT/2026-06-30/0000033213-26-000043/filing.htm"
+        },
+        {
+          "companyName": "EQT Corporation",
+          "ticker": "EQT",
+          "cik": "0000033213",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-10-28",
+          "accessionNumber": "0000033213-26-000058",
+          "primaryDocument": "eqt-20260930.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/33213/000003321326000058/eqt-20260930.htm",
+          "repositoryPath": "data/sec/EQT/2026-09-30/0000033213-26-000058/filing.htm"
         }
       ]
     },
