@@ -406,6 +406,18 @@
           "primaryDocument": "crk-20260630.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/23194/000119312526326260/crk-20260630.htm",
           "repositoryPath": "data/sec/CRK/2026-06-30/0001193125-26-326260/filing.htm"
+        },
+        {
+          "companyName": "Comstock Resources, Inc.",
+          "ticker": "CRK",
+          "cik": "0000023194",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-11-05",
+          "accessionNumber": "0001193125-26-450020",
+          "primaryDocument": "crk-20260930.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/23194/000119312526450020/crk-20260930.htm",
+          "repositoryPath": "data/sec/CRK/2026-09-30/0001193125-26-450020/filing.htm"
         }
       ]
     },
@@ -811,6 +823,18 @@
           "primaryDocument": "gpor-20260630.htm",
           "filingUrl": "https://www.sec.gov/Archives/edgar/data/874499/000162828026052313/gpor-20260630.htm",
           "repositoryPath": "data/sec/GPOR/2026-06-30/0001628280-26-052313/filing.htm"
+        },
+        {
+          "companyName": "Gulfport Energy Corporation",
+          "ticker": "GPOR",
+          "cik": "0000874499",
+          "form": "10-Q",
+          "reportDate": "2026-09-30",
+          "filingDate": "2026-11-05",
+          "accessionNumber": "0000874499-26-000003",
+          "primaryDocument": "gpor-20260930.htm",
+          "filingUrl": "https://www.sec.gov/Archives/edgar/data/874499/000087449926000003/gpor-20260930.htm",
+          "repositoryPath": "data/sec/GPOR/2026-09-30/0000874499-26-000003/filing.htm"
         }
       ]
     },
